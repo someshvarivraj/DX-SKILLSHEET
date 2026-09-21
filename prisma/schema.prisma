@@ -13,6 +13,11 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" covers local dev on whatever host runs it; "debian-openssl-3.0.x"
+  // is pinned explicitly because the Docker image (node:22-bookworm-slim) has
+  // no `openssl` CLI, so Prisma's own detection guesses wrong at build time
+  // and ships the 1.1.x engine into an image that actually has OpenSSL 3.0.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
