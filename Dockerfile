@@ -29,6 +29,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tini \
     && rm -rf /var/lib/apt/lists/*
 ENV CHROMIUM_PATH=/usr/bin/chromium
+# The "nextjs" user below has no home directory (useradd --system, no -m), so
+# Chromium's crashpad crash-reporter can't resolve a config/cache directory
+# and refuses to start ("chrome_crashpad_handler: --database is required").
+# Point it at /tmp, which is writable by any user.
+ENV HOME=/tmp XDG_CONFIG_HOME=/tmp/.chromium XDG_CACHE_HOME=/tmp/.chromium
 
 RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs nextjs
