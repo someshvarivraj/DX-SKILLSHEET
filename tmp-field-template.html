@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8" />
+<title>項目定義書 / Field definitions</title>
+<style>
+:root { --ink:#1a1d23; --soft:#5c6470; --line:#dce1e9; --accent:#2f5d94; --tint:#eaf0f7; }
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:"Noto Sans JP","Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+ font-size:9pt;line-height:1.75;line-break:strict;overflow-wrap:anywhere;word-break:normal;
+ -webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2{font-feature-settings:"palt"}
+.head{border-bottom:2.5px solid var(--accent);padding-bottom:8px;margin-bottom:12px}
+.title{margin:0;font-size:16pt;font-weight:700;letter-spacing:.06em}
+.title-en{margin:2px 0 0;font-size:9pt;color:var(--soft)}
+.meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;font-size:9pt;color:var(--soft)}
+.meta .to{font-size:11pt;font-weight:700;color:var(--ink)}
+.lead p{margin:0 0 6px}
+.en-block{background:#f7f9fb;border-left:3px solid #b9c5d4;padding:8px 12px;margin:9px 0;font-size:8.5pt;
+ line-height:1.65;color:#2f3742;font-family:"Noto Sans",Arial,sans-serif}
+.en-block .lbl{display:block;font-size:7pt;font-weight:700;letter-spacing:.1em;color:#8892a2;margin-bottom:3px}
+.en-block p{margin:0 0 5px} .en-block p:last-child{margin:0}
+.summary{display:flex;gap:8px;margin:10px 0}
+.stat{flex:1;border:1px solid var(--line);border-radius:5px;padding:6px 8px;text-align:center;background:#fbfcfd}
+.stat b{display:block;font-size:14pt;color:var(--accent);line-height:1.3}
+.stat span{font-size:8pt;color:var(--soft)}
+.sec{margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
+.sec-head{margin:0 0 5px;background:var(--tint);border-left:4px solid var(--accent);padding:5px 9px;
+ font-size:11pt;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.sec-head .en{margin-left:7px;font-size:8pt;font-weight:500;color:var(--soft);letter-spacing:0}
+.sec-head .kind{margin-left:7px;font-size:7.5pt;font-weight:600;color:#fff;background:#8792a4;border-radius:3px;padding:1px 6px}
+.sec-head .doc-sup{margin-left:6px;font-size:7.5pt;font-weight:700;color:#fff;background:#9E4468;border-radius:3px;padding:1px 6px}
+.sec-note{margin:0 0 5px;font-size:8.5pt;color:#8d3a5c}
+.sec-desc{margin:0 0 5px;font-size:8.5pt;color:var(--soft)}
+table.fields{width:100%;border-collapse:collapse;table-layout:fixed}
+table.fields th,table.fields td{border:1px solid var(--line);padding:4px 7px;vertical-align:top;text-align:left}
+table.fields thead th{background:#f2f4f8;font-weight:700;text-align:center;font-size:8.5pt}
+table.fields td.c{text-align:center;white-space:nowrap}
+table.fields td.nm strong{display:block}
+table.fields td.nm .en{display:block;font-size:7.5pt;color:var(--soft);font-weight:400}
+table.fields td.note{font-size:8pt;color:var(--soft)}
+.src{margin-bottom:2px} .src code{font-weight:700;color:var(--accent);font-size:8.5pt}
+.hint{font-size:7.5pt;color:var(--soft)}
+.none{color:#9aa2ae}
+.tag{display:inline-block;border-radius:999px;padding:0 6px;font-size:7.5pt;font-weight:700;white-space:nowrap}
+.tag-existing{background:#eef0f3;color:#525a66}
+.tag-added{background:#e7f3ea;color:#256b39}
+.tag-changed{background:#fdf5e6;color:#7a560f}
+.tag-shown{background:#eaf0f7;color:#24507f}
+.tag-pending{background:#fdeef3;color:#8d3a5c}
+tr.st-added td{background:#f6fbf7} tr.st-changed td{background:#fffcf5}
+tr.st-pending td{background:#fdf7f9} tr.st-shown td{background:#f8fafd}
+.box{border:1px solid var(--line);border-left:3px solid #9aa6b6;background:#fbfcfd;padding:8px 11px;margin:10px 0;font-size:8.5pt}
+.box h3{margin:0 0 4px;font-size:10pt}
+table.small{width:100%;border-collapse:collapse;font-size:8.5pt;margin-top:4px}
+table.small th,table.small td{border:1px solid var(--line);padding:3px 7px;text-align:left}
+table.small thead th{background:#f2f4f8;text-align:center}
+@page{size:A4 portrait;margin:14mm 12mm 16mm}
+.pb{page-break-before:always}
+</style></head><body>
+
+<div class="head">
+  <h1 class="title">IITスキルシート生成システム　項目定義書</h1>
+  <p class="title-en">Field Definitions — which question appears where on the sheet</p>
+  <div class="meta"><span class="to">佐野様</span><span>2026年9月18日</span></div>
+</div>
+
+<div class="lead">
+  <p>ご依頼いただいた項目定義のテンプレートをお送りいたします。本書は<strong>アプリケーションの定義データから自動生成</strong>しており、実装と内容が食い違うことはございません。</p>
+  <p>並び順は、ご提供いただいた見本のスキルシートの構成に合わせております。今回のご回答により追加・変更した項目には<span class="tag tag-added">今回追加</span><span class="tag tag-changed">今回変更</span><span class="tag tag-shown">今回表示</span>を付しております。A-1のご判断待ちの項目には<span class="tag tag-pending">ご判断待ち</span>を付しております。</p>
+  <div class="en-block">
+    <span class="lbl">English</span>
+    <p>The field-definition template you asked for. It is <strong>generated directly from the application's definition data</strong>, so it cannot drift from what the system actually does — re-running one command reproduces it after any change.</p>
+    <p>The order follows the sample skill sheet you gave us. Rows added or changed by your answers are tagged, and the one item still awaiting your A-1 decision is marked 「ご判断待ち」.</p>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="stat"><b>13</b><span>セクション</span></div>
+  <div class="stat"><b>72</b><span>項目</span></div>
+  <div class="stat"><b>112 / 113</b><span>使用設問 / 全設問</span></div>
+  <div class="stat"><b>1</b><span>未割当の設問</span></div>
+</div>
+
+<div class="box">
+  <h3>本書について</h3>
+  <p>9月18日にいただいたご指示をすべて反映しております。追加・変更した箇所には<span class="tag tag-added">今回追加</span><span class="tag tag-changed">今回変更</span>を付しております。</p>
+  <p><strong>スキルシートと補足資料の2種類</strong>になりました。<span class="doc-sup">補足資料のみ</span>と表示のある区分は、スキルシートには一切出力されず、営業用の補足資料にのみ出力されます。</p>
+  <div class="en-block">
+    <span class="lbl">English</span>
+    <p>Every instruction from your 18 September reply is reflected here. There are now two documents: sections marked 補足資料のみ are printed only on the sales-facing supplementary document and never on the skill sheet.</p>
+  </div>
+</div>
+
+
+  <div class="sec">
+    <h2 class="sec-head">
+      個人情報<span class="en">Personal Information</span>
+      <span class="kind">単一</span>
+      
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">並び順を変更：氏名／出身地／年齢・性別／対応言語／食事／趣味／現在の居住地</p>
+    
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>社員番号</strong><span class="en">Employee number</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">社員マスタから取得。フォームには存在しない項目。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>氏名</strong><span class="en">Name</span></td>
+        <td><div class="src"><code>A-1-2</code> 氏名（カタカナ）</div><div class="src"><code>A-1-1</code> 氏名（英）</div></td>
+        <td class="c">規則＋補完</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">カタカナと英語を併記する。カタカナは中黒「・」で区切る。表示形式：ソメシュヴァリ・ヴラージ／Someshvari Vrai</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>出身地</strong><span class="en">Hometown</span></td>
+        <td><div class="src"><code>A-1-6</code> 出身地（州・都市）</div></td>
+        <td class="c">規則＋補完</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">都市名・州名・地域区分を組み合わせて表示する。例：パラディップ・オディシャ州（東インド）。地域区分は辞書の対応表から機械的に決定し、AIには判定させない。</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>年齢</strong><span class="en">Age</span></td>
+        <td><div class="src"><code>A-1-4</code> 生年月日</div></td>
+        <td class="c">規則</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">性別と同じ行に表示する</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>性別</strong><span class="en">Gender</span></td>
+        <td><div class="src"><code>A-1-3</code> 性別</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">年齢と同じ行に表示する</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>対応言語</strong><span class="en">Languages spoken</span></td>
+        <td><div class="src"><code>C-1-1</code> 日本語（JLPT取得済みの最高レベル）</div><div class="src"><code>C-1-4</code> 英語（TOEFL</div><div class="src"><code>C-1-5</code> 母語</div><div class="src"><code>C-1-6</code> その他言語</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">日本語にC-1-1のレベルを括弧書きで付す（例：日本語（N3））</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>食事に関する情報</strong><span class="en">Dietary information</span></td>
+        <td><div class="src"><code>A-1-7</code> 食事に関する制限</div><div class="src"><code>A-1-8</code> 食べられないもの・アレルギー</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>趣味</strong><span class="en">Hobbies</span></td>
+        <td><div class="src"><code>J-1-3</code> 趣味、興味あること</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「個人情報」の「現在の居住地」の上に移動</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>現在の居住地</strong><span class="en">Current location</span></td>
+        <td><div class="src"><code>A-1-5</code> 現在の居住地</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">来日後の居住地を想定した項目である。回答時点では全員空欄になるため、確定後に手入力する。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>プロフィール写真</strong><span class="en">Profile photo</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">アプリ画面からアップロードする。差し替え可能。</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      志向<span class="en">Career Aspirations</span>
+      <span class="kind">単一</span>
+      
+      
+    </h2>
+    
+    
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>希望業界</strong><span class="en">Desired industry</span></td>
+        <td><div class="src"><code>G-1-2</code> 希望業界</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>希望職種（第1希望）</strong><span class="en">Desired job type (1st choice)</span></td>
+        <td><div class="src"><code>G-1-1A</code> 興味ある職種　第一希望</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>希望職種（第2希望）</strong><span class="en">Desired job type (2nd choice)</span></td>
+        <td><div class="src"><code>G-1-1B</code> 興味ある職種　第二希望</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>希望職種（第3希望）</strong><span class="en">Desired job type (3rd choice)</span></td>
+        <td><div class="src"><code>G-1-1C</code> 興味ある職種　第三希望</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>目指す役割</strong><span class="en">Target role</span></td>
+        <td><div class="src"><code>G-1-4</code> 将来的に目指したい役割</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>ワークスタイル</strong><span class="en">Work style</span></td>
+        <td><div class="src"><code>G-1-3</code> 働き方の志向</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      学歴<span class="en">Education</span>
+      <span class="kind">繰り返し</span>
+      
+      
+    </h2>
+    
+    <p class="sec-desc">修士・学士・高校を別の行として保持する。回答者が在籍期間を誤って記入している例があるため、画面から修正できること。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>年</strong><span class="en">Years</span></td>
+        <td><div class="src"><code>B-1-5</code> 在籍期間</div><div class="src"><code>B-2-5</code> 在籍期間</div><div class="src"><code>B-3-4</code> 在籍期間</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">例：2023年07月 – 2025年07月</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>大学名</strong><span class="en">Institution</span></td>
+        <td><div class="src"><code>B-1-4</code> 大学名</div><div class="src"><code>B-2-4</code> 大学名</div><div class="src"><code>B-3-3</code> 学校名</div></td>
+        <td class="c">辞書変換</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">選択式の8校は選択肢の日本語をそのまま転記する。「その他」欄の自由記述のみ辞書で変換する。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>成績</strong><span class="en">Academic score</span></td>
+        <td><div class="src"><code>B-1-6</code> 成績</div><div class="src"><code>B-2-6</code> 成績</div><div class="src"><code>B-3-5</code> 成績</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">CGPAまたはPercentageを回答どおり表示する。日本のGPAとは尺度が異なるため、換算はしない。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>専攻名</strong><span class="en">Major</span></td>
+        <td><div class="src"><code>B-1-3</code> 専攻</div><div class="src"><code>B-2-3</code> 専攻</div><div class="src"><code>B-3-2</code> 専攻</div></td>
+        <td class="c">辞書変換</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">自由記述のため辞書が必須。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>学位</strong><span class="en">Degree</span></td>
+        <td><div class="src"><code>B-1-1</code> 学歴レベル</div><div class="src"><code>B-1-2(B)</code> 学位</div><div class="src"><code>B-1-2(M)</code> 学位</div><div class="src"><code>B-3-1</code> 学歴レベル</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">修士は B-1-2(M)、学士は B-1-2(B)、高校は B-3-1 から取得する。「その他」欄の自由記述のみ辞書で変換する。</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      技術スキル<span class="en">Technical Skills</span>
+      <span class="kind">単一</span>
+      
+      
+    </h2>
+    
+    <p class="sec-desc">採用者には機械系・材料系が含まれるため、CAD・CAE・電気制御・材料分析の欄が必要。該当項目がすべて「使用経験なし」の場合、その欄は非表示にする。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>プログラミング言語</strong><span class="en">Programming languages</span></td>
+        <td><div class="src"><code>D-1-1</code> プログラミング言語</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>開発ツール</strong><span class="en">Development tools</span></td>
+        <td><div class="src"><code>D-1-2</code> データベース・クエリ言語</div><div class="src"><code>D-1-3</code> バージョン管理</div><div class="src"><code>D-1-4</code> コードエディタ・IDE</div><div class="src"><code>D-1-5</code> 機械学習フレームワーク</div><div class="src"><code>D-1-6</code> ロボティクス・ハードウェア</div><div class="src"><code>D-1-7</code> オペレーティングシステム</div><div class="src"><code>D-1-8</code> クラウドプラットフォーム</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>CAD・3Dモデリング</strong><span class="en">CAD and 3D modelling</span></td>
+        <td><div class="src"><code>D-1-9</code> CAD・3Dモデリング</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>CAE・解析</strong><span class="en">CAE and simulation</span></td>
+        <td><div class="src"><code>D-1-10</code> CAE・解析シミュレーション</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>電気・制御・FA</strong><span class="en">Electrical, control and FA</span></td>
+        <td><div class="src"><code>D-1-11</code> 電気・制御・FA</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>材料分析</strong><span class="en">Materials characterisation</span></td>
+        <td><div class="src"><code>D-1-12</code> 材料分析・材料シミュレーション</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>製図・図面</strong><span class="en">Engineering drawing</span></td>
+        <td><div class="src"><code>D-1-13</code> 製図・図面</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>主要スキルと習熟度</strong><span class="en">Top skills and proficiency</span></td>
+        <td><div class="src"><code>D-1-14</code> 主要スキル上位5件と習熟度</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      インターンシップ<span class="en">Internships</span>
+      <span class="kind">繰り返し</span>
+      
+      
+    </h2>
+    
+    <p class="sec-desc">1人あたり10件程度まで登録でき、スキルシートに表示するのは最大3件。企業名と期間はAIが書き換えないこと。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>タイトル</strong><span class="en">Title</span></td>
+        <td><div class="src"><code>E-x-1<span class="hint">（E-1-1・E-2-1）</span></code> インターン名（またはテーマ）</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>企業</strong><span class="en">Company</span></td>
+        <td><div class="src"><code>E-x-2<span class="hint">（E-1-2・E-2-2）</span></code> 企業名・機関名</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">企業名はAI再生成の対象外。手修正のみ可能。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>期間</strong><span class="en">Period</span></td>
+        <td><div class="src"><code>E-x-3<span class="hint">（E-1-3・E-2-3）</span></code> 実施期間（年月〜年月）</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">期間はAI再生成の対象外。例：2024年07月 – 2024年08月</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>使用技術</strong><span class="en">Technologies</span></td>
+        <td><div class="src"><code>E-x-5<span class="hint">（E-1-5・E-2-5）</span></code> 使用技術</div></td>
+        <td class="c">辞書変換</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>概要</strong><span class="en">Summary</span></td>
+        <td><div class="src"><code>E-x-6<span class="hint">（E-1-6・E-2-6）</span></code> 概要</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>具体的な内容</strong><span class="en">Description</span></td>
+        <td><div class="src"><code>E-x-6<span class="hint">（E-1-6・E-2-6）</span></code> 概要</div><div class="src"><code>E-x-7<span class="hint">（E-1-7・E-2-7）</span></code> 目的・背景（簡潔に）</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>果たした役割</strong><span class="en">Role</span></td>
+        <td><div class="src"><code>E-x-8<span class="hint">（E-1-8・E-2-8）</span></code> あなたの役割・担当したこと</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-added">
+        <td class="nm"><strong>チーム規模</strong><span class="en">Team size</span></td>
+        <td><div class="src"><code>E-x-4<span class="hint">（E-1-4・E-2-4）</span></code> チーム規模</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-added">今回追加</span></td>
+        <td class="note">果たした役割と直面した課題の間に配置</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>直面した課題</strong><span class="en">Challenges</span></td>
+        <td><div class="src"><code>E-x-9<span class="hint">（E-1-9・E-2-9）</span></code> 工夫・課題と対応方法</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>得られた成果</strong><span class="en">Outcome</span></td>
+        <td><div class="src"><code>E-x-10<span class="hint">（E-1-10・E-2-10）</span></code> 得られた成果や学び</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      プロジェクト<span class="en">Projects</span>
+      <span class="kind">繰り返し</span>
+      
+      
+    </h2>
+    
+    
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>タイトル</strong><span class="en">Title</span></td>
+        <td><div class="src"><code>F-x-1<span class="hint">（F-1-1・F-2-1）</span></code> プロジェクト名（またはテーマ）</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>期間</strong><span class="en">Period</span></td>
+        <td><div class="src"><code>F-x-2<span class="hint">（F-1-2・F-2-2）</span></code> 実施期間（年月〜年月）</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">期間はAI再生成の対象外。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>使用技術</strong><span class="en">Technologies</span></td>
+        <td><div class="src"><code>F-x-4<span class="hint">（F-1-4・F-2-4）</span></code> 使用技術</div></td>
+        <td class="c">辞書変換</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>概要</strong><span class="en">Summary</span></td>
+        <td><div class="src"><code>F-x-5<span class="hint">（F-1-5・F-2-5）</span></code> 概要</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>具体的な内容</strong><span class="en">Description</span></td>
+        <td><div class="src"><code>F-x-5<span class="hint">（F-1-5・F-2-5）</span></code> 概要</div><div class="src"><code>F-x-6<span class="hint">（F-1-6・F-2-6）</span></code> 目的・背景（簡潔に）</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>果たした役割</strong><span class="en">Role</span></td>
+        <td><div class="src"><code>F-x-7<span class="hint">（F-1-7・F-2-7）</span></code> あなたの役割・担当したこと</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-added">
+        <td class="nm"><strong>チーム規模</strong><span class="en">Team size</span></td>
+        <td><div class="src"><code>F-x-3<span class="hint">（F-1-3・F-2-3）</span></code> チーム規模</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-added">今回追加</span></td>
+        <td class="note">果たした役割と直面した課題の間に配置</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>直面した課題</strong><span class="en">Challenges</span></td>
+        <td><div class="src"><code>F-x-8<span class="hint">（F-1-8・F-2-8）</span></code> 工夫・課題と対応方法</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>得られた成果</strong><span class="en">Outcome</span></td>
+        <td><div class="src"><code>F-x-9<span class="hint">（F-1-9・F-2-9）</span></code> 得られた成果や学び</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      日本での業務経験<span class="en">Work Experience in Japan</span>
+      <span class="kind">繰り返し</span>
+      
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">チーム規模を追加</p>
+    <p class="sec-desc">入社後に本人が追加する欄。フォームには対応する設問がないため、すべて手入力である。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>就業先・現場</strong><span class="en">Site</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">配属先の企業名または現場名を入力する。</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>期間</strong><span class="en">Period</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">例：2026年4月 - 2026年9月</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>担当業務</strong><span class="en">Role</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>使用技術</strong><span class="en">Technologies used</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-added">
+        <td class="nm"><strong>チーム規模</strong><span class="en">Team size</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-added">今回追加</span></td>
+        <td class="note">「使用技術」の直後に配置</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>成果・学んだこと</strong><span class="en">Outcome</span></td>
+        <td><span class="none">フォームに対応する設問なし（手入力）</span></td>
+        <td class="c">手入力</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      日本企業について<span class="en">About Japanese Companies</span>
+      <span class="kind">単一</span>
+      
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">「興味がある点」に名称変更</p>
+    
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-changed">
+        <td class="nm"><strong>興味がある点</strong><span class="en">Most interesting aspect</span></td>
+        <td><div class="src"><code>I-1-1</code> 日本企業に興味を持った理由</div><div class="src"><code>I-1-2</code> 学びたい点</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「一番興味がある点」から「興味がある点」に名称変更</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>習得したいこと</strong><span class="en">What they want to learn</span></td>
+        <td><div class="src"><code>I-1-2</code> 学びたい点</div><div class="src"><code>I-1-3</code> 日本企業でやってみたい仕事</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      キャリアアップについて<span class="en">Career Development</span>
+      <span class="kind">単一</span>
+      
+      
+    </h2>
+    
+    
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>働く上での価値観</strong><span class="en">Work values</span></td>
+        <td><div class="src"><code>G-1-5</code> 働く上での価値観</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      日本語能力<span class="en">Japanese Language Ability</span>
+      <span class="kind">単一</span>
+      
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">学習歴を追加し、「日本語力について」に名称変更</p>
+    <p class="sec-desc">スキルシートに掲載するのは取得資格と時期、およびスコアから生成した説明文の2つ。スコアそのものは掲載しない。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>取得資格と時期</strong><span class="en">Qualification and date</span></td>
+        <td><div class="src"><code>C-1-1</code> 日本語（JLPT取得済みの最高レベル）</div><div class="src"><code>C-2-1</code> 合格したJLPTの受験時期</div></td>
+        <td class="c">規則</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">例：2025年12月にN3取得</td>
+      </tr>
+<tr class="st-added">
+        <td class="nm"><strong>日本語の学習歴</strong><span class="en">Japanese study history</span></td>
+        <td><div class="src"><code>C-1-3</code> 日本語の学習歴</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-added">今回追加</span></td>
+        <td class="note">取得資格と時期の直後に配置（C-1-3）</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>日本語力について</strong><span class="en">Description of ability</span></td>
+        <td><div class="src"><code>C-2-2</code> 総合点（180点満点）</div><div class="src"><code>C-2-3</code> 【N1・N2・N3の方】言語知識（文字・語彙・文法）の得点（60点満点）</div><div class="src"><code>C-2-4</code> 【N1・N2・N3の方】読解の得点（60点満点）</div><div class="src"><code>C-2-5</code> 【N4・N5の方】言語知識・読解の得点（120点満点）</div><div class="src"><code>C-2-6</code> 聴解の得点（60点満点）</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「日本語力の説明」から「日本語力について」に名称変更</td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>各スコア</strong><span class="en">Individual scores</span></td>
+        <td><div class="src"><code>C-2-2</code> 総合点（180点満点）</div><div class="src"><code>C-2-3</code> 【N1・N2・N3の方】言語知識（文字・語彙・文法）の得点（60点満点）</div><div class="src"><code>C-2-4</code> 【N1・N2・N3の方】読解の得点（60点満点）</div><div class="src"><code>C-2-5</code> 【N4・N5の方】言語知識・読解の得点（120点満点）</div><div class="src"><code>C-2-6</code> 聴解の得点（60点満点）</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note">PDFには出力しない（説明文の生成にのみ使用）。従来から出力対象外</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      研究業績<span class="en">Research Output</span>
+      <span class="kind">単一</span>
+      
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">論文・特許の表示規則を統一し、修士論文に指導教員をまとめ、GitHub・ポートフォリオを移動</p>
+    <p class="sec-desc">該当するデータが1件もない場合はセクションごと非表示にする（初期設定）。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-changed">
+        <td class="nm"><strong>論文・学会発表</strong><span class="en">Publications</span></td>
+        <td><div class="src"><code>H-2-1</code> 論文・学会発表の有無</div><div class="src"><code>H-2-2</code> 論文・発表の詳細</div></td>
+        <td class="c">規則</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">有無（H-2-1）と詳細（H-2-2）を1項目に統合。内容がある場合はH-2-2の内容のみを表示し、「あり」は表示しない。ない場合は「なし」と表示する</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>修士論文・卒業論文</strong><span class="en">Thesis</span></td>
+        <td><div class="src"><code>H-2-3</code> 修士論文・卒業論文のテーマ</div><div class="src"><code>H-2-4</code> 指導教員名・研究室名</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「修士論文・卒業論文のテーマ」から「修士論文・卒業論文」に名称変更。H-2-3とH-2-4を1項目にまとめ、「指導教員・研究室」の項目は削除した</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>特許</strong><span class="en">Patents</span></td>
+        <td><div class="src"><code>H-2-5</code> 特許の出願・取得</div><div class="src"><code>H-2-6</code> 特許の詳細</div></td>
+        <td class="c">規則</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「特許について」から「特許」に名称変更。論文と同じ規則を適用し、内容がある場合はH-2-6の内容のみ、ない場合は「なし」と表示する</td>
+      </tr>
+<tr class="st-changed">
+        <td class="nm"><strong>GitHub・ポートフォリオ</strong><span class="en">GitHub or portfolio</span></td>
+        <td><div class="src"><code>J-1-2</code> GitHub・ポートフォリオリンク</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-changed">今回変更</span></td>
+        <td class="note">「研究業績」の「特許」の下に移動</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      配属検討用の情報<span class="en">Information for Placement Decisions</span>
+      <span class="kind">単一</span>
+      <span class="doc-sup">補足資料のみ</span>
+      <span class="tag tag-changed">今回変更</span>
+    </h2>
+    <p class="sec-note">スキルシートから削除し、補足資料にのみ出力</p>
+    <p class="sec-desc">提出先によっては掲載したくない場合があるため、項目ごとにチェックボックスで表示を切り替えられること。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>該当職種がない場合の希望</strong><span class="en">Desired role if none listed matches</span></td>
+        <td><div class="src"><code>G-1-6</code> 該当する職種がなかった場合の希望</div></td>
+        <td class="c">翻訳</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>専攻外分野への配属許容度</strong><span class="en">Openness to work outside their major</span></td>
+        <td><div class="src"><code>G-1-7</code> 専攻外分野への配属許容度</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>勤務スタイルの受容度</strong><span class="en">Acceptable working styles</span></td>
+        <td><div class="src"><code>G-1-8</code> 勤務スタイルの受容度</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>日本企業に多い業務課題への対応</strong><span class="en">Willingness for common tasks</span></td>
+        <td><div class="src"><code>G-1-9</code> 日本企業に多い業務課題への対応</div></td>
+        <td class="c">転記</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-added">
+        <td class="nm"><strong>備考</strong><span class="en">Remarks</span></td>
+        <td><div class="src"><code>J-1-1</code> 備考・補足（特記事項や伝えたいこと）</div></td>
+        <td class="c">翻訳</td>
+        <td class="c"><span class="tag tag-added">今回追加</span></td>
+        <td class="note">備考（J-1-1）。スキルシートからは削除し、補足資料の「配属検討用の情報」の末尾に配置</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2 class="sec-head">
+      リーダーシップ・課外活動<span class="en">Leadership and Extracurriculars</span>
+      <span class="kind">単一</span>
+      
+      
+    </h2>
+    
+    <p class="sec-desc">H-1-1・H-1-2。佐野様のご回答により掲載する。</p>
+    <table class="fields">
+      <thead><tr>
+        <th style="width:140px;">項目名</th>
+        <th>取得元の設問</th>
+        <th style="width:86px;">処理</th>
+        <th style="width:72px;">状態</th>
+        <th style="width:176px;">備考</th>
+      </tr></thead>
+      <tbody><tr class="st-existing">
+        <td class="nm"><strong>学生団体・プロジェクトリーダー等</strong><span class="en">Student groups and project leadership</span></td>
+        <td><div class="src"><code>H-1-1</code> 学生団体・プロジェクトリーダー・イベント運営等</div></td>
+        <td class="c">AI生成</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr>
+<tr class="st-existing">
+        <td class="nm"><strong>発表・受賞・チームマネジメント経験</strong><span class="en">Presentations, awards and team management</span></td>
+        <td><div class="src"><code>H-1-2</code> 発表・受賞・チームマネジメント経験など</div></td>
+        <td class="c">翻訳</td>
+        <td class="c"><span class="tag tag-existing">既存</span></td>
+        <td class="note"></td>
+      </tr></tbody>
+    </table>
+  </div>
+
+<div class="box">
+  <h3>未割当の設問（1件）／ Questions not placed on the sheet</h3>
+  <p>フォームで収集していますが、どの項目にも割り当てていない設問です。ご回答により「不要」とされたもの、および仕様書に記載のないものを含みます。</p>
+  <table class="small">
+    <thead><tr><th style="width:80px;">設問</th><th>内容</th><th style="width:240px;">扱い</th></tr></thead>
+    <tbody>
+      <tr><td><code>C-1-2</code></td><td>次回のJLPT受験予定</td><td>A-2のご回答により「不要」</td></tr>
+    </tbody>
+  </table>
+  <div class="en-block">
+    <span class="lbl">English</span>
+    <p>Collected by the form but not placed on the sheet. C-1-2 is the one you said was not needed.</p>
+  </div>
+</div>
+
+<div class="box">
+  <h3>今回反映した内容 / What this revision changed</h3>
+  <table class="small">
+    <thead><tr><th style="width:150px;">ご指示</th><th>反映した内容</th></tr></thead>
+    <tbody>
+      <tr><td>チーム規模（日本での業務経験）</td><td>「使用技術」の直後に追加した</td></tr>
+      <tr><td>一番興味がある点</td><td>「興味がある点」に名称を変更した</td></tr>
+      <tr><td>日本語力の説明</td><td>「日本語力について」に名称を変更した</td></tr>
+      <tr><td>論文・学会発表</td><td>内容がある場合はH-2-2の内容のみを表示し、「あり」は表示しない。ない場合は「なし」と表示する</td></tr>
+      <tr><td>修士論文・卒業論文</td><td>「修士論文・卒業論文のテーマ」から名称を変更し、H-2-3とH-2-4を1項目にまとめた。「指導教員・研究室」の項目は削除した</td></tr>
+      <tr><td>特許について</td><td>「特許」に名称を変更した。有無と詳細を持つ項目には論文と同じ規則を適用し、内容がある場合は内容のみ、ない場合は「なし」と表示する</td></tr>
+      <tr><td>趣味</td><td>「その他」から「個人情報」へ移し、「現在の居住地」の上に配置した</td></tr>
+      <tr><td>GitHub・ポートフォリオ</td><td>「その他」から「研究業績」へ移し、「特許」の下に配置した</td></tr>
+      <tr><td>その他</td><td>セクションごと削除した</td></tr>
+      <tr><td>補足資料の冒頭文</td><td>ご指定の文面に差し替えた。1行目を太字にしている</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p style="margin-top:12px;font-size:9pt;">
+  ご確認のうえ、修正すべき点がございましたらお知らせください。何卒よろしくお願い申し上げます。
+</p>
+
+</body></html>

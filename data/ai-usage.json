@@ -1,0 +1,391 @@
+{
+  "measuredFrom": "data/sample-responses.csv (3 people, averaged)",
+  "perPerson": [
+    {
+      "calls": 32,
+      "input": 18500,
+      "output": 5180
+    },
+    {
+      "calls": 33,
+      "input": 19095,
+      "output": 5330
+    },
+    {
+      "calls": 33,
+      "input": 19049,
+      "output": 5330
+    }
+  ],
+  "range": {
+    "calls": [
+      32,
+      33
+    ],
+    "input": [
+      18500,
+      19095
+    ],
+    "output": [
+      5180,
+      5330
+    ]
+  },
+  "tokenRatios": {
+    "cjk": 1,
+    "latin": 0.25
+  },
+  "callsPerSheet": 33,
+  "inputTokensPerSheet": 18881,
+  "outputTokensPerSheet": 5280,
+  "totalTokensPerSheet": 24161,
+  "avgInputTokensPerCall": 572,
+  "avgOutputTokensPerCall": 160,
+  "bySection": {
+    "personal": {
+      "calls": 2,
+      "inputTokens": 1206,
+      "outputTokens": 140
+    },
+    "skills": {
+      "calls": 1,
+      "inputTokens": 639,
+      "outputTokens": 150
+    },
+    "internships": {
+      "calls": 12,
+      "inputTokens": 6738,
+      "outputTokens": 2120
+    },
+    "projects": {
+      "calls": 6,
+      "inputTokens": 3318,
+      "outputTokens": 1060
+    },
+    "japanese_companies": {
+      "calls": 2,
+      "inputTokens": 1275,
+      "outputTokens": 300
+    },
+    "career_development": {
+      "calls": 1,
+      "inputTokens": 672,
+      "outputTokens": 150
+    },
+    "japanese_ability": {
+      "calls": 1,
+      "inputTokens": 719,
+      "outputTokens": 200
+    },
+    "research": {
+      "calls": 2,
+      "inputTokens": 1127,
+      "outputTokens": 350
+    },
+    "placement": {
+      "calls": 1,
+      "inputTokens": 546,
+      "outputTokens": 150
+    },
+    "leadership": {
+      "calls": 2,
+      "inputTokens": 1124,
+      "outputTokens": 350
+    },
+    "other": {
+      "calls": 2,
+      "inputTokens": 1136,
+      "outputTokens": 210
+    }
+  },
+  "rows": [
+    {
+      "section": "personal",
+      "field": "languages_spoken",
+      "nameJa": "対応言語",
+      "record": null,
+      "inputTokens": 591,
+      "outputTokens": 60,
+      "inputChars": 716
+    },
+    {
+      "section": "personal",
+      "field": "dietary",
+      "nameJa": "食事に関する情報",
+      "record": null,
+      "inputTokens": 615,
+      "outputTokens": 80,
+      "inputChars": 730
+    },
+    {
+      "section": "skills",
+      "field": "skill_top5",
+      "nameJa": "主要スキルと習熟度",
+      "record": null,
+      "inputTokens": 639,
+      "outputTokens": 150,
+      "inputChars": 730
+    },
+    {
+      "section": "internships",
+      "field": "int_title",
+      "nameJa": "タイトル",
+      "record": "E-1",
+      "inputTokens": 560,
+      "outputTokens": 60,
+      "inputChars": 651
+    },
+    {
+      "section": "internships",
+      "field": "int_summary",
+      "nameJa": "概要",
+      "record": "E-1",
+      "inputTokens": 531,
+      "outputTokens": 150,
+      "inputChars": 664
+    },
+    {
+      "section": "internships",
+      "field": "int_description",
+      "nameJa": "具体的な内容",
+      "record": "E-1",
+      "inputTokens": 625,
+      "outputTokens": 300,
+      "inputChars": 863
+    },
+    {
+      "section": "internships",
+      "field": "int_role",
+      "nameJa": "果たした役割",
+      "record": "E-1",
+      "inputTokens": 554,
+      "outputTokens": 150,
+      "inputChars": 753
+    },
+    {
+      "section": "internships",
+      "field": "int_challenges",
+      "nameJa": "直面した課題",
+      "record": "E-1",
+      "inputTokens": 554,
+      "outputTokens": 200,
+      "inputChars": 736
+    },
+    {
+      "section": "internships",
+      "field": "int_outcome",
+      "nameJa": "得られた成果",
+      "record": "E-1",
+      "inputTokens": 572,
+      "outputTokens": 200,
+      "inputChars": 741
+    },
+    {
+      "section": "internships",
+      "field": "int_title",
+      "nameJa": "タイトル",
+      "record": "E-2",
+      "inputTokens": 557,
+      "outputTokens": 60,
+      "inputChars": 637
+    },
+    {
+      "section": "internships",
+      "field": "int_summary",
+      "nameJa": "概要",
+      "record": "E-2",
+      "inputTokens": 521,
+      "outputTokens": 150,
+      "inputChars": 622
+    },
+    {
+      "section": "internships",
+      "field": "int_description",
+      "nameJa": "具体的な内容",
+      "record": "E-2",
+      "inputTokens": 605,
+      "outputTokens": 300,
+      "inputChars": 784
+    },
+    {
+      "section": "internships",
+      "field": "int_role",
+      "nameJa": "果たした役割",
+      "record": "E-2",
+      "inputTokens": 539,
+      "outputTokens": 150,
+      "inputChars": 694
+    },
+    {
+      "section": "internships",
+      "field": "int_challenges",
+      "nameJa": "直面した課題",
+      "record": "E-2",
+      "inputTokens": 550,
+      "outputTokens": 200,
+      "inputChars": 721
+    },
+    {
+      "section": "internships",
+      "field": "int_outcome",
+      "nameJa": "得られた成果",
+      "record": "E-2",
+      "inputTokens": 570,
+      "outputTokens": 200,
+      "inputChars": 733
+    },
+    {
+      "section": "projects",
+      "field": "prj_title",
+      "nameJa": "タイトル",
+      "record": "F-1",
+      "inputTokens": 546,
+      "outputTokens": 60,
+      "inputChars": 655
+    },
+    {
+      "section": "projects",
+      "field": "prj_summary",
+      "nameJa": "概要",
+      "record": "F-1",
+      "inputTokens": 538,
+      "outputTokens": 150,
+      "inputChars": 687
+    },
+    {
+      "section": "projects",
+      "field": "prj_description",
+      "nameJa": "具体的な内容",
+      "record": "F-1",
+      "inputTokens": 592,
+      "outputTokens": 300,
+      "inputChars": 833
+    },
+    {
+      "section": "projects",
+      "field": "prj_role",
+      "nameJa": "果たした役割",
+      "record": "F-1",
+      "inputTokens": 540,
+      "outputTokens": 150,
+      "inputChars": 699
+    },
+    {
+      "section": "projects",
+      "field": "prj_challenges",
+      "nameJa": "直面した課題",
+      "record": "F-1",
+      "inputTokens": 552,
+      "outputTokens": 200,
+      "inputChars": 730
+    },
+    {
+      "section": "projects",
+      "field": "prj_outcome",
+      "nameJa": "得られた成果",
+      "record": "F-1",
+      "inputTokens": 550,
+      "outputTokens": 200,
+      "inputChars": 710
+    },
+    {
+      "section": "japanese_companies",
+      "field": "jp_interest",
+      "nameJa": "一番興味がある点",
+      "record": null,
+      "inputTokens": 639,
+      "outputTokens": 150,
+      "inputChars": 919
+    },
+    {
+      "section": "japanese_companies",
+      "field": "jp_learn",
+      "nameJa": "習得したいこと",
+      "record": null,
+      "inputTokens": 636,
+      "outputTokens": 150,
+      "inputChars": 847
+    },
+    {
+      "section": "career_development",
+      "field": "work_values",
+      "nameJa": "働く上での価値観",
+      "record": null,
+      "inputTokens": 672,
+      "outputTokens": 150,
+      "inputChars": 819
+    },
+    {
+      "section": "japanese_ability",
+      "field": "jlpt_description",
+      "nameJa": "日本語力の説明",
+      "record": null,
+      "inputTokens": 719,
+      "outputTokens": 200,
+      "inputChars": 823
+    },
+    {
+      "section": "research",
+      "field": "res_thesis",
+      "nameJa": "修士論文・卒業論文のテーマ",
+      "record": null,
+      "inputTokens": 588,
+      "outputTokens": 200,
+      "inputChars": 818
+    },
+    {
+      "section": "research",
+      "field": "res_patents",
+      "nameJa": "特許",
+      "record": null,
+      "inputTokens": 539,
+      "outputTokens": 150,
+      "inputChars": 596
+    },
+    {
+      "section": "placement",
+      "field": "plc_desired_role_other",
+      "nameJa": "該当職種がない場合の希望",
+      "record": null,
+      "inputTokens": 546,
+      "outputTokens": 150,
+      "inputChars": 603
+    },
+    {
+      "section": "leadership",
+      "field": "ldr_student_groups",
+      "nameJa": "学生団体・プロジェクトリーダー等",
+      "record": null,
+      "inputTokens": 554,
+      "outputTokens": 200,
+      "inputChars": 687
+    },
+    {
+      "section": "leadership",
+      "field": "ldr_awards",
+      "nameJa": "発表・受賞・チームマネジメント経験",
+      "record": null,
+      "inputTokens": 570,
+      "outputTokens": 150,
+      "inputChars": 683
+    },
+    {
+      "section": "other",
+      "field": "oth_hobbies",
+      "nameJa": "趣味",
+      "record": null,
+      "inputTokens": 580,
+      "outputTokens": 60,
+      "inputChars": 704
+    },
+    {
+      "section": "other",
+      "field": "oth_notes",
+      "nameJa": "備考",
+      "record": null,
+      "inputTokens": 556,
+      "outputTokens": 150,
+      "inputChars": 671
+    }
+  ]
+}

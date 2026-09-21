@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>ログイン プレビュー</title>
+<link rel="stylesheet" href="./ui-preview.css"></head>
+<body>
+<main class="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+  <aside class="relative overflow-hidden bg-brand-700 px-8 py-10 text-white lg:px-14 lg:py-16">
+    <div class="pointer-events-none absolute inset-0 opacity-90" style="background: radial-gradient(90% 70% at 15% 10%, #0069F0 0%, rgba(0,105,240,0) 55%), radial-gradient(70% 60% at 95% 95%, #044BA7 0%, rgba(4,75,167,0) 60%)"></div>
+    <div class="relative flex h-full flex-col justify-between gap-10">
+      <div class="flex items-center gap-2.5 text-sm font-semibold">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-white/15 text-xs ring-1 ring-white/25">SS</span>
+        株式会社モルブ阪神工業
+      </div>
+      <div class="max-w-md">
+        <h1 class="text-2xl font-bold leading-snug lg:text-3xl">スキルシート<br>管理システム</h1>
+        <p class="mt-4 text-sm leading-loose text-white/80">アンケートの回答から、日本語のスキルシートを作成します。作成した内容は確認・修正のうえ確定し、A4のPDFとして出力できます。</p>
+        <ul class="mt-7 space-y-2.5 text-sm text-white/85">
+          <li class="flex gap-2.5"><span class="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-white/60"></span>アンケート回答の取り込みと項目への割り当て</li>
+          <li class="flex gap-2.5"><span class="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-white/60"></span>日本語文章の生成と、担当者による確認・修正</li>
+          <li class="flex gap-2.5"><span class="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-white/60"></span>確定版のPDF出力と、営業向けの補足資料</li>
+        </ul>
+      </div>
+      <p class="text-xs text-white/55">社内利用限定。個人情報を扱うため、取り扱いにご注意ください。</p>
+    </div>
+  </aside>
+  <div class="flex items-center justify-center px-6 py-12">
+    <div class="w-full max-w-sm">
+      <h2 class="page-title">ログイン</h2>
+      <p class="mt-2 text-sm text-ink-500">社内メールアドレスにログインリンクを送ります。パスワードは不要です。</p>
+      <form class="mt-7 space-y-3">
+        <label class="field-label">メールアドレス</label>
+        <input class="input" placeholder="name@morabu.com">
+        <button class="btn btn-primary w-full justify-center">ログインリンクを送る</button>
+      </form>
+      <div class="my-7 flex items-center gap-3 text-xs text-ink-400">
+        <span class="h-px flex-1 bg-ink-100"></span>デモ利用者<span class="h-px flex-1 bg-ink-100"></span>
+      </div>
+      <form class="space-y-3">
+        <p class="field-hint">試用中の関係者向けの共有アカウントです。閲覧のみで、編集・確定・PDF出力はできません。</p>
+        <input class="input" type="password" placeholder="デモ用パスワード">
+        <button class="btn btn-secondary w-full justify-center">デモアカウントで閲覧する</button>
+      </form>
+    </div>
+  </div>
+</main>
+</body></html>

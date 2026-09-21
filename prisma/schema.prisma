@@ -1,0 +1,722 @@
+// ---------------------------------------------------------------------------
+// IIT Skill Sheet Generation System — data model
+//
+// Design principle (spec §5.3): the mapping between form questions and
+// skill-sheet positions lives in DATA (SheetSection / SheetField /
+// SheetFieldSource), never in code. A new form revision is absorbed by adding
+// rows, not by editing and redeploying the application.
+//
+// Layering (spec §5.1):
+//   FormResponse   = import layer  — raw answers, written once, read-only after
+//   FieldValue     = working layer — the authoritative content of a skill sheet
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================================
+// 1. Identity, roles and access  (spec ch.12, ch.14)
+// ===========================================================================
+
+/// ADMIN   — full control: field definitions, import, edit, finalise, export
+/// SALES   — may edit sheets and switch which records are displayed, may export
+/// ENGINEER— may edit only their OWN experience records, submits for review
+/// VIEWER  — read-only (the shared demo account)
+enum Role {
+  ADMIN
+  SALES
+  ENGINEER
+  VIEWER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  displayName  String
+  role         Role      @default(VIEWER)
+  /// Set for ENGINEER accounts: the person whose sheet they own.
+  personId     String?   @unique
+  person       Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  /// Shared demo account uses a password; everyone else uses one-time links.
+  passwordHash String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  loginTokens    LoginToken[]
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  importBatches  ImportBatch[]
+  createdVersions SheetVersion[] @relation("VersionCreatedBy")
+  finalisedVersions SheetVersion[] @relation("VersionFinalisedBy")
+  fieldEdits     FieldValueHistory[]
+  exports        ExportHistory[]
+  authoredMemos  PersonMemo[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// One-time login link (spec §12.2). Only the hash is stored.
+model LoginToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  requestIp String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("login_tokens")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Audit log (spec §12.4): login, view, edit, finalise, export.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?
+  entityId   String?
+  /// Person the action concerned, so "who touched whose sheet" is answerable.
+  personId   String?
+  summary    String?
+  meta       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([personId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// ===========================================================================
+// 2. Form definition — the input side of the mapping  (spec §4, §5.3)
+// ===========================================================================
+
+enum QuestionType {
+  TEXT
+  PARAGRAPH
+  RADIO
+  CHECKBOX
+  LIST
+  GRID
+  DATE
+  SCALE
+  UNKNOWN
+}
+
+/// One yearly revision of the Google Form, e.g. "2026".
+model FormRevision {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  /// Name of the Apps Script the catalogue was generated from.
+  sourceFile  String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  questions FormQuestion[]
+  batches   ImportBatch[]
+
+  @@map("form_revisions")
+}
+
+/// A single question in the form. Imported from create_iit_form_YYYY.gs so the
+/// admin screen can show which questions exist and which are still unassigned.
+model FormQuestion {
+  id             String       @id @default(cuid())
+  formRevisionId String
+  formRevision   FormRevision @relation(fields: [formRevisionId], references: [id], onDelete: Cascade)
+  /// Stable question code used everywhere else, e.g. "A-1-1", "E-1-6".
+  code           String
+  titleJa        String
+  titleEn        String?
+  helpText       String?
+  type           QuestionType @default(TEXT)
+  sectionLabel   String?
+  /// Choice options, verbatim, e.g. "A1. システムエンジニア（要件定義・設計）／System Engineer"
+  options        String[]     @default([])
+  /// Grid questions (G-1-7/8/9) carry rows and columns.
+  gridRows       String[]     @default([])
+  gridColumns    String[]     @default([])
+  /// The header text as it appears in the response spreadsheet, used to match
+  /// columns on import without relying on column position.
+  responseHeader String?
+  isRequired     Boolean      @default(false)
+  order          Int          @default(0)
+
+  sources SheetFieldSource[]
+
+  @@unique([formRevisionId, code])
+  @@index([formRevisionId, order])
+  @@map("form_questions")
+}
+
+// ===========================================================================
+// 3. Skill sheet definition — the output side of the mapping  (spec §5.3, §6)
+// ===========================================================================
+
+enum SectionKind {
+  /// One set of fields per person (personal info, career aspirations, ...)
+  SINGLE
+  /// A set of repeating records (internships, projects) — spec §5.4
+  REPEATING
+}
+
+enum Processing {
+  /// Copy verbatim; for choice answers strip the "A1. " prefix and "／English"
+  COPY
+  /// Replace using the glossary (no AI) — spec §8.5
+  GLOSSARY
+  /// Copy, then add information the system holds (e.g. hometown + region)
+  ENRICH
+  /// Translate to Japanese without summarising — spec §6.11
+  TRANSLATE
+  /// Translate + simplify into Japanese prose — spec ch.8
+  GENERATE
+  /// Deterministic generation from values, no AI — spec ch.10
+  RULE_BASED
+  /// Not from the form; typed in by staff
+  MANUAL
+}
+
+enum Editing {
+  MANUAL_ONLY
+  PROMPT_AND_MANUAL
+}
+
+enum ValueType {
+  STRING
+  TEXT
+  STRING_LIST
+  GRID
+  NUMBER
+  DATE
+}
+
+model SheetSection {
+  id           String      @id @default(cuid())
+  code         String      @unique
+  nameJa       String
+  nameEn       String?
+  order        Int         @default(0)
+  kind         SectionKind @default(SINGLE)
+  /// Which printed document the section appears on. 配属検討用の情報 and the
+  /// sales notes are printed only on the supplementary document — they are
+  /// deliberately absent from the skill sheet itself.
+  document     SheetDocument @default(SKILL_SHEET)
+  isVisible    Boolean     @default(true)
+  /// Hide the whole section when it holds no data — spec §5.3 (research output)
+  hideWhenEmpty Boolean    @default(false)
+  /// For REPEATING sections: which record kind it renders.
+  recordKind   RecordKind?
+  /// Maximum records displayed at once — spec §5.4 caps this at 3.
+  maxDisplayed Int         @default(3)
+  description  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  fields SheetField[]
+
+  @@index([order])
+  @@map("sheet_sections")
+}
+
+model SheetField {
+  id               String       @id @default(cuid())
+  sectionId        String
+  section          SheetSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  code             String       @unique
+  nameJa           String
+  nameEn           String?
+  order            Int          @default(0)
+  processing       Processing   @default(COPY)
+  editing          Editing      @default(MANUAL_ONLY)
+  valueType        ValueType    @default(STRING)
+  /// Shown on screen but excluded from the PDF (e.g. JLPT raw scores) — spec §5.3
+  includeInPdf     Boolean      @default(true)
+  /// Each item individually switchable per recipient company — spec §6.12
+  displayToggle    Boolean      @default(false)
+  isRequired       Boolean      @default(false)
+  /// Instruction handed to the AI. Editable from the admin screen so operators
+  /// can tune output without a developer — spec §5.3.
+  generationPrompt String?
+  targetLengthMin  Int?
+  targetLengthMax  Int?
+  /// Which glossary category to apply for GLOSSARY processing.
+  glossaryCategory GlossaryCategory?
+  /// Which deterministic rule to run for RULE_BASED processing,
+  /// e.g. "jlpt_description", "age_from_dob", "hometown_with_region".
+  ruleKey          String?
+  /// Free-form notes for the operator, shown as a hint in the editor.
+  helpText         String?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  sources SheetFieldSource[]
+  values  FieldValue[]
+
+  @@index([sectionId, order])
+  @@map("sheet_fields")
+}
+
+/// Which form question(s) feed a field. Several questions may combine into one
+/// field (spec §5.3, e.g. dietary info = A-1-7 + A-1-8).
+model SheetFieldSource {
+  id         String  @id @default(cuid())
+  fieldId    String
+  field      SheetField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  /// Question code. Kept as a string so a definition can be written before the
+  /// matching form revision is imported.
+  questionCode String
+  questionId   String?
+  question     FormQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  /// For REPEATING sections the code carries an "x" placeholder (E-x-6) that is
+  /// resolved per record using SheetRecord.sourcePrefix.
+  order      Int     @default(0)
+
+  @@unique([fieldId, questionCode])
+  @@index([questionCode])
+  @@map("sheet_field_sources")
+}
+
+// ===========================================================================
+// 4. People and the import layer  (spec §5.1, §5.2)
+// ===========================================================================
+
+model Person {
+  id                String   @id @default(cuid())
+  /// From the employee master; may be unknown at import time — spec §15.
+  employeeNumber    String?  @unique
+  fullNameEnglish   String
+  fullNameKatakana  String?
+  /// Email address collected by the form; used to match responses to people.
+  email             String?  @unique
+  dateOfBirth       DateTime? @db.Date
+  cohort            String?
+  photoKey          String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user        User?
+  skillSheet  SkillSheet?
+  responses   FormResponse[]
+  jlptResults JlptResult[]
+  memos       PersonMemo[]
+
+  @@index([cohort])
+  @@map("people")
+}
+
+enum ImportSource {
+  CSV
+  XLSX
+  SHEETS_API
+  MANUAL
+}
+
+model ImportBatch {
+  id             String       @id @default(cuid())
+  formRevisionId String
+  formRevision   FormRevision @relation(fields: [formRevisionId], references: [id])
+  importedById   String?
+  importedBy     User?        @relation(fields: [importedById], references: [id], onDelete: SetNull)
+  source         ImportSource @default(CSV)
+  fileName       String?
+  rowCount       Int          @default(0)
+  /// Question codes present in the file but not mapped to any field — surfaced
+  /// on screen as "unassigned questions" (spec §5.3).
+  unmappedHeaders String[]    @default([])
+  note           String?
+  createdAt      DateTime     @default(now())
+
+  responses FormResponse[]
+
+  @@map("import_batches")
+}
+
+/// The import layer (spec §5.1): raw form answers exactly as submitted.
+/// Written once at import and never modified afterwards.
+model FormResponse {
+  id            String      @id @default(cuid())
+  importBatchId String
+  importBatch   ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  personId      String?
+  person        Person?     @relation(fields: [personId], references: [id], onDelete: SetNull)
+  /// Key used to match the row to a person (normally the email address).
+  responseKey   String
+  submittedAt   DateTime?
+  /// { "A-1-1": "Priya Das", "D-1-1": ["Python", "C++"], "G-1-7": {...} }
+  answers       Json
+  createdAt     DateTime    @default(now())
+
+  @@unique([importBatchId, responseKey])
+  @@index([personId])
+  @@map("form_responses")
+}
+
+// ===========================================================================
+// 5. The skill sheet itself — working layer, versions, values  (spec §5.6)
+// ===========================================================================
+
+enum SheetStatus {
+  DRAFT
+  /// Reserved for phase 3: the person edited, an administrator must approve.
+  AWAITING_REVIEW
+  FINAL
+}
+
+model SkillSheet {
+  id               String    @id @default(cuid())
+  personId         String    @unique
+  person           Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  currentVersionId String?   @unique
+  currentVersion   SheetVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  versions       SheetVersion[]  @relation("SheetVersions")
+  records        SheetRecord[]
+  displayPresets DisplayPreset[]
+
+  @@map("skill_sheets")
+}
+
+/// Every save produces a version; a version can be restored (spec §5.6).
+model SheetVersion {
+  id           String      @id @default(cuid())
+  skillSheetId String
+  skillSheet   SkillSheet  @relation("SheetVersions", fields: [skillSheetId], references: [id], onDelete: Cascade)
+  versionNo    Int
+  status       SheetStatus @default(DRAFT)
+  note         String?
+  createdById  String?
+  createdBy    User?       @relation("VersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  finalisedAt  DateTime?
+  finalisedById String?
+  finalisedBy  User?       @relation("VersionFinalisedBy", fields: [finalisedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  values      FieldValue[]
+  exports     ExportHistory[]
+  currentFor  SkillSheet?  @relation("CurrentVersion")
+
+  @@unique([skillSheetId, versionNo])
+  @@index([status])
+  @@map("sheet_versions")
+}
+
+model FieldValue {
+  id         String       @id @default(cuid())
+  versionId  String
+  version    SheetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  fieldId    String
+  field      SheetField   @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  /// Set when the value belongs to a repeating record (internship/project).
+  recordId   String?
+  record     SheetRecord? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  /// Mirrors `recordId`, but "" instead of null when there is no record.
+  /// Postgres treats every NULL in a unique index as distinct, so a
+  /// `@@unique` built directly on a nullable `recordId` would silently allow
+  /// duplicate rows (and Prisma's `findUnique`/`upsert` refuse null in a
+  /// compound-unique selector outright). Keeping a non-null mirror column is
+  /// what makes "one value per field per record" an actual guarantee.
+  recordKey  String       @default("")
+
+  /// Japanese output printed on the sheet.
+  valueJa    String?
+  /// Structured value for lists and grids.
+  valueJson  Json?
+  /// The original English answer, always kept and shown beside the Japanese
+  /// so a reviewer can check the translation — spec §8.4.
+  sourceText String?
+
+  /// Locked fields are never touched by AI regeneration — spec §7.5.
+  isLocked   Boolean      @default(false)
+  /// False while the value is AI output nobody has checked yet — spec §7.5.
+  isReviewed Boolean      @default(false)
+  /// Per-field display switch for the fields that allow it — spec §6.12.
+  isDisplayed Boolean     @default(true)
+  /// Set when the value was produced by AI, for the "unreviewed" indicator.
+  generatedAt DateTime?
+  generatedBy String?
+  updatedAt  DateTime     @updatedAt
+
+  history FieldValueHistory[]
+
+  @@unique([versionId, fieldId, recordKey])
+  @@index([versionId])
+  @@index([fieldId])
+  @@index([recordId])
+  @@map("field_values")
+}
+
+enum ChangeType {
+  IMPORT
+  AI_GENERATE
+  RULE_GENERATE
+  MANUAL_EDIT
+  REVERT
+  LOCK
+  UNLOCK
+  REVIEW
+}
+
+/// Per-field history: who changed what, from what, to what, when — spec §5.6.
+model FieldValueHistory {
+  id           String     @id @default(cuid())
+  fieldValueId String
+  fieldValue   FieldValue @relation(fields: [fieldValueId], references: [id], onDelete: Cascade)
+  changeType   ChangeType
+  previousJa   String?
+  valueJa      String?
+  valueJson    Json?
+  /// The instruction typed by the operator for a prompted regeneration — §7.4.
+  prompt       String?
+  model        String?
+  changedById  String?
+  changedBy    User?      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+
+  @@index([fieldValueId, createdAt])
+  @@map("field_value_history")
+}
+
+// ===========================================================================
+// 6. Repeating records and display selection  (spec §5.4, §5.5)
+// ===========================================================================
+
+enum SheetDocument {
+  SKILL_SHEET
+  SUPPLEMENT
+}
+
+enum RecordKind {
+  EDUCATION
+  INTERNSHIP
+  PROJECT
+  /// Work carried out in Japan after joining, added by the person themselves
+  /// (Sano-san's reply to D-1: "you should be able to add your experience at
+  /// Nakajima-san's site yourself"). It has no form question behind it — the
+  /// form is filled in before joining — so these records are entered by hand.
+  WORK_EXPERIENCE
+}
+
+enum RecordOrigin {
+  IMPORTED
+  MANUAL
+}
+
+model SheetRecord {
+  id           String       @id @default(cuid())
+  skillSheetId String
+  skillSheet   SkillSheet   @relation(fields: [skillSheetId], references: [id], onDelete: Cascade)
+  kind         RecordKind
+  origin       RecordOrigin @default(IMPORTED)
+  /// Question prefix this record was imported from, e.g. "E-1" or "F-2".
+  sourcePrefix String?
+  /// Fallback ordering when no preset applies.
+  order        Int          @default(0)
+  /// Soft delete so a mistake can be undone — spec §5.4.
+  deletedAt    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  values    FieldValue[]
+  displays  RecordDisplay[]
+
+  @@index([skillSheetId, kind])
+  @@map("sheet_records")
+}
+
+/// A named set of "which records are shown, in what order" — kept separate from
+/// the record itself so several presets (A社向け / B社向け) can exist — spec §5.5.
+model DisplayPreset {
+  id           String     @id @default(cuid())
+  skillSheetId String
+  skillSheet   SkillSheet @relation(fields: [skillSheetId], references: [id], onDelete: Cascade)
+  name         String     @default("既定")
+  isDefault    Boolean    @default(true)
+  /// Field codes hidden in this preset (spec §6.12 per-item switches).
+  hiddenFieldCodes String[] @default([])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  displays RecordDisplay[]
+  exports  ExportHistory[]
+
+  @@unique([skillSheetId, name])
+  @@map("display_presets")
+}
+
+model RecordDisplay {
+  id          String        @id @default(cuid())
+  presetId    String
+  preset      DisplayPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  recordId    String
+  record      SheetRecord   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  isDisplayed Boolean       @default(false)
+  order       Int           @default(0)
+
+  @@unique([presetId, recordId])
+  @@map("record_displays")
+}
+
+// ===========================================================================
+// 7. Glossary  (spec §8.5)
+// ===========================================================================
+
+enum GlossaryCategory {
+  UNIVERSITY
+  MAJOR
+  DEGREE
+  STATE
+  TECH_TERM
+  HIGH_SCHOOL
+  OTHER
+}
+
+model GlossaryEntry {
+  id         String           @id @default(cuid())
+  category   GlossaryCategory
+  /// Canonical English spelling used for matching.
+  english    String
+  /// Other spellings that may appear in answers.
+  aliases    String[]         @default([])
+  japanese   String
+  /// Short explanation added on first use — spec §8.1.
+  gloss      String?
+  /// For STATE entries: 北インド / 南インド / ...
+  region     String?
+  note       String?
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([category, english])
+  @@index([category])
+  @@map("glossary_entries")
+}
+
+// ===========================================================================
+// 8. JLPT  (spec §6.10, ch.10)
+// ===========================================================================
+
+enum JlptLevel {
+  N1
+  N2
+  N3
+  N4
+  N5
+}
+
+/// Several attempts are kept as history; the latest pass drives the sheet.
+model JlptResult {
+  id                 String    @id @default(cuid())
+  personId           String
+  person             Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  level              JlptLevel
+  examYear           Int
+  /// 7 or 12
+  examMonth          Int
+  total              Int?
+  /// N1–N3 breakdown
+  languageKnowledge  Int?
+  reading            Int?
+  /// N4–N5 breakdown
+  languageAndReading Int?
+  /// All levels
+  listening          Int?
+  passed             Boolean?
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([personId, level, examYear, examMonth])
+  @@index([personId])
+  @@map("jlpt_results")
+}
+
+// ===========================================================================
+// 9. PDF export history  (spec §11.7)
+// ===========================================================================
+
+model ExportHistory {
+  id           String        @id @default(cuid())
+  versionId    String
+  version      SheetVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  presetId     String?
+  preset       DisplayPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  exportedById String?
+  exportedBy   User?         @relation(fields: [exportedById], references: [id], onDelete: SetNull)
+  fileName     String
+  /// Object storage key (S3 in production, local path in development).
+  storageKey   String
+  byteSize     Int?
+  createdAt    DateTime      @default(now())
+
+  @@index([versionId, createdAt])
+  @@map("export_history")
+}
+
+// ===========================================================================
+// 10. Application settings — key/value, editable from the admin screen
+// ===========================================================================
+
+model Setting {
+  key       String   @id
+  value     Json
+  note      String?
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/// A free note about a person, for the supplementary document only.
+///
+/// Sano-san asked for the date to be stamped automatically whenever a memo is
+/// added, so the timestamp is the row's own createdAt rather than anything the
+/// author types — it cannot be backdated or forgotten. Memos are never edited
+/// in place: a correction is a new memo, which keeps the record honest.
+model PersonMemo {
+  id          String   @id @default(cuid())
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  body        String
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([personId, createdAt])
+  @@map("person_memos")
+}

@@ -1,0 +1,33 @@
+# ローカル開発用。アプリ本体は `npm run dev` でホスト側で動かします。
+# ここではデータベースとメール確認用のツールだけを起動します。
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: skillsheet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skillsheet
+      POSTGRES_PASSWORD: skillsheet
+      POSTGRES_DB: skillsheet
+      TZ: Asia/Tokyo
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U skillsheet']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 送信メール（ログインリンク）をブラウザで確認できます: http://localhost:8025
+  mail:
+    image: axllent/mailpit:latest
+    container_name: skillsheet-mail
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  db-data:

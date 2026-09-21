@@ -1,0 +1,39 @@
+# EC2インスタンス上での構成。
+# データベースは当面同一インスタンスに同居させ、将来RDSへ移行できるよう
+# 接続先は環境変数のみで切り替えられるようにしています（仕様書5.7節）。
+
+services:
+  app:
+    build: .
+    image: dx-skillsheet:latest
+    restart: unless-stopped
+    env_file: .env.production
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+    # Chromium は既定の 64MB では起動に失敗します（仕様書11.3節）。
+    shm_size: '512mb'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skillsheet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: skillsheet
+      TZ: Asia/Tokyo
+    volumes:
+      - /var/lib/skillsheet/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U skillsheet']
+      interval: 10s
+      timeout: 5s
+      retries: 5

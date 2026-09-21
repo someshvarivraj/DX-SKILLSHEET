@@ -1,0 +1,69 @@
+{
+  "name": "dx-skillsheet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IIT Skill Sheet Generation System (DX) — Morub Hanshin Kogyo",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start -p ${PORT:-3000}",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed/index.ts",
+    "db:demo": "tsx prisma/seed/demo.ts",
+    "db:reset": "prisma migrate reset --force",
+    "form:parse": "tsx scripts/parse-form-script.ts",
+    "sample:responses": "tsx scripts/make-sample-responses.ts",
+    "sample:responses2": "tsx scripts/make-sample-responses-2.ts",
+    "setup": "npm install && npm run db:generate && npm run db:migrate && npm run db:seed",
+    "postinstall": "prisma generate",
+    "template:fields": "TSX_TSCONFIG_PATH=./tsconfig.scripts.json tsx scripts/make-field-template.ts && node scripts/render-template.mjs",
+    "sample:sheet": "TSX_TSCONFIG_PATH=./tsconfig.scripts.json tsx scripts/make-sample-sheet.tsx && node scripts/render-sample-sheet.mjs",
+    "ai:measure": "tsx scripts/measure-ai-usage.ts",
+    "ui:preview": "tailwindcss -i src/app/globals.css -o scripts/ui-preview.css --content \"scripts/ui-preview*.html,src/**/*.tsx\"",
+    "ai:report": "tsx scripts/measure-ai-usage.ts && tsx scripts/make-ai-cost-report.ts && node scripts/render-ai-cost.mjs"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.658.0",
+    "@aws-sdk/client-s3": "^3.658.0",
+    "@aws-sdk/s3-request-presigner": "^3.658.0",
+    "@prisma/client": "^6.1.0",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.462.0",
+    "next": "15.1.3",
+    "nodemailer": "^6.9.16",
+    "playwright-core": "^1.49.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.2",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.1.3",
+    "playwright": "^1.49.1",
+    "prisma": "^6.1.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}

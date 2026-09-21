@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>UIプレビュー</title>
+    <link rel="stylesheet" href="./ui-preview.css" />
+  </head>
+  <!--
+    A static rendering of the application's chrome, built from the same
+    stylesheet the app uses, so the design can be looked at without a database.
+    It is a review harness, not a screen the application serves.
+  -->
+  <body>
+    <div class="min-h-screen">
+    <header class="app-header sticky top-0 z-30">
+      <div class="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-2.5">
+        <a href="#" class="wordmark"><span class="mark">SS</span>スキルシート管理システム</a>
+        <nav class="order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto md:order-none md:w-auto md:flex-1">
+          <a href="#" class="nav-link" aria-current="page">対象者一覧</a>
+          <a href="#" class="nav-link">取り込み</a>
+          <a href="#" class="nav-link">項目定義</a>
+          <a href="#" class="nav-link">対訳辞書</a>
+          <a href="#" class="nav-link">利用者</a>
+          <a href="#" class="nav-link">操作ログ</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <span class="text-right text-xs leading-tight text-ink-500">
+            <span class="block font-semibold text-ink-900">田中 健一</span>
+            <span class="block text-ink-400">営業</span>
+          </span>
+          <button class="btn btn-secondary">ログアウト</button>
+        </div>
+      </div>
+      <div class="env-banner">
+        AIサービスは未接続です（モックプロバイダで動作中）。生成された文章は仮のものです。
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1400px] space-y-5 px-6 py-7">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="page-title">対象者一覧</h1>
+        <button class="btn btn-primary">アンケート回答を取り込む</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div class="card border-t-[3px] border-brand-400 px-4 py-3 text-ink-900">
+          <p class="text-xs font-medium text-ink-500">登録人数</p>
+          <p class="tabular mt-0.5 text-xl font-bold">18名</p>
+        </div>
+        <div class="card border-t-[3px] border-review-line px-4 py-3 text-review-ink">
+          <p class="text-xs font-medium text-ink-500">確認待ち</p>
+          <p class="tabular mt-0.5 text-xl font-bold">3件</p>
+        </div>
+        <div class="card border-t-[3px] border-final-line px-4 py-3 text-final-ink">
+          <p class="text-xs font-medium text-ink-500">確定済み</p>
+          <p class="tabular mt-0.5 text-xl font-bold">11名</p>
+        </div>
+        <div class="card border-t-[3px] border-accent-500/45 px-4 py-3 text-[#b03a22]">
+          <p class="text-xs font-medium text-ink-500">未確認の項目</p>
+          <p class="tabular mt-0.5 text-xl font-bold">7項目</p>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>氏名</th><th>社員番号</th><th>期</th><th>日本語</th>
+              <th>状態</th><th>未確認</th><th class="!text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a href="#" class="font-semibold text-ink-900">ナイル・プリヤ</a>
+                <div class="text-xs text-ink-400">Priya Nair</div>
+              </td>
+              <td class="tabular text-ink-700">IIT-2026-018</td>
+              <td class="tabular text-ink-700">2026</td>
+              <td class="text-ink-700">N4</td>
+              <td><span class="badge badge-final">確定<span class="font-normal opacity-70">第3版</span></span></td>
+              <td><span class="text-xs text-ink-400">なし</span></td>
+              <td class="text-right">
+                <div class="flex justify-end gap-2">
+                  <button class="btn btn-secondary">編集</button>
+                  <button class="btn btn-quiet">プレビュー</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="#" class="font-semibold text-ink-900">デブナート・プリヤンカ</a>
+                <div class="text-xs text-ink-400">Priyanka Debnath</div>
+              </td>
+              <td class="tabular text-ink-700">IIT-2026-021</td>
+              <td class="tabular text-ink-700">2026</td>
+              <td class="text-ink-700">N3</td>
+              <td><span class="badge badge-review">確認待ち<span class="font-normal opacity-70">第2版</span></span></td>
+              <td><span class="badge badge-warn">4項目</span></td>
+              <td class="text-right">
+                <div class="flex justify-end gap-2">
+                  <button class="btn btn-secondary">編集</button>
+                  <button class="btn btn-quiet">プレビュー</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="#" class="font-semibold text-ink-900">シャルマ・ラフル</a>
+                <div class="text-xs text-ink-400">Rahul Sharma</div>
+              </td>
+              <td class="tabular text-ink-700">IIT-2026-024</td>
+              <td class="tabular text-ink-700">2026</td>
+              <td class="text-ink-700">—</td>
+              <td><span class="badge badge-draft">下書き<span class="font-normal opacity-70">第1版</span></span></td>
+              <td><span class="badge badge-warn">12項目</span></td>
+              <td class="text-right">
+                <div class="flex justify-end gap-2">
+                  <button class="btn btn-secondary">編集</button>
+                  <button class="btn btn-quiet">プレビュー</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- Editor: toolbar plus two section panels in their printed colours. -->
+      <div class="card sticky-below-header px-4 py-3 shadow-lift">
+        <div class="flex flex-wrap items-center gap-3">
+          <div>
+            <h1 class="page-title text-base">ナイル・プリヤ</h1>
+            <p class="tabular pl-[calc(4px+0.6rem)] text-xs text-ink-400">Priya Nair ・ No.IIT-2026-018</p>
+          </div>
+          <span class="badge badge-review">確認待ち 第2版</span>
+          <span class="badge badge-warn">未確認 4項目</span>
+          <button class="btn btn-secondary">未入力の一覧（3）</button>
+          <span class="flex-1"></span>
+          <span class="tabular text-xs text-ink-400">最終保存 2026/09/19 14:32</span>
+          <button class="btn btn-secondary">プレビュー</button>
+          <button class="btn btn-secondary">確認を依頼する</button>
+          <button class="btn btn-primary">確定する</button>
+        </div>
+        <p class="section-note mt-3">
+          生成された文章のうち80項目が未確認である。各項目の内容を確認し「確認済み」にすると確定できる。
+        </p>
+      </div>
+
+      <!-- The long list lives outside the pinned bar. -->
+      <div class="card border-accent-500/35 bg-accent-50 px-4 py-3 text-xs text-[#b03a22]" id="unreviewed">
+        <div class="flex flex-wrap items-baseline gap-2">
+          <p class="font-semibold">確認が済んでいない項目（80件）</p>
+          <p class="text-ink-500">各項目の「確認済み」にチェックを入れると確定できる。</p>
+        </div>
+        <ul class="mt-1.5 grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3" id="ulist"></ul>
+      </div>
+
+      <section class="card overflow-hidden">
+        <header class="panel-head" style="--accent: #3D5A8A; --accent-tint: #EAEFF7">
+          <button class="panel-title inline-flex items-center gap-1.5"><span class="text-xs opacity-70">▾</span>個人情報</button>
+          <span class="panel-title-en">Personal Information</span>
+          <span class="flex-1"></span>
+          <button class="btn btn-secondary">セクション一括生成</button>
+        </header>
+        <div class="border-t border-ink-100 px-4 py-3">
+          <label class="field-label">氏名</label>
+          <input class="input" value="ナイル・プリヤ／Priya Nair" />
+          <span class="field-hint">カタカナと英語を併記する。カタカナは中黒「・」で区切る。</span>
+        </div>
+        <div class="border-t border-ink-100 px-4 py-3">
+          <label class="field-label">出身地</label>
+          <input class="input" value="コーチ・ケーララ州（南インド）" />
+          <span class="field-hint">地域区分は辞書の対応表から機械的に決定する。</span>
+        </div>
+      </section>
+
+      <section class="card overflow-hidden">
+        <header class="panel-head" style="--accent: #A94F46; --accent-tint: #F9ECEA">
+          <button class="panel-title inline-flex items-center gap-1.5"><span class="text-xs opacity-70">▾</span>日本語能力</button>
+          <span class="panel-title-en">Japanese Language Ability</span>
+          <span class="flex-1"></span>
+          <button class="btn btn-secondary">セクション一括生成</button>
+        </header>
+        <div class="border-t border-ink-100 px-4 py-3">
+          <label class="field-label">日本語力について</label>
+          <textarea class="textarea" rows="3">N4を取得している。言語知識・読解は120点中78点と一定の水準にあり、仕様書や手順書を辞書を用いて読み進められる。</textarea>
+          <div class="mt-1.5 flex gap-2">
+            <button class="btn btn-primary">AIで生成</button>
+            <button class="btn btn-secondary">確認済みにする</button>
+            <button class="btn btn-danger">削除</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card overflow-hidden">
+        <header class="panel-head" style="--accent: #4E6A7A; --accent-tint: #EBF0F3">
+          <button class="panel-title inline-flex items-center gap-1.5"><span class="text-xs opacity-70">▾</span>配属検討用の情報</button>
+          <span class="panel-title-en">Information for Placement Decisions</span>
+          <span class="badge badge-warn">補足資料のみ</span>
+        </header>
+        <div class="border-t border-ink-100 px-4 py-3 text-sm text-ink-700">
+          この区分はスキルシートには出力されず、補足資料にのみ出力される。
+        </div>
+      </section>
+          <div class="card px-4 py-6 text-sm text-ink-500" style="min-height: 1400px">
+        スクロール確認用の余白。
+      </div>
+    </main>
+    </div>
+    <script>
+      // Mirrors <HeaderOffset>: measure, don't guess.
+      // 80 rows, as in the screenshot that prompted this.
+      const names = ['個人情報／氏名','個人情報／出身地','個人情報／年齢','学歴／大学名','学歴／専攻名','学歴／学位','学歴／成績','技術スキル／プログラミング言語','技術スキル／CAD・3Dモデリング','インターンシップ／果たした役割'];
+      document.getElementById('ulist').innerHTML =
+        Array.from({ length: 80 }, (_, i) => `<li>${names[i % names.length]}</li>`).join('');
+      const header = document.querySelector('header.app-header');
+      const apply = () =>
+        document.documentElement.style.setProperty(
+          '--app-header-h',
+          Math.round(header.getBoundingClientRect().height) + 'px',
+        );
+      apply();
+      new ResizeObserver(apply).observe(header);
+    </script>
+  </body>
+</html>

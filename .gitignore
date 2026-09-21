@@ -1,0 +1,33 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# environment — never commit real secrets
+.env
+.env.local
+.env.production
+.env*.local
+!.env.example
+!.env.production.example
+
+# local runtime data
+/storage/
+/tmp/
+/var/
+*.log
+
+# editor
+.DS_Store
+.vscode/
+.idea/
+
+# test
+coverage/
+
+# build harness output
+/tmp-sample-*.html
+/scripts/ui-preview.css

@@ -1,0 +1,790 @@
+@import 'tailwindcss';
+
+/* ===========================================================================
+   Design tokens.
+
+   The palette is the company's own, taken from morabu.com rather than invented:
+   navy #102B54 for text and headings, #044BA7 for primary actions, #0069F0 for
+   the active and hover state, #7486A2 for muted text, the warm cream #FCF8EF
+   that the corporate site uses instead of a cold grey, and #FF4D33 as the one
+   accent the site reserves for emphasis.
+
+   The cream is the reason this screen no longer looks like a default admin
+   panel: a warm background makes white cards read as raised, where a grey one
+   makes them read as flat.
+   =========================================================================== */
+
+@theme {
+  /* "system-ui" is deliberately not first: on Japanese Windows it resolves to
+     Yu Gothic, which is thin and hard to read at small sizes. Name the faces we
+     actually want, in the order Japanese sites normally list them. */
+  --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
+    'Yu Gothic', YuGothic, Meiryo, system-ui, sans-serif;
+
+  /* The type scale is raised one step across the board. Japanese needs more
+     vertical space than Latin at the same nominal size — kanji fill the em box,
+     so 12px Japanese reads smaller than 12px English — and the screens here are
+     read all day by operators. Line heights follow the 1.7–2.0 band that
+     Japanese body text conventionally uses rather than Tailwind's tighter
+     Latin defaults. */
+  --text-xs: 0.8125rem; /* 13px, was 12px */
+  --text-xs--line-height: 1.7;
+  --text-sm: 0.9375rem; /* 15px, was 14px */
+  --text-sm--line-height: 1.75;
+  --text-base: 1.0625rem; /* 17px, was 16px */
+  --text-base--line-height: 1.8;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.7;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.6;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.5;
+
+  /* Brand — morabu.com */
+  --color-brand-50: #eef4fd;
+  --color-brand-100: #d8e6fa;
+  --color-brand-200: #b4cef4;
+  --color-brand-300: #7ba9ea;
+  --color-brand-400: #0069f0; /* site: active tab, link hover */
+  --color-brand-500: #044ba7; /* site: headings, primary blocks */
+  --color-brand-600: #06407f;
+  --color-brand-700: #102b54; /* site: body ink */
+
+  /* Warm neutrals — the site's cream, extended into a working scale. */
+  --color-sand-50: #fdfbf7;
+  --color-sand-100: #fcf8ef;
+  --color-sand-200: #f5eee1;
+  --color-sand-300: #e8dfcd;
+
+  /* Cool neutrals for rules, borders and secondary text. */
+  --color-ink-900: #102b54;
+  --color-ink-700: #33415c;
+  --color-ink-500: #5b6b85;
+  /* The site uses #7486A2 for an inactive tab. At 13px on white that is 3.7:1,
+     below the 4.5:1 needed for text, and this tone carries real information
+     here — the English name, the role, the timestamp. Darkened to the nearest
+     value that clears it (4.67:1 on white, 4.41:1 on the cream). */
+  --color-ink-400: #647591;
+  --color-ink-200: #cfd8e5;
+  --color-ink-100: #e4eaf2;
+
+  /* The single accent, used as sparingly here as on the site. */
+  --color-accent-500: #ff4d33;
+  --color-accent-50: #fff1ee;
+
+  /* Workflow status. Semantic, not decorative: an operator learns these three
+     colours once and reads them everywhere. */
+  --color-draft-bg: #fdf4e3;
+  --color-draft-line: #e6cf9f;
+  --color-draft-ink: #7a5610;
+  --color-review-bg: #e8f0fd;
+  --color-review-line: #b6cdf1;
+  --color-review-ink: #0a4183;
+  --color-final-bg: #e6f4ea;
+  --color-final-line: #aed7bb;
+  --color-final-ink: #1f6135;
+
+  --radius-card: 12px;
+
+  --shadow-card: 0 1px 2px rgba(16, 43, 84, 0.05), 0 1px 3px rgba(16, 43, 84, 0.04);
+  --shadow-lift: 0 4px 12px rgba(16, 43, 84, 0.1), 0 2px 4px rgba(16, 43, 84, 0.06);
+}
+
+:root {
+  /* Measured at runtime by <HeaderOffset>. The fallback is the header's height
+     with one row of navigation and no environment banner, so the layout is
+     still sensible for the first paint and if the script never runs. */
+  --app-header-h: 3.5rem;
+}
+
+/* min-height, not height: a fixed `height: 100%` caps the body box at one
+   viewport, and a sticky child can only stick inside its containing block — so
+   the header would come unstuck as soon as the page scrolled past the first
+   screenful. */
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  /* Warm cream, lifted very slightly at the top so a long page has some depth
+     rather than reading as one flat field. */
+  background:
+    radial-gradient(120% 60% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    var(--color-sand-100);
+  background-attachment: fixed;
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  /* 禁則処理 — a line must never begin with 、。）」 or end with （「. */
+  line-break: strict;
+  /* Break inside a long unbroken Latin run (an email, a URL, a question code)
+     only when it would otherwise overflow its container. */
+  overflow-wrap: anywhere;
+  word-break: normal;
+  text-spacing-trim: trim-start;
+}
+
+/* Japanese sets emphasis with weight; italic kana and kanji are not used. */
+:is(em, i, cite, dfn, address) {
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Headings use proportional kerning, the way Japanese sites tighten full-width
+   characters, and break at phrase boundaries where the browser supports it. */
+/* Colour is deliberately NOT set here. A heading inherits the body ink already,
+   and pinning it would beat any explicit colour on an ancestor — which is how a
+   white heading on the login screen's dark panel turned navy-on-navy. */
+:is(h1, h2, h3, h4, h5, h6) {
+  font-feature-settings: 'palt';
+  letter-spacing: 0.02em;
+}
+@supports (word-break: auto-phrase) {
+  :is(h1, h2, h3, h4, h5, h6) {
+    word-break: auto-phrase;
+  }
+}
+
+/* ===========================================================================
+   Application shell
+   =========================================================================== */
+
+.app-header {
+  background: #fff;
+  border-bottom: 1px solid var(--color-ink-100);
+  box-shadow: 0 1px 2px rgba(16, 43, 84, 0.04);
+}
+/* A thin brand rule along the very top. It costs three pixels and is the
+   difference between "a page" and "this company's tool". */
+.app-header::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-700) 0%,
+    var(--color-brand-500) 45%,
+    var(--color-brand-400) 100%
+  );
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-ink-900);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.wordmark .mark {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-400));
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: 0 1px 3px rgba(4, 75, 167, 0.35);
+}
+
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 7px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-500);
+  white-space: nowrap;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease;
+}
+.nav-link:hover {
+  background: var(--color-brand-50);
+  color: var(--color-brand-500);
+}
+/* The current screen is marked by an underline in the brand colour, not by a
+   filled pill — the filled state is reserved for buttons, so a reader is never
+   in doubt about what is clickable and what is merely current. */
+.nav-link[aria-current='page'] {
+  color: var(--color-brand-500);
+}
+.nav-link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 0.7rem;
+  right: 0.7rem;
+  bottom: -0.35rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-brand-400);
+}
+
+.env-banner {
+  background: linear-gradient(90deg, var(--color-accent-50), var(--color-sand-200));
+  border-bottom: 1px solid var(--color-sand-300);
+  color: #8a3d2c;
+  font-size: 0.8125rem;
+  padding: 0.4rem 1.5rem;
+  text-align: center;
+}
+
+/* Anything that sticks below the header sits exactly at its lower edge: no gap
+   for scrolled content to show through, and no overlap that would cut it off. */
+.sticky-below-header {
+  position: sticky;
+  top: var(--app-header-h);
+  z-index: 20;
+  /* A sticky block taller than the window has to be scrolled past before the
+     page moves, which reads as the page being stuck. Long content belongs
+     outside this bar, and this cap makes sure that even if something long ends
+     up inside it, it scrolls within itself instead of freezing the page. */
+  max-height: calc(100dvh - var(--app-header-h) - 1rem);
+  overflow-y: auto;
+}
+/* On a narrow window the toolbar's controls wrap onto four or five rows, and a
+   pinned block that tall would swallow half the screen. Below the breakpoint it
+   scrolls with the page. */
+@media (max-width: 767px) {
+  .sticky-below-header {
+    position: static;
+  }
+}
+/* Jumping to a section must not park it underneath the header. */
+[id^='section-'] {
+  scroll-margin-top: calc(var(--app-header-h) + 0.75rem);
+}
+
+/* ===========================================================================
+   Surfaces
+   =========================================================================== */
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-ink-100);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+/* For a card that is itself a link or a button. */
+.card-hover {
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.card-hover:hover {
+  border-color: var(--color-brand-200);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+/* The heading strip on a panel. `--accent` is set per section (see the section
+   colour map shared with the printed sheet), so the editor and the PDF use the
+   same colour for the same section and an operator can match them at a glance. */
+.panel-head {
+  --accent: var(--color-brand-500);
+  --accent-tint: var(--color-brand-50);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--accent-tint);
+  border-left: 4px solid var(--accent);
+  padding: 0.6rem 0.95rem;
+}
+.panel-head .panel-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.panel-head .panel-title-en {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink-400);
+}
+
+/* A page's own title, with the brand tick that ties it to the header rule. */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+.page-title::before {
+  content: '';
+  width: 4px;
+  height: 1.15rem;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--color-brand-400), var(--color-brand-500));
+}
+
+/* ===========================================================================
+   Controls
+   =========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 7px;
+  /* A comfortable hit target: 36px tall, which is the minimum that stays
+     easy to click through a long editing session. */
+  min-height: 2.25rem;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.08s ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* A visible keyboard focus ring on every control, not just on hover. */
+.btn:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--color-brand-500);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(4, 75, 167, 0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-brand-400);
+  box-shadow: 0 2px 6px rgba(0, 105, 240, 0.32);
+}
+.btn-secondary {
+  background: #fff;
+  border-color: var(--color-ink-200);
+  color: var(--color-ink-700);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-200);
+  color: var(--color-brand-500);
+}
+.btn-danger {
+  background: #fff;
+  border-color: #f0bdb2;
+  color: #c0341c;
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-accent-50);
+  border-color: var(--color-accent-500);
+}
+/* For a secondary action that should not compete with the primary button. */
+.btn-quiet {
+  background: transparent;
+  /* A dashed-off transparent border would make this read as disabled next to a
+     bordered secondary button, so it keeps a faint one and full label weight. */
+  border-color: transparent;
+  color: var(--color-brand-500);
+  font-weight: 600;
+}
+.btn-quiet:hover:not(:disabled) {
+  background: var(--color-brand-50);
+  color: var(--color-brand-500);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 7px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  background: #fff;
+  color: var(--color-ink-900);
+  font-family: inherit;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: #a7b3c5;
+}
+.input:hover:not(:disabled),
+.textarea:hover:not(:disabled),
+.select:hover:not(:disabled) {
+  border-color: var(--color-brand-300);
+}
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-brand-400);
+  box-shadow: 0 0 0 3px rgba(0, 105, 240, 0.14);
+}
+.textarea {
+  line-height: 1.9;
+  resize: vertical;
+}
+
+/* A form control's own label, and the one-line explanation under it. Labelling
+   every field with what it is for is the difference between an operator
+   guessing and an operator knowing. */
+.field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-700);
+  margin-bottom: 0.25rem;
+}
+.field-hint {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--color-ink-500);
+  margin-top: 0.25rem;
+}
+/* An explanation of what a whole screen or panel is for. */
+.section-note {
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  color: var(--color-ink-700);
+  background: var(--color-brand-50);
+  border: 1px solid var(--color-brand-100);
+  border-left: 3px solid var(--color-brand-400);
+  border-radius: 0 7px 7px 0;
+  padding: 0.6rem 0.85rem;
+}
+
+/* ===========================================================================
+   Select (see src/components/ui/select.tsx)
+   =========================================================================== */
+
+.select-root {
+  position: relative;
+  width: 100%;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--color-ink-900);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--color-brand-300);
+}
+.select-trigger:focus-visible,
+.select-trigger[aria-expanded='true'] {
+  outline: none;
+  border-color: var(--color-brand-400);
+  box-shadow: 0 0 0 3px rgba(0, 105, 240, 0.14);
+}
+.select-trigger:disabled {
+  background: var(--color-sand-50);
+  color: var(--color-ink-400);
+  cursor: not-allowed;
+}
+.select-value,
+.select-placeholder {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-placeholder {
+  color: #a7b3c5;
+}
+/* The trigger's own second line: what distinguishes this choice from a
+   similarly-named one. */
+.select-hint {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-ink-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-caret {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 5px;
+  background: var(--color-brand-50);
+  color: var(--color-brand-500);
+  transition: transform 0.15s ease;
+}
+.select-trigger[aria-expanded='true'] .select-caret {
+  transform: rotate(180deg);
+}
+
+.select-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--color-ink-100);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+  animation: select-in 0.12s ease-out;
+}
+@keyframes select-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.select-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-sand-50);
+}
+.select-list {
+  max-height: 17rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  margin: 0;
+  list-style: none;
+}
+.select-list:focus-visible {
+  outline: none;
+}
+.select-group {
+  padding: 0.4rem 0.6rem 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-ink-400);
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+/* Highlight follows the keyboard as well as the pointer, so arrowing through
+   the list looks the same as moving the mouse over it. */
+.select-option[data-active='true'] {
+  background: var(--color-brand-50);
+}
+.select-option[aria-selected='true'] {
+  color: var(--color-brand-500);
+  font-weight: 600;
+}
+.select-option[aria-disabled='true'] {
+  color: var(--color-ink-400);
+  cursor: not-allowed;
+}
+.select-option-label {
+  flex: 1;
+  min-width: 0;
+}
+.select-option-hint {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-ink-400);
+}
+.select-check {
+  flex: none;
+  color: var(--color-brand-400);
+}
+.select-empty {
+  padding: 0.7rem 0.6rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-400);
+  text-align: center;
+}
+
+/* ===========================================================================
+   Status
+   =========================================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+/* A coloured dot in front of the label, so the three workflow states are
+   distinguishable without relying on the fill colour alone. */
+.badge::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+.badge-plain::before {
+  display: none;
+}
+.badge-draft {
+  background: var(--color-draft-bg);
+  border-color: var(--color-draft-line);
+  color: var(--color-draft-ink);
+}
+.badge-review {
+  background: var(--color-review-bg);
+  border-color: var(--color-review-line);
+  color: var(--color-review-ink);
+}
+.badge-final {
+  background: var(--color-final-bg);
+  border-color: var(--color-final-line);
+  color: var(--color-final-ink);
+}
+.badge-warn {
+  background: var(--color-accent-50);
+  border-color: #f4bfb4;
+  color: #b03a22;
+}
+
+/* ===========================================================================
+   Tables
+   =========================================================================== */
+
+/* A wide table scrolls inside its own card rather than pushing the whole page
+   sideways on a narrow screen. */
+.table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.data-table {
+  width: 100%;
+  /* Below this the columns get so narrow that Japanese wraps one character per
+     line, which is correct behaviour in a box that should never have been that
+     narrow. The scroller above handles the rest. */
+  min-width: 62rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9375rem;
+}
+.data-table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-sand-50);
+  border-bottom: 1px solid var(--color-ink-100);
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-ink-500);
+  white-space: nowrap;
+}
+.data-table > tbody > tr > td {
+  /* A long Latin token (an employee number, an address) may break; a word in
+     the middle of a sentence should not. */
+  overflow-wrap: break-word;
+  border-bottom: 1px solid #f0f3f8;
+  padding: 0.65rem 1rem;
+  vertical-align: middle;
+}
+.data-table > tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+.data-table > tbody > tr {
+  transition: background-color 0.1s ease;
+}
+.data-table > tbody > tr:hover {
+  background: var(--color-brand-50);
+}
+
+/* Tabular data: numbers and dates line up column to column. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+   Motion
+
+   One short fade-and-rise on first paint. Anything longer gets in the way of
+   someone who opens this screen forty times a day, and it is switched off
+   entirely for a reader who has asked for reduced motion.
+   =========================================================================== */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.28s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .card-hover:hover {
+    transform: none;
+  }
+}
