@@ -41,11 +41,11 @@ jobs:
       - name: Package source
         run: |
           tar --exclude='.git' --exclude='node_modules' --exclude='.next' --exclude='storage' \
-              -czf app.tar.gz .
+              -czf /tmp/app.tar.gz .
 
       - name: Upload to S3
         run: |
-          aws s3 cp app.tar.gz "s3://${{ vars.DEPLOY_BUCKET }}/app-${{ github.sha }}.tar.gz"
+          aws s3 cp /tmp/app.tar.gz "s3://${{ vars.DEPLOY_BUCKET }}/app-${{ github.sha }}.tar.gz"
 
       - name: Trigger rebuild on EC2
         env:
