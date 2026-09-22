@@ -1,0 +1,94 @@
+# 体験環境への自動デプロイ。
+#
+# main への push をトリガーに、GitHub Actions が AWS に一時的な認証情報で
+# ログインし（OIDC。長期のアクセスキーはどこにも保存しない）、最新のソースを
+# S3 に置いてから、SSM 経由で EC2 上に再展開する。手順は今まで手動でやって
+# いたもの（tar 作成 → S3 アップロード → SSM でビルド・再起動）と同じで、
+# それを push のたびに自動で行うだけである。
+#
+# 一度きりのAWS側セットアップは docs/ci-cd/README.md を参照。本番の別AWSアカウント
+# へ移すときは、そちらの手順を新アカウントでもう一度実行し、下の3つの
+# リポジトリ変数（Settings → Secrets and variables → Actions → Variables）を
+# 新しい値に差し替えるだけでよい。シークレットは一切使わない。
+#
+#   AWS_DEPLOY_ROLE_ARN  例: arn:aws:iam::514917275273:role/dx-skillsheet-github-deploy
+#   DEPLOY_BUCKET        例: dx-skillsheet-deploy-514917275273
+#   DEPLOY_INSTANCE_ID   例: i-0521602aa68362440
+
+name: Deploy to trial EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write # OIDCでAWSの一時認証情報を受け取るために必要
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC — 保存された鍵は使わない)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Package source
+        run: |
+          tar --exclude='.git' --exclude='node_modules' --exclude='.next' --exclude='storage' \
+              -czf app.tar.gz .
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp app.tar.gz "s3://${{ vars.DEPLOY_BUCKET }}/app-${{ github.sha }}.tar.gz"
+
+      - name: Trigger rebuild on EC2
+        env:
+          BUCKET: ${{ vars.DEPLOY_BUCKET }}
+          KEY: app-${{ github.sha }}.tar.gz
+          INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+        run: |
+          set -e
+          cat > /tmp/commands.json <<EOF
+          {
+            "commands": [
+              "set -e",
+              "cd /opt",
+              "aws s3 cp s3://${BUCKET}/${KEY} /opt/app.tar.gz",
+              "rm -rf dx-skillsheet-new && mkdir dx-skillsheet-new",
+              "tar -xzf /opt/app.tar.gz -C dx-skillsheet-new",
+              "cp /opt/dx-skillsheet/.env dx-skillsheet-new/.env",
+              "cp /opt/dx-skillsheet/.env.production dx-skillsheet-new/.env.production",
+              "mv /opt/dx-skillsheet /opt/dx-skillsheet-prev-$(date +%s)",
+              "mv /opt/dx-skillsheet-new /opt/dx-skillsheet",
+              "cd /opt/dx-skillsheet",
+              "docker compose -f docker-compose.prod.yml --env-file .env build app",
+              "docker compose -f docker-compose.prod.yml --env-file .env up -d app",
+              "rm -f /opt/app.tar.gz",
+              "echo DEPLOY_DONE"
+            ]
+          }
+          EOF
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/commands.json \
+            --query 'Command.CommandId' --output text)
+          echo "SSM command: $CMD_ID"
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query 'Status' --output text 2>/dev/null || echo "Pending")
+            echo "status: $STATUS"
+            case "$STATUS" in
+              Success) break ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID"
+                exit 1 ;;
+              *) sleep 10 ;;
+            esac
+          done
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID"

@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UploadDeployArtifact",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::dx-skillsheet-deploy-514917275273/*"
+    },
+    {
+      "Sid": "TriggerDeployOnInstance",
+      "Effect": "Allow",
+      "Action": ["ssm:SendCommand"],
+      "Resource": [
+        "arn:aws:ec2:us-east-1:514917275273:instance/i-0521602aa68362440",
+        "arn:aws:ssm:us-east-1::document/AWS-RunShellScript"
+      ]
+    },
+    {
+      "Sid": "ReadDeployStatus",
+      "Effect": "Allow",
+      "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"],
+      "Resource": "*"
+    }
+  ]
+}
