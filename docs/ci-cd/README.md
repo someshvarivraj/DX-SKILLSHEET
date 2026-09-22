@@ -62,6 +62,26 @@ aws iam get-role --role-name dx-skillsheet-github-deploy --query 'Role.Arn' --ou
 # 例: arn:aws:iam::514917275273:role/dx-skillsheet-github-deploy
 ```
 
+## 2.5 体験用EC2インスタンス自身のS3読み取り権限も広げる
+
+体験環境の構築時、EC2インスタンス自身のIAMロール(`dx-skillsheet-ec2`)には
+S3から読み取れるオブジェクトが `app.tar.gz` という決め打ちのファイル名1つだけに
+制限されていた(最初の手動デプロイのときの名残)。このCI/CDワークフローは
+コミットのSHAを含むファイル名(`app-<sha>.tar.gz`)を毎回アップロードするため、
+このままでは EC2 側が403 Forbiddenで読み取りに失敗する。
+
+同じディレクトリの `ec2-read-deploy-artifact-policy.json` で、バケット内の
+オブジェクト全体を読めるように広げてある。EC2インスタンスのロール名は環境
+ごとに異なる可能性があるため、実際のロール名を確認してから適用すること
+(体験環境では `dx-skillsheet-ec2`)。
+
+```bash
+aws iam put-role-policy \
+  --role-name dx-skillsheet-ec2 \
+  --policy-name read-deploy-artifact \
+  --policy-document file://ec2-read-deploy-artifact-policy.json
+```
+
 ## 3. GitHub側にリポジトリ変数を3つ設定する
 
 GitHubの `someshvarivraj/DX-SKILLSHEET` → **Settings → Secrets and variables →
