@@ -30,6 +30,14 @@ aws iam create-open-id-connect-provider \
 `main` ブランチへのpushだけがこのロールを引き受けられるように制限してある
 （他のリポジトリや他のブランチからは使えない）。
 
+> **注意:** リポジトリの名前変更・移譲があったGitHubアカウントでは、OIDCトークンの
+> `sub` クレームが `repo:OWNER/REPO:ref:...` ではなく
+> `repo:OWNER@OWNER_ID/REPO@REPO_ID:ref:...`（所有者IDとリポジトリIDが付く形式）に
+> なることがある。そのため `trust-policy.json` では `@*` のワイルドカードを使って
+> 両方の形式に対応させてある。新しいアカウントに移す際も、実際の値は
+> CloudTrail（`sts.amazonaws.com` の `AssumeRoleWithWebIdentity` イベント、
+> `errorCode: AccessDenied` のとき）で確認するのが確実。
+
 ```bash
 cd docs/ci-cd
 
