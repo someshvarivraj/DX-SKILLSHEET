@@ -289,7 +289,12 @@ body {
 
 /* The heading strip on a panel. `--accent` is set per section (see the section
    colour map shared with the printed sheet), so the editor and the PDF use the
-   same colour for the same section and an operator can match them at a glance. */
+   same colour for the same section and an operator can match them at a glance.
+   Sano-san's review (2026-09-22, item 2/9): on screen the light tint the PDF
+   uses reads as almost-white and the section breaks disappear at a glance; she
+   asked for what the PDF's own band already suggests — a solid, dark band with
+   white text. Every accent in SECTION_COLOURS was checked against white text
+   for WCAG AA (>=4.5:1) before this change. */
 .panel-head {
   --accent: var(--color-brand-500);
   --accent-tint: var(--color-brand-50);
@@ -297,19 +302,25 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  background: var(--accent-tint);
-  border-left: 4px solid var(--accent);
+  background: var(--accent);
   padding: 0.6rem 0.95rem;
+  color: #fff;
 }
 .panel-head .panel-title {
   font-size: 0.9375rem;
   font-weight: 700;
-  color: var(--accent);
+  color: #fff;
 }
 .panel-head .panel-title-en {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-ink-400);
+  color: rgba(255, 255, 255, 0.78);
+}
+/* Muted informational text (record counts etc.) inside the dark panel-head —
+   `text-ink-500`/`text-ink-400` are tuned for a white background and vanish
+   here. */
+.panel-head-meta {
+  color: rgba(255, 255, 255, 0.82) !important;
 }
 
 /* A page's own title, with the brand tick that ties it to the header rule. */
@@ -327,6 +338,80 @@ body {
   height: 1.15rem;
   border-radius: 2px;
   background: linear-gradient(180deg, var(--color-brand-400), var(--color-brand-500));
+}
+
+/* ===========================================================================
+   Section tabs (editing screen)
+
+   Sano-san's review (2026-09-22, item 3): put the sections along the top as
+   tabs so pressing one expands only that section, instead of every field
+   being stacked vertically. One tab per section; the tab uses the same
+   accent/tint the section's own header and the PDF use, so a tab is
+   recognisable before it is even opened.
+   =========================================================================== */
+.tab-bar {
+  position: sticky;
+  top: calc(var(--app-header-h) + 0.5rem);
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  background: #fff;
+  border: 1px solid var(--color-ink-100);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.5rem;
+}
+@media (max-width: 767px) {
+  .tab-bar {
+    position: static;
+  }
+}
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--tab-tint, var(--color-sand-50));
+  color: var(--tab-accent, var(--color-ink-700));
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.tab-button:hover {
+  box-shadow: 0 0 0 1px var(--tab-accent, var(--color-brand-300)) inset;
+}
+.tab-button:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+}
+.tab-button-active {
+  background: var(--tab-accent, var(--color-brand-500));
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+/* Marks a tab whose section prints only on the internal supplementary
+   document, never on the skill sheet itself (Sano-san's review, item 5). */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--color-accent-50);
+  color: #b03a22;
+}
+.tab-button-active .tab-badge {
+  background: rgba(255, 255, 255, 0.9);
 }
 
 /* ===========================================================================

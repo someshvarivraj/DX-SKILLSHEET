@@ -120,7 +120,7 @@ export function SectionPanel({
           <span className="badge badge-draft">データなしのため出力されない</span>
         ) : null}
         {section.kind === 'REPEATING' ? (
-          <span className="text-xs text-ink-500">
+          <span className="panel-head-meta text-xs">
             {section.records.length}件登録／表示{displayedCount}件（上限{section.maxDisplayed}件）
           </span>
         ) : null}

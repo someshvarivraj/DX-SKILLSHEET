@@ -134,8 +134,45 @@ function SectionBlock({
         <code className="rounded bg-white px-1.5 py-0.5 text-xs text-ink-500">
           {section.code}
         </code>
+        {/* Sano-san's review (2026-09-22, item 6): she reached this screen but
+            could not find where to change 表示順. It was a field inside the
+            hidden 「セクション設定」 panel; it now sits directly in the header,
+            always visible, with its own save button. */}
+        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-700">
+          表示順
+          <input
+            type="number"
+            className="input w-16 py-1 text-center"
+            value={draft.order}
+            onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
+          />
+        </label>
+        {draft.order !== section.order ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await updateSectionAction({
+                  id: draft.id,
+                  nameJa: draft.nameJa,
+                  nameEn: draft.nameEn ?? undefined,
+                  order: draft.order,
+                  isVisible: draft.isVisible,
+                  hideWhenEmpty: draft.hideWhenEmpty,
+                  maxDisplayed: draft.maxDisplayed,
+                  description: draft.description ?? undefined,
+                });
+                setNotice(result.message);
+              })
+            }
+          >
+            並び順を保存
+          </button>
+        ) : null}
         <span className="text-xs text-ink-400">
-          表示順 {section.order}・{section.kind === 'REPEATING' ? '繰り返し' : '単一'}
+          {section.kind === 'REPEATING' ? '繰り返し' : '単一'}
           {section.kind === 'REPEATING' ? `・最大${section.maxDisplayed}件表示` : ''}
         </span>
         {!section.isVisible ? <span className="badge badge-draft">非表示</span> : null}
@@ -144,7 +181,7 @@ function SectionBlock({
         ) : null}
         <span className="flex-1" />
         <button type="button" className="btn btn-secondary" onClick={() => setEditing((v) => !v)}>
-          セクション設定
+          その他のセクション設定
         </button>
         <button type="button" className="btn btn-secondary" onClick={() => setAdding((v) => !v)}>
           ＋ 項目を追加
@@ -169,14 +206,6 @@ function SectionBlock({
               className="input"
               value={draft.nameEn ?? ''}
               onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })}
-            />
-          </Labeled>
-          <Labeled label="表示順">
-            <input
-              type="number"
-              className="input"
-              value={draft.order}
-              onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
             />
           </Labeled>
           <Labeled label="最大表示件数">
@@ -378,6 +407,42 @@ function FieldRowEditor({
         </span>
         {!field.includeInPdf ? <span className="badge badge-draft">PDF非出力</span> : null}
         {!field.isActive ? <span className="badge badge-warn">無効</span> : null}
+        <span className="flex-1" />
+        {/* Same fix as the section header above — 表示順 no longer requires
+            opening this row first. */}
+        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-700">
+          表示順
+          <input
+            type="number"
+            className="input w-16 py-1 text-center"
+            value={draft.order}
+            onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
+          />
+        </label>
+        {draft.order !== field.order ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await updateFieldAction({
+                  ...draft,
+                  nameEn: draft.nameEn ?? undefined,
+                  generationPrompt: draft.generationPrompt ?? undefined,
+                  helpText: draft.helpText ?? undefined,
+                  sourceCodes: sources
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                });
+                setNotice(result.message);
+              })
+            }
+          >
+            並び順を保存
+          </button>
+        ) : null}
       </div>
 
       {notice ? <p className="mt-1 text-xs text-final-ink">{notice}</p> : null}
@@ -389,14 +454,6 @@ function FieldRowEditor({
               className="input"
               value={draft.nameJa}
               onChange={(e) => setDraft({ ...draft, nameJa: e.target.value })}
-            />
-          </Labeled>
-          <Labeled label="表示順">
-            <input
-              type="number"
-              className="input"
-              value={draft.order}
-              onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
             />
           </Labeled>
           <Labeled label="処理区分">

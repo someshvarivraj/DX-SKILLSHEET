@@ -67,13 +67,20 @@ export function FieldEditor({
 
   const dirty = value !== field.valueJa;
   const disabled = Boolean(readOnly) || field.isLocked || pending;
+  // GRID fields (e.g. JLPT の各スコア) are copied structured data, never AI
+  // output, so there is nothing to regenerate or to show "the original" of.
+  // Sano-san's review (2026-09-22, item 8): "Scores are not generated text,
+  // so regeneration in particular seems unnecessary." Applied to every GRID
+  // field, not just this one, since the reasoning is the same for all of
+  // them (§6.12's placement grids are COPY too).
   const canRegenerate =
-    field.processing === 'GENERATE' ||
-    field.processing === 'TRANSLATE' ||
-    field.processing === 'RULE_BASED' ||
-    field.processing === 'COPY' ||
-    field.processing === 'GLOSSARY' ||
-    field.processing === 'ENRICH';
+    field.valueType !== 'GRID' &&
+    (field.processing === 'GENERATE' ||
+      field.processing === 'TRANSLATE' ||
+      field.processing === 'RULE_BASED' ||
+      field.processing === 'COPY' ||
+      field.processing === 'GLOSSARY' ||
+      field.processing === 'ENRICH');
 
   const run = (fn: () => Promise<{ message?: string; warnings?: string[] }>) =>
     startTransition(async () => {
@@ -88,7 +95,13 @@ export function FieldEditor({
       }
     });
 
-  const isLongText = field.valueType === 'TEXT';
+  // GRID also renders as a textarea: its value is several "ラベル：値" lines
+  // (see processCopy), which a single-line <input> collapses into one
+  // unreadable run. Sano-san's review, item 8: "please label each one —
+  // language knowledge, reading, listening — rather than listing bare
+  // numbers." The labels are already in the stored value; they just were not
+  // visible as separate lines.
+  const isLongText = field.valueType === 'TEXT' || field.valueType === 'GRID';
   const overLimit =
     field.targetLengthMax !== null && [...value].length > field.targetLengthMax;
 
@@ -221,7 +234,7 @@ export function FieldEditor({
           </button>
         ) : null}
 
-        {field.sourceText ? (
+        {field.sourceText && field.valueType !== 'GRID' ? (
           <button
             type="button"
             className="btn btn-secondary"

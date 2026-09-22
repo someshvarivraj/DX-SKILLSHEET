@@ -7,6 +7,7 @@ import {
   finaliseAction,
   submitForReviewAction,
 } from '@/app/(app)/people/[personId]/actions';
+import { previewScrollKey } from './scroll-restore';
 
 const STATUS_CLASS: Record<string, string> = {
   DRAFT: 'badge-draft',
@@ -43,14 +44,18 @@ export function SheetToolbar({
   const isFinal = model.version.status === 'FINAL';
 
   // Say plainly what this sheet needs next, so an operator does not have to
-  // infer it from the badges.
+  // infer it from the badges. Sano-san's review (2026-09-22, item 4): she
+  // could not tell what this notice was for, and its stiff である style did
+  // not match the rest of the screen. Reworded in the plain ですます style
+  // used everywhere else, as a direct instruction rather than a statement of
+  // state — kept, not removed, since the state it reports has real value.
   const nextStep = isFinal
-    ? 'この版は確定済みである。PDFを出力できる。内容を直す場合は、編集すると新しい下書きの版が作られる。'
+    ? 'この版は確定済みです。PDFを出力できます。内容を直す場合は、編集すると新しい下書きが作られます。'
     : model.unreviewedCount > 0
-      ? `生成された文章のうち${model.unreviewedCount}項目が未確認である。各項目の内容を確認し「確認済み」にすると確定できる。`
+      ? `生成された文章のうち${model.unreviewedCount}項目がまだ未確認です。内容を確認し、「確認済み」にチェックを入れてください。全項目が確認済みになると確定できます。`
       : canFinalise
-        ? '全項目の確認が済んでいる。「確定する」を実行するとPDFを出力できる。'
-        : '編集が終わったら「確認を依頼する」を実行すること。確定は管理者が行う。';
+        ? '全項目の確認が済みました。「確定する」を押すとPDFを出力できます。'
+        : '編集が終わったら「確認を依頼する」を押してください。確定は管理者が行います。';
 
   return (
     <>
@@ -95,6 +100,20 @@ export function SheetToolbar({
           href={`/people/${model.personId}/preview`}
           className="btn btn-secondary"
           title="印刷される状態のスキルシートを画面で確認する。PDFと同じ見た目である。"
+          onClick={() => {
+            // So that closing the preview can return to this position instead
+            // of the top of the page — see ScrollRestore, read on the editing
+            // screen's next load. Sano-san's review (2026-09-22, item 7).
+            try {
+              sessionStorage.setItem(
+                previewScrollKey(model.personId),
+                String(window.scrollY),
+              );
+            } catch {
+              // Private browsing / storage disabled: preview still works, it
+              // just reopens the editing screen at the top.
+            }
+          }}
         >
           プレビュー
         </Link>

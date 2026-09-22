@@ -4,10 +4,11 @@ import { can, canAccessPerson, ENGINEER_EDITABLE_SECTIONS } from '@/lib/auth/per
 import { recordAudit } from '@/lib/audit';
 import { loadSheetModel } from '@/lib/sheet/model';
 import { getOrCreateSkillSheet } from '@/lib/sheet/version';
-import { SectionPanel } from '@/components/editor/section-panel';
+import { SectionTabs } from '@/components/editor/section-tabs';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
 import { MemoPanel } from '@/components/editor/memo-panel';
 import { PhotoPanel } from '@/components/editor/photo-panel';
+import { ScrollRestore } from '@/components/editor/scroll-restore';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,7 @@ export default async function PersonEditorPage({
 
   return (
     <div className="space-y-4">
+      <ScrollRestore personId={personId} />
       <SheetToolbar
         model={model}
         canFinalise={can(user, 'sheet.finalise')}
@@ -81,17 +83,14 @@ export default async function PersonEditorPage({
         readOnly={!can(user, 'sheet.edit')}
       />
 
-      {editorSections.map((section) => (
-        <SectionPanel
-          key={section.id}
-          personId={personId}
-          section={section}
-          presetId={model.preset?.id ?? null}
-          readOnly={readOnly}
-          editableSectionCodes={editableSectionCodes}
-          canSelectRecords={can(user, 'sheet.selectRecords')}
-        />
-      ))}
+      <SectionTabs
+        personId={personId}
+        sections={editorSections}
+        presetId={model.preset?.id ?? null}
+        readOnly={readOnly}
+        editableSectionCodes={editableSectionCodes}
+        canSelectRecords={can(user, 'sheet.selectRecords')}
+      />
 
       {showSupplement ? (
         <MemoPanel
