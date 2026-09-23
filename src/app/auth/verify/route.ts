@@ -1,8 +1,9 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { recordAudit } from '@/lib/audit';
 import { hashToken } from '@/lib/auth/crypto';
 import { createSession } from '@/lib/auth/session';
+import { redirectToPath } from '@/lib/redirect';
 
 /**
  * One-time login link (spec §12.2): valid for a short period, single use.
@@ -11,9 +12,9 @@ import { createSession } from '@/lib/auth/session';
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
-  const failure = new URL('/login?error=invalid', request.nextUrl.origin);
+  const failure = () => redirectToPath('/login?error=invalid');
 
-  if (!token) return NextResponse.redirect(failure);
+  if (!token) return failure();
 
   const record = await prisma.loginToken.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       action: 'auth.login_failed',
       summary: 'リンクが無効または期限切れである',
     });
-    return NextResponse.redirect(failure);
+    return failure();
   }
 
   await prisma.loginToken.update({
@@ -42,5 +43,5 @@ export async function GET(request: NextRequest) {
   });
 
   const destination = record.user.role === 'ENGINEER' ? '/my-sheet' : '/people';
-  return NextResponse.redirect(new URL(destination, request.nextUrl.origin));
+  return redirectToPath(destination);
 }
