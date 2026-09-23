@@ -22,10 +22,10 @@ export default async function PreviewPage({
   searchParams,
 }: {
   params: Promise<{ personId: string }>;
-  searchParams: Promise<{ preset?: string }>;
+  searchParams: Promise<{ preset?: string; tab?: string }>;
 }) {
   const { personId } = await params;
-  const { preset } = await searchParams;
+  const { preset, tab } = await searchParams;
   const user = await requireUser();
   if (!canAccessPerson(user, personId)) notFound();
 
@@ -35,6 +35,14 @@ export default async function PreviewPage({
   // §11.1: only a finalised version can be exported. Offering the button before
   // then sends the operator to an endpoint that can only refuse them.
   const isFinal = model.version.status === 'FINAL';
+
+  // Back to the same tab the preview was opened from (Sano-san's review,
+  // 2026-09-23 item 5). The editing screen then scrolls to the field that was
+  // on screen; `scroll={false}` stops the router jumping to the top first.
+  const backQuery = new URLSearchParams();
+  if (preset) backQuery.set('preset', preset);
+  if (tab) backQuery.set('tab', tab);
+  const backHref = `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
 
   return (
     <div className="space-y-3">
@@ -53,7 +61,7 @@ export default async function PreviewPage({
       <PreviewStage
         toolbar={
           <>
-            <Link href={`/people/${personId}`} className="btn btn-secondary">
+            <Link href={backHref} scroll={false} className="btn btn-secondary">
               編集に戻る
             </Link>
             {can(user, 'sheet.export') ? (

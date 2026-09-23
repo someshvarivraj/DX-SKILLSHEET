@@ -48,12 +48,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               ))}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="text-right text-xs leading-tight text-ink-500">
-              <span className="block font-semibold text-ink-900">{user.displayName}</span>
-              <span className="block text-ink-400">{ROLE_LABELS[user.role]}</span>
+            <span className="header-user text-right text-xs leading-tight">
+              <span className="block font-semibold">{user.displayName}</span>
+              <span className="header-user-role block">{ROLE_LABELS[user.role]}</span>
             </span>
             <form action="/auth/logout" method="post">
-              <button type="submit" className="btn btn-secondary">
+              <button type="submit" className="btn btn-on-bar">
                 ログアウト
               </button>
             </form>

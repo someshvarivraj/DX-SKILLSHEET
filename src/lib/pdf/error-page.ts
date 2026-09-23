@@ -69,29 +69,29 @@ export function sendDownloadProblem(
   :root { color-scheme: light; }
   body {
     margin: 0; padding: 48px 24px;
-    background: #FCF8EF; color: #102B54;
+    background: #F1F4F6; color: #25313D;
     font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
       'Yu Gothic', YuGothic, Meiryo, sans-serif;
     line-height: 1.8; line-break: strict;
   }
   .card {
     max-width: 720px; margin: 0 auto; background: #fff;
-    border: 1px solid #E4EAF2; border-radius: 12px; padding: 28px 30px;
-    box-shadow: 0 1px 3px rgba(16,43,84,.06);
+    border: 1px solid #E7ECF0; border-radius: 12px; padding: 28px 30px;
+    box-shadow: 0 1px 3px rgba(30,45,60,.06);
   }
   h1 { margin: 0 0 8px; font-size: 1.125rem; }
   p { margin: 0 0 4px; font-size: .9375rem; }
-  .detail { color: #33415C; }
+  .detail { color: #3B4754; }
   .lead { margin-top: 20px; font-weight: 600; font-size: .875rem; }
   ul {
     margin: 6px 0 0; padding: 0; list-style: none;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 0 24px; font-size: .8125rem;
   }
-  .sec { color: #647591; }
+  .sec { color: #626D78; }
   .btn {
     display: inline-block; margin-top: 22px; padding: 9px 16px;
-    background: #044BA7; color: #fff; border-radius: 7px;
+    background: #087DBB; color: #fff; border-radius: 7px;
     font-size: .875rem; font-weight: 600; text-decoration: none;
   }
 </style></head>

@@ -218,6 +218,14 @@ function processCopy(
     for (const s of sources) {
       if (s.value && typeof s.value === 'object' && !Array.isArray(s.value)) {
         merged.push(...cleanGrid(s.value as Record<string, string>));
+      } else {
+        // A grid can also be assembled from several single-answer questions,
+        // one row each — the JLPT 各スコア field is five separate questions
+        // (C-2-2〜C-2-6). These used to be skipped because only grid-shaped
+        // answers were read, which left the field empty. Sano-san's review
+        // (2026-09-23, item 6): show each score with its label.
+        const row = scalarGridRow(s.code, s.value);
+        if (row) merged.push(row);
       }
     }
     return {
@@ -263,6 +271,34 @@ function processCopy(
     warnings: [],
     unmatchedTerms: [],
   };
+}
+
+/**
+ * Labels for single-answer questions that feed a grid row. The form's own
+ * titles are too long to print as a label (「【N1・N2・N3の方】言語知識（文字・
+ * 語彙・文法）の得点（60点満点）」), so the scored JLPT sections are named the
+ * way the result notice names them, with the maximum kept for context.
+ */
+const SCORE_ROWS: Record<string, { label: string; max: number }> = {
+  'C-2-2': { label: '総合点', max: 180 },
+  'C-2-3': { label: '言語知識（文字・語彙・文法）', max: 60 },
+  'C-2-4': { label: '読解', max: 60 },
+  'C-2-5': { label: '言語知識・読解', max: 120 },
+  'C-2-6': { label: '聴解', max: 60 },
+};
+
+function scalarGridRow(
+  code: string,
+  value: unknown,
+): { row: string; value: string } | null {
+  if (isEmptyAnswer(value)) return null;
+  const raw = String(value).trim();
+  const known = SCORE_ROWS[code];
+  if (!known) return { row: code, value: cleanChoice(raw) };
+  // "45", "45点", "４５" and "45/60" all mean a score of 45.
+  const digits = raw.normalize('NFKC').match(/\d+/)?.[0];
+  if (!digits) return { row: known.label, value: raw };
+  return { row: known.label, value: `${Number(digits)}点（${known.max}点満点）` };
 }
 
 function processGlossary(

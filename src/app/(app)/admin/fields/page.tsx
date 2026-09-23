@@ -28,6 +28,19 @@ export default async function FieldDefinitionPage() {
     prisma.formRevision.findFirst({ where: { isActive: true } }),
   ]);
 
+  // How many people have something entered in each field (in their current
+  // version), so deleting a field can say how much entered data goes with it.
+  // A repeating section holds one value per record, so values are grouped by
+  // field and version first and then counted per field.
+  const filledRows = await prisma.fieldValue.groupBy({
+    by: ['fieldId', 'versionId'],
+    where: { valueJa: { not: '' }, version: { currentFor: { isNot: null } } },
+  });
+  const filledByField = new Map<string, number>();
+  for (const row of filledRows) {
+    filledByField.set(row.fieldId, (filledByField.get(row.fieldId) ?? 0) + 1);
+  }
+
   const questions = revision
     ? await prisma.formQuestion.findMany({
         where: { formRevisionId: revision.id },
@@ -82,19 +95,25 @@ export default async function FieldDefinitionPage() {
       ruleKey: f.ruleKey,
       helpText: f.helpText,
       sourceCodes: f.sources.map((s) => s.questionCode),
+      filledCount: filledByField.get(f.id) ?? 0,
     })),
   }));
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-ink-900">項目定義</h1>
+        <h1 className="page-title">項目定義</h1>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-500">
           どの設問がスキルシートのどの位置に入るかは、この画面の設定で決まります。
           来年フォームが変わったときは、ここに行を追加するか取得元の設問IDを直すだけで対応でき、
           プログラムの修正や再デプロイは必要ありません。生成プロンプトもここで調整できます。
-          並び順は、各セクション・各項目の見出しにある「表示順」の数値を書き換えて保存します。
         </p>
+        <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-700">
+          <li>並び替え：行の左端をドラッグするか、↑↓ボタン</li>
+          <li>表示・非表示：「表示」のスイッチ</li>
+          <li>削除：ゴミ箱のボタン</li>
+          <li>詳しい設定：行の右端の ＞</li>
+        </ul>
       </div>
 
       {unassigned.length > 0 ? (

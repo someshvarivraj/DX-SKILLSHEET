@@ -252,7 +252,11 @@ export async function loadSheetModel(
       ? []
       : section.fields.map((f) => {
           const view = buildFieldView(f, valueByKey.get(`${f.id}::`));
-          if (!view.valueJa) {
+          // プロフィール写真 holds no text: the photo is a file on the person,
+          // uploaded from the editing screen. It is missing only when there
+          // is no photo, not because its (unused) text value is blank.
+          const isEmpty = f.code === 'photo' ? !sheet.person.photoKey : !view.valueJa;
+          if (isEmpty) {
             emptyFields.push({
               sectionName: section.nameJa,
               fieldName: f.nameJa,

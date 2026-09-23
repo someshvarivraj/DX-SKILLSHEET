@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronRight,
+  GripVertical,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import type {
   Editing,
@@ -10,9 +18,35 @@ import type {
 } from '@prisma/client';
 import {
   createFieldAction,
+  createSectionAction,
+  deleteFieldAction,
+  deleteSectionAction,
+  reorderFieldsAction,
+  reorderSectionsAction,
+  setFieldPrintedAction,
+  setSectionVisibleAction,
   updateFieldAction,
   updateSectionAction,
+  type SaveResult,
 } from '@/app/(app)/admin/fields/actions';
+
+/**
+ * The field-definition screen.
+ *
+ * Sano-san's review (2026-09-23, item 4): order was set by typing numbers
+ * (10, 20, 65, 90 …) that meant nothing to the person using the screen, 0 did
+ * not hide anything, and there was no way to tell order from visibility. She
+ * pointed at the list screens commonly used in Japan, where nothing is typed:
+ *
+ *   並べ替え     drag the row by its handle, or press ↑ / ↓
+ *   表示・非表示  a switch in the 表示 column
+ *   削除         a waste-bin button
+ *
+ * That is what this screen now does, laid out like her reference screens: a
+ * blue heading bar, one row per item, the switch and the bin at the right, and
+ * ＞ at the end to open the detailed settings. The stored order values still
+ * exist but are an internal detail, renumbered on every move and never shown.
+ */
 
 export type FieldRow = {
   id: string;
@@ -34,6 +68,8 @@ export type FieldRow = {
   ruleKey: string | null;
   helpText: string | null;
   sourceCodes: string[];
+  /** How many people have something entered in this field. */
+  filledCount: number;
 };
 
 export type SectionRow = {
@@ -95,6 +131,231 @@ const GLOSSARY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'HIGH_SCHOOL', label: '高校名' },
 ];
 
+type Notice = { ok: boolean; text: string } | null;
+
+// ===========================================================================
+// Reordering: drag by the handle, or ↑ / ↓.
+// ===========================================================================
+
+function useReorder<T extends { id: string }>(
+  items: T[],
+  save: (ids: string[]) => Promise<SaveResult>,
+  onNotice: (n: Notice) => void,
+) {
+  const [ids, setIds] = useState(() => items.map((i) => i.id));
+  // When the server sends a fresh list (after any save), start from it again.
+  const [source, setSource] = useState(items);
+  if (source !== items) {
+    setSource(items);
+    setIds(items.map((i) => i.id));
+  }
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const ordered = ids.map((id) => byId.get(id)).filter((i): i is T => Boolean(i));
+
+  const commit = (next: string[]) => {
+    const previous = ids;
+    setIds(next);
+    startTransition(async () => {
+      const result = await save(next);
+      onNotice({ ok: result.ok, text: result.message });
+      if (!result.ok) setIds(previous);
+    });
+  };
+
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= ids.length) return;
+    const next = [...ids];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    commit(next);
+  };
+
+  /** Props for the grip handle of the row with this id. */
+  const handleProps = (id: string, row: React.RefObject<HTMLElement | null>) => ({
+    draggable: !pending,
+    onDragStart: (e: React.DragEvent) => {
+      setDragId(id);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', id);
+      // Drag the whole row, not just the small handle.
+      if (row.current) e.dataTransfer.setDragImage(row.current, 24, 20);
+    },
+    onDragEnd: () => {
+      setDragId(null);
+      setOverId(null);
+    },
+  });
+
+  /** Props for the row itself, which accepts a drop. */
+  const dropProps = (id: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!dragId || dragId === id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (overId !== id) setOverId(id);
+    },
+    onDragLeave: () => {
+      if (overId === id) setOverId(null);
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      if (dragId && dragId !== id) move(ids.indexOf(dragId), ids.indexOf(id));
+      setDragId(null);
+      setOverId(null);
+    },
+  });
+
+  return { ordered, move, handleProps, dropProps, dragId, overId, pending };
+}
+
+function MoveButtons({
+  index,
+  count,
+  disabled,
+  onMove,
+  label,
+}: {
+  index: number;
+  count: number;
+  disabled: boolean;
+  onMove: (to: number) => void;
+  label: string;
+}) {
+  return (
+    <div className="def-move">
+      <button
+        type="button"
+        className="icon-btn"
+        disabled={disabled || index === 0}
+        onClick={() => onMove(index - 1)}
+        aria-label={`${label}を1つ上へ`}
+        title="1つ上へ"
+      >
+        <ArrowUp size={16} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        disabled={disabled || index === count - 1}
+        onClick={() => onMove(index + 1)}
+        aria-label={`${label}を1つ下へ`}
+        title="1つ下へ"
+      >
+        <ArrowDown size={16} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Switch and delete confirmation
+// ===========================================================================
+
+function Switch({
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      title={checked ? '表示中（押すと非表示）' : '非表示（押すと表示）'}
+      className="switch"
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="switch-thumb" aria-hidden />
+    </button>
+  );
+}
+
+/** A switch that saves itself, and goes back if the save fails. */
+function SavingSwitch({
+  initial,
+  save,
+  label,
+  onNotice,
+}: {
+  initial: boolean;
+  save: (next: boolean) => Promise<SaveResult>;
+  label: string;
+  onNotice: (n: Notice) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [source, setSource] = useState(initial);
+  if (source !== initial) {
+    setSource(initial);
+    setValue(initial);
+  }
+  const [pending, startTransition] = useTransition();
+  return (
+    <Switch
+      checked={value}
+      disabled={pending}
+      label={label}
+      onChange={(next) => {
+        setValue(next);
+        startTransition(async () => {
+          const result = await save(next);
+          onNotice({ ok: result.ok, text: result.message });
+          if (!result.ok) setValue(!next);
+        });
+      }}
+    />
+  );
+}
+
+function DeleteConfirm({
+  message,
+  onConfirm,
+  onCancel,
+  pending,
+}: {
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  pending: boolean;
+}) {
+  return (
+    <div className="def-confirm" role="alertdialog" aria-live="assertive">
+      <Trash2 size={16} aria-hidden className="flex-none text-[#b03a22]" />
+      <p className="flex-1">{message}</p>
+      <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
+        やめる
+      </button>
+      <button type="button" className="btn btn-delete" onClick={onConfirm} disabled={pending}>
+        {pending ? '削除中…' : '削除する'}
+      </button>
+    </div>
+  );
+}
+
+function NoticeLine({ notice }: { notice: Notice }) {
+  if (!notice) return null;
+  return (
+    <p className={`def-notice ${notice.ok ? 'def-notice-ok' : 'def-notice-error'}`} role="status">
+      {notice.text}
+    </p>
+  );
+}
+
+// ===========================================================================
+// Sections
+// ===========================================================================
+
 export function FieldDefinitionTable({
   sections,
   questionCodes,
@@ -102,98 +363,201 @@ export function FieldDefinitionTable({
   sections: SectionRow[];
   questionCodes: string[];
 }) {
+  const [notice, setNotice] = useState<Notice>(null);
+  const reorder = useReorder(sections, reorderSectionsAction, setNotice);
+  const [adding, setAdding] = useState(false);
+
   return (
-    <div className="space-y-4">
-      {sections.map((section) => (
-        <SectionBlock key={section.id} section={section} questionCodes={questionCodes} />
+    <div className="def-table">
+      <div className="def-bar">
+        <h2 className="def-bar-title">セクション一覧</h2>
+        <span className="def-bar-meta">{sections.length}件</span>
+      </div>
+
+      <NoticeLine notice={notice} />
+
+      <div className="def-row def-head" aria-hidden>
+        <span>並び替え</span>
+        <span>セクション名</span>
+        <span className="def-col-meta">内容</span>
+        <span className="text-center">表示</span>
+        <span className="text-center">削除</span>
+        <span className="text-center">詳細</span>
+      </div>
+
+      {reorder.ordered.map((section, index) => (
+        <SectionItem
+          key={section.id}
+          section={section}
+          index={index}
+          count={reorder.ordered.length}
+          reorder={reorder}
+          questionCodes={questionCodes}
+          onNotice={setNotice}
+        />
       ))}
+
+      {adding ? (
+        <AddSectionForm
+          onDone={(result) => {
+            setNotice({ ok: result.ok, text: result.message });
+            if (result.ok) setAdding(false);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <button type="button" className="def-add" onClick={() => setAdding(true)}>
+          <Plus size={16} aria-hidden /> セクションを追加する
+        </button>
+      )}
     </div>
   );
 }
 
-function SectionBlock({
+function SectionItem({
   section,
+  index,
+  count,
+  reorder,
   questionCodes,
+  onNotice,
 }: {
   section: SectionRow;
+  index: number;
+  count: number;
+  reorder: ReturnType<typeof useReorder<SectionRow>>;
   questionCodes: string[];
+  onNotice: (n: Notice) => void;
 }) {
+  const rowRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [draft, setDraft] = useState(section);
+
+  const isDragging = reorder.dragId === section.id;
+  const isOver = reorder.overId === section.id;
 
   return (
-    <section className="card overflow-hidden">
-      <header className="flex flex-wrap items-center gap-2 bg-sand-50 px-4 py-2.5">
-        <button type="button" onClick={() => setOpen((v) => !v)} className="text-sm font-semibold">
-          {open ? '▾' : '▸'} {section.nameJa}
+    <div className={`def-item ${open ? 'def-item-open' : ''}`}>
+      <div
+        ref={rowRef}
+        className={`def-row ${isDragging ? 'def-row-dragging' : ''} ${isOver ? 'def-row-over' : ''}`}
+        {...reorder.dropProps(section.id)}
+      >
+        <span
+          className="def-grip"
+          {...reorder.handleProps(section.id, rowRef)}
+          title="ドラッグして並べ替え"
+          aria-hidden
+        >
+          <GripVertical size={18} />
+        </span>
+        <MoveButtons
+          index={index}
+          count={count}
+          disabled={reorder.pending}
+          onMove={(to) => reorder.move(index, to)}
+          label={section.nameJa}
+        />
+        <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
+          <span className="def-name-ja">{section.nameJa}</span>
+          <span className="def-name-sub">{section.nameEn ?? section.code}</span>
         </button>
-        <code className="rounded bg-white px-1.5 py-0.5 text-xs text-ink-500">
-          {section.code}
-        </code>
-        {/* Sano-san's review (2026-09-22, item 6): she reached this screen but
-            could not find where to change 表示順. It was a field inside the
-            hidden 「セクション設定」 panel; it now sits directly in the header,
-            always visible, with its own save button. */}
-        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-700">
-          表示順
-          <input
-            type="number"
-            className="input w-16 py-1 text-center"
-            value={draft.order}
-            onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
+        <span className="def-col-meta def-meta">
+          {section.kind === 'REPEATING'
+            ? `繰り返し・最大${section.maxDisplayed}件`
+            : '単一'}
+          ・項目{section.fields.length}件
+          {section.hideWhenEmpty ? <span className="def-tag">データなしで非表示</span> : null}
+        </span>
+        <span className="grid place-items-center">
+          <SavingSwitch
+            initial={section.isVisible}
+            label={`${section.nameJa}をシートに表示する`}
+            save={(next) => setSectionVisibleAction(section.id, next)}
+            onNotice={onNotice}
           />
-        </label>
-        {draft.order !== section.order ? (
+        </span>
+        <span className="grid place-items-center">
           <button
             type="button"
-            className="btn btn-primary"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await updateSectionAction({
-                  id: draft.id,
-                  nameJa: draft.nameJa,
-                  nameEn: draft.nameEn ?? undefined,
-                  order: draft.order,
-                  isVisible: draft.isVisible,
-                  hideWhenEmpty: draft.hideWhenEmpty,
-                  maxDisplayed: draft.maxDisplayed,
-                  description: draft.description ?? undefined,
-                });
-                setNotice(result.message);
-              })
-            }
+            className="icon-btn icon-btn-danger"
+            onClick={() => setConfirming(true)}
+            aria-label={`${section.nameJa}を削除`}
+            title="削除"
           >
-            並び順を保存
+            <Trash2 size={18} aria-hidden />
           </button>
-        ) : null}
-        <span className="text-xs text-ink-400">
-          {section.kind === 'REPEATING' ? '繰り返し' : '単一'}
-          {section.kind === 'REPEATING' ? `・最大${section.maxDisplayed}件表示` : ''}
         </span>
-        {!section.isVisible ? <span className="badge badge-draft">非表示</span> : null}
-        {section.hideWhenEmpty ? (
-          <span className="badge badge-review">データなしで非表示</span>
-        ) : null}
-        <span className="flex-1" />
-        <button type="button" className="btn btn-secondary" onClick={() => setEditing((v) => !v)}>
-          その他のセクション設定
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => setAdding((v) => !v)}>
-          ＋ 項目を追加
-        </button>
-      </header>
+        <span className="grid place-items-center">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-label={`${section.nameJa}の項目と設定を${open ? '閉じる' : '開く'}`}
+            title={open ? '閉じる' : '項目と設定を開く'}
+          >
+            <ChevronRight size={20} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
+          </button>
+        </span>
+      </div>
 
-      {notice ? (
-        <p className="bg-final-bg px-4 py-1.5 text-xs text-final-ink">{notice}</p>
+      {confirming ? (
+        <DeleteConfirm
+          pending={pending}
+          message={
+            section.fields.length > 0
+              ? `「${section.nameJa}」には項目が${section.fields.length}件あります。セクションを削除するには、先に中の項目を削除してください。一時的に出さないだけなら「表示」のスイッチを切ってください。`
+              : `「${section.nameJa}」を削除します。元には戻せません。`
+          }
+          onCancel={() => setConfirming(false)}
+          onConfirm={() =>
+            section.fields.length > 0
+              ? setConfirming(false)
+              : startTransition(async () => {
+                  const result = await deleteSectionAction(section.id);
+                  onNotice({ ok: result.ok, text: result.message });
+                  setConfirming(false);
+                })
+          }
+        />
       ) : null}
 
-      {editing ? (
-        <div className="grid gap-3 border-t border-ink-100 bg-sand-50/60 p-4 md:grid-cols-4">
+      {open ? (
+        <div className="def-children">
+          <SectionSettings section={section} onNotice={onNotice} />
+          <FieldList section={section} questionCodes={questionCodes} onNotice={onNotice} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SectionSettings({
+  section,
+  onNotice,
+}: {
+  section: SectionRow;
+  onNotice: (n: Notice) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(section);
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="def-settings">
+      <button
+        type="button"
+        className="def-settings-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <ChevronRight size={16} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
+        セクションの設定（名前・表示件数など）
+      </button>
+      {open ? (
+        <div className="grid gap-3 pt-3 md:grid-cols-4">
           <Labeled label="表示名（日本語）">
             <input
               className="input"
@@ -208,29 +572,24 @@ function SectionBlock({
               onChange={(e) => setDraft({ ...draft, nameEn: e.target.value })}
             />
           </Labeled>
-          <Labeled label="最大表示件数">
-            <input
-              type="number"
-              className="input"
-              value={draft.maxDisplayed}
-              onChange={(e) => setDraft({ ...draft, maxDisplayed: Number(e.target.value) })}
-            />
-          </Labeled>
-          <label className="flex items-center gap-2 text-xs text-ink-700">
-            <input
-              type="checkbox"
-              checked={draft.isVisible}
-              onChange={(e) => setDraft({ ...draft, isVisible: e.target.checked })}
-            />
-            スキルシートに出力する
-          </label>
-          <label className="flex items-center gap-2 text-xs text-ink-700">
+          {section.kind === 'REPEATING' ? (
+            <Labeled label="シートに載せる最大件数">
+              <input
+                type="number"
+                min={1}
+                className="input"
+                value={draft.maxDisplayed}
+                onChange={(e) => setDraft({ ...draft, maxDisplayed: Number(e.target.value) })}
+              />
+            </Labeled>
+          ) : null}
+          <label className="flex items-center gap-2 self-end pb-2 text-xs text-ink-700">
             <input
               type="checkbox"
               checked={draft.hideWhenEmpty}
               onChange={(e) => setDraft({ ...draft, hideWhenEmpty: e.target.checked })}
             />
-            データが1件もない場合は非表示にする
+            データが1件もない場合はシートに出さない
           </label>
           <div className="md:col-span-4">
             <Labeled label="説明（担当者向けのメモ）">
@@ -253,41 +612,255 @@ function SectionBlock({
                     id: draft.id,
                     nameJa: draft.nameJa,
                     nameEn: draft.nameEn ?? undefined,
-                    order: draft.order,
-                    isVisible: draft.isVisible,
+                    isVisible: section.isVisible,
                     hideWhenEmpty: draft.hideWhenEmpty,
                     maxDisplayed: draft.maxDisplayed,
                     description: draft.description ?? undefined,
                   });
-                  setNotice(result.message);
-                  setEditing(false);
+                  onNotice({ ok: result.ok, text: result.message });
                 })
               }
             >
-              保存
+              設定を保存
             </button>
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
 
+function AddSectionForm({
+  onDone,
+  onCancel,
+}: {
+  onDone: (result: SaveResult) => void;
+  onCancel: () => void;
+}) {
+  const [code, setCode] = useState('');
+  const [nameJa, setNameJa] = useState('');
+  const [nameEn, setNameEn] = useState('');
+  const [pending, startTransition] = useTransition();
+  return (
+    <div className="def-add-form">
+      <Labeled label="表示名（日本語）">
+        <input className="input" value={nameJa} onChange={(e) => setNameJa(e.target.value)} />
+      </Labeled>
+      <Labeled label="表示名（英語）">
+        <input className="input" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+      </Labeled>
+      <Labeled label="セクションコード（英小文字）">
+        <input
+          className="input"
+          placeholder="例：certifications"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </Labeled>
+      <div className="flex items-end gap-2">
+        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
+          やめる
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={pending || !code.trim() || !nameJa.trim()}
+          onClick={() =>
+            startTransition(async () => {
+              onDone(await createSectionAction({ code, nameJa, nameEn }));
+            })
+          }
+        >
+          追加する
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Fields within a section
+// ===========================================================================
+
+function FieldList({
+  section,
+  questionCodes,
+  onNotice,
+}: {
+  section: SectionRow;
+  questionCodes: string[];
+  onNotice: (n: Notice) => void;
+}) {
+  const [notice, setNotice] = useState<Notice>(null);
+  const reorder = useReorder(
+    section.fields,
+    (ids) => reorderFieldsAction(section.id, ids),
+    setNotice,
+  );
+  const [adding, setAdding] = useState(false);
+  // Messages about this section's fields appear here, next to the fields,
+  // rather than at the top of a long page.
+  const report = (n: Notice) => {
+    setNotice(n);
+    onNotice(null);
+  };
+
+  return (
+    <div className="def-fields">
+      <NoticeLine notice={notice} />
+      <div className="def-row def-head def-head-sub" aria-hidden>
+        <span>並び替え</span>
+        <span>項目名</span>
+        <span className="def-col-meta">処理・取得元</span>
+        <span className="text-center">表示</span>
+        <span className="text-center">削除</span>
+        <span className="text-center">詳細</span>
+      </div>
+      {reorder.ordered.length === 0 ? (
+        <p className="px-4 py-4 text-center text-xs text-ink-500">項目はまだありません。</p>
+      ) : (
+        reorder.ordered.map((field, index) => (
+          <FieldItem
+            key={field.id}
+            field={field}
+            index={index}
+            count={reorder.ordered.length}
+            reorder={reorder}
+            questionCodes={questionCodes}
+            onNotice={report}
+          />
+        ))
+      )}
       {adding ? (
         <AddFieldForm
           sectionId={section.id}
-          onDone={(message) => {
-            setNotice(message);
-            setAdding(false);
+          onDone={(result) => {
+            report({ ok: result.ok, text: result.message });
+            if (result.ok) setAdding(false);
           }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <button type="button" className="def-add" onClick={() => setAdding(true)}>
+          <Plus size={16} aria-hidden /> 「{section.nameJa}」に項目を追加する
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FieldItem({
+  field,
+  index,
+  count,
+  reorder,
+  questionCodes,
+  onNotice,
+}: {
+  field: FieldRow;
+  index: number;
+  count: number;
+  reorder: ReturnType<typeof useReorder<FieldRow>>;
+  questionCodes: string[];
+  onNotice: (n: Notice) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const processing = PROCESSING_OPTIONS.find((o) => o.value === field.processing)?.label;
+
+  return (
+    <div className={`def-item ${open ? 'def-item-open' : ''}`}>
+      <div
+        ref={rowRef}
+        className={`def-row ${reorder.dragId === field.id ? 'def-row-dragging' : ''} ${
+          reorder.overId === field.id ? 'def-row-over' : ''
+        }`}
+        {...reorder.dropProps(field.id)}
+      >
+        <span
+          className="def-grip"
+          {...reorder.handleProps(field.id, rowRef)}
+          title="ドラッグして並べ替え"
+          aria-hidden
+        >
+          <GripVertical size={18} />
+        </span>
+        <MoveButtons
+          index={index}
+          count={count}
+          disabled={reorder.pending}
+          onMove={(to) => reorder.move(index, to)}
+          label={field.nameJa}
+        />
+        <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
+          <span className="def-name-ja">
+            {field.nameJa}
+            {field.isRequired ? <span className="def-required">必須</span> : null}
+            {!field.isActive ? <span className="def-tag">無効</span> : null}
+          </span>
+          <span className="def-name-sub">{field.code}</span>
+        </button>
+        <span className="def-col-meta def-meta">
+          <span className="def-tag def-tag-blue">{processing}</span>
+          {field.sourceCodes.length > 0 ? field.sourceCodes.join(' + ') : '取得元なし'}
+        </span>
+        <span className="grid place-items-center">
+          <SavingSwitch
+            initial={field.includeInPdf}
+            label={`${field.nameJa}をシートに表示する`}
+            save={(next) => setFieldPrintedAction(field.id, next)}
+            onNotice={onNotice}
+          />
+        </span>
+        <span className="grid place-items-center">
+          <button
+            type="button"
+            className="icon-btn icon-btn-danger"
+            onClick={() => setConfirming(true)}
+            aria-label={`${field.nameJa}を削除`}
+            title="削除"
+          >
+            <Trash2 size={18} aria-hidden />
+          </button>
+        </span>
+        <span className="grid place-items-center">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-label={`${field.nameJa}の詳しい設定を${open ? '閉じる' : '開く'}`}
+            title={open ? '閉じる' : '詳しい設定を開く'}
+          >
+            <ChevronRight size={20} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
+          </button>
+        </span>
+      </div>
+
+      {confirming ? (
+        <DeleteConfirm
+          pending={pending}
+          message={
+            field.filledCount > 0
+              ? `「${field.nameJa}」を削除すると、${field.filledCount}人分の入力内容も一緒に削除され、元に戻せません。一時的に出さないだけなら「表示」のスイッチを切ってください。`
+              : `「${field.nameJa}」を削除します。元には戻せません。`
+          }
+          onCancel={() => setConfirming(false)}
+          onConfirm={() =>
+            startTransition(async () => {
+              const result = await deleteFieldAction(field.id);
+              onNotice({ ok: result.ok, text: result.message });
+              setConfirming(false);
+            })
+          }
         />
       ) : null}
 
-      {open ? (
-        <div className="divide-y divide-ink-100">
-          {section.fields.map((field) => (
-            <FieldRowEditor key={field.id} field={field} questionCodes={questionCodes} />
-          ))}
-        </div>
-      ) : null}
-    </section>
+      {open ? <FieldDetail field={field} questionCodes={questionCodes} onNotice={onNotice} /> : null}
+    </div>
   );
 }
 
@@ -303,9 +876,11 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 function AddFieldForm({
   sectionId,
   onDone,
+  onCancel,
 }: {
   sectionId: string;
-  onDone: (message: string) => void;
+  onDone: (result: SaveResult) => void;
+  onCancel: () => void;
 }) {
   const [code, setCode] = useState('');
   const [nameJa, setNameJa] = useState('');
@@ -314,26 +889,29 @@ function AddFieldForm({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="grid gap-3 border-t border-ink-100 bg-final-bg/40 p-4 md:grid-cols-5">
-      <Labeled label="項目コード（英数字）">
-        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} />
-      </Labeled>
+    <div className="def-add-form">
       <Labeled label="表示名">
         <input className="input" value={nameJa} onChange={(e) => setNameJa(e.target.value)} />
       </Labeled>
+      <Labeled label="項目コード（英小文字）">
+        <input
+          className="input"
+          placeholder="例：hobby"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </Labeled>
       <Labeled label="処理区分">
-        <div className="w-56">
-          <Select
-            ariaLabel="処理方法で絞り込む"
-            value={processing}
-            onChange={(v) => setProcessing(v as Processing)}
-            options={PROCESSING_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-              hint: o.hint,
-            }))}
-          />
-        </div>
+        <Select
+          ariaLabel="処理区分"
+          value={processing}
+          onChange={(v) => setProcessing(v as Processing)}
+          options={PROCESSING_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+            hint: o.hint,
+          }))}
+        />
       </Labeled>
       <Labeled label="取得元の設問ID（カンマ区切り）">
         <input
@@ -343,45 +921,49 @@ function AddFieldForm({
           onChange={(e) => setSources(e.target.value)}
         />
       </Labeled>
-      <div className="flex items-end">
+      <div className="flex items-end gap-2">
+        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
+          やめる
+        </button>
         <button
           type="button"
           className="btn btn-primary"
-          disabled={pending || !code || !nameJa}
+          disabled={pending || !code.trim() || !nameJa.trim()}
           onClick={() =>
             startTransition(async () => {
-              const result = await createFieldAction({
-                sectionId,
-                code: code.trim(),
-                nameJa: nameJa.trim(),
-                processing,
-                sourceCodes: sources
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              });
-              onDone(result.message);
+              onDone(
+                await createFieldAction({
+                  sectionId,
+                  code: code.trim(),
+                  nameJa: nameJa.trim(),
+                  processing,
+                  sourceCodes: sources
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                }),
+              );
             })
           }
         >
-          追加
+          追加する
         </button>
       </div>
     </div>
   );
 }
 
-function FieldRowEditor({
+function FieldDetail({
   field,
   questionCodes,
+  onNotice,
 }: {
   field: FieldRow;
   questionCodes: string[];
+  onNotice: (n: Notice) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(field);
   const [sources, setSources] = useState(field.sourceCodes.join(', '));
-  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const unknownSources = sources
@@ -391,244 +973,181 @@ function FieldRowEditor({
     .filter((code) => !questionCodes.includes(code) && !code.includes('-x-'));
 
   return (
-    <div className="px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOpen((v) => !v)} className="text-sm text-ink-900">
-          {open ? '▾' : '▸'} {field.nameJa}
-        </button>
-        <code className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">
-          {field.code}
-        </code>
-        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">
-          {PROCESSING_OPTIONS.find((o) => o.value === field.processing)?.label}
-        </span>
-        <span className="text-xs text-ink-400">
-          {field.sourceCodes.length > 0 ? field.sourceCodes.join(' + ') : '取得元なし'}
-        </span>
-        {!field.includeInPdf ? <span className="badge badge-draft">PDF非出力</span> : null}
-        {!field.isActive ? <span className="badge badge-warn">無効</span> : null}
-        <span className="flex-1" />
-        {/* Same fix as the section header above — 表示順 no longer requires
-            opening this row first. */}
-        <label className="flex items-center gap-1.5 text-xs font-medium text-ink-700">
-          表示順
-          <input
-            type="number"
-            className="input w-16 py-1 text-center"
-            value={draft.order}
-            onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) })}
-          />
-        </label>
-        {draft.order !== field.order ? (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await updateFieldAction({
-                  ...draft,
-                  nameEn: draft.nameEn ?? undefined,
-                  generationPrompt: draft.generationPrompt ?? undefined,
-                  helpText: draft.helpText ?? undefined,
-                  sourceCodes: sources
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                });
-                setNotice(result.message);
-              })
-            }
-          >
-            並び順を保存
-          </button>
+    <div className="def-detail grid gap-3 md:grid-cols-4">
+      <Labeled label="表示名">
+        <input
+          className="input"
+          value={draft.nameJa}
+          onChange={(e) => setDraft({ ...draft, nameJa: e.target.value })}
+        />
+      </Labeled>
+      <Labeled label="処理区分">
+        <Select
+          ariaLabel="処理方法"
+          value={draft.processing}
+          onChange={(v) => setDraft({ ...draft, processing: v as Processing })}
+          options={PROCESSING_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+            hint: o.hint,
+          }))}
+        />
+        <p className="mt-1 text-xs text-ink-500">
+          {PROCESSING_OPTIONS.find((o) => o.value === draft.processing)?.hint}
+        </p>
+      </Labeled>
+      <Labeled label="編集方法">
+        <Select
+          ariaLabel="編集方法"
+          value={draft.editing}
+          onChange={(v) => setDraft({ ...draft, editing: v as Editing })}
+          options={EDITING_OPTIONS}
+        />
+      </Labeled>
+      <Labeled label="値の型">
+        <Select
+          ariaLabel="値の種類"
+          value={draft.valueType}
+          onChange={(v) => setDraft({ ...draft, valueType: v as ValueType })}
+          options={VALUE_TYPE_OPTIONS}
+        />
+      </Labeled>
+
+      <div className="md:col-span-4">
+        <Labeled label="取得元の設問ID（カンマ区切り。繰り返し項目は E-x-6 のように x を使う）">
+          <input className="input" value={sources} onChange={(e) => setSources(e.target.value)} />
+        </Labeled>
+        {unknownSources.length > 0 ? (
+          <p className="mt-1 text-xs text-draft-ink">
+            ⚠ 現在のフォームに存在しない設問ID: {unknownSources.join('、')}
+          </p>
         ) : null}
       </div>
 
-      {notice ? <p className="mt-1 text-xs text-final-ink">{notice}</p> : null}
+      <Labeled label="辞書の分類">
+        <Select
+          ariaLabel="辞書の分類"
+          value={draft.glossaryCategory ?? ''}
+          onChange={(v) =>
+            setDraft({ ...draft, glossaryCategory: (v || null) as GlossaryCategory | null })
+          }
+          options={GLOSSARY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
+      </Labeled>
+      <Labeled label="規則キー">
+        <Select
+          ariaLabel="規則キー"
+          value={draft.ruleKey ?? ''}
+          onChange={(v) => setDraft({ ...draft, ruleKey: v || null })}
+          options={RULE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
+      </Labeled>
+      <div className="grid grid-cols-2 gap-2 md:col-span-2">
+        <Labeled label="文字数の目安（下限）">
+          <input
+            type="number"
+            className="input"
+            value={draft.targetLengthMin ?? ''}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                targetLengthMin: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+          />
+        </Labeled>
+        <Labeled label="文字数の目安（上限）">
+          <input
+            type="number"
+            className="input"
+            value={draft.targetLengthMax ?? ''}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                targetLengthMax: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+          />
+        </Labeled>
+      </div>
 
-      {open ? (
-        <div className="mt-3 grid gap-3 rounded-md bg-sand-50 p-3 md:grid-cols-4">
-          <Labeled label="表示名">
-            <input
-              className="input"
-              value={draft.nameJa}
-              onChange={(e) => setDraft({ ...draft, nameJa: e.target.value })}
-            />
-          </Labeled>
-          <Labeled label="処理区分">
-            <Select
-              ariaLabel="処理方法"
-              value={draft.processing}
-              onChange={(v) => setDraft({ ...draft, processing: v as Processing })}
-              options={PROCESSING_OPTIONS.map((o) => ({
-                value: o.value,
-                label: o.label,
-                hint: o.hint,
-              }))}
-            />
-            <p className="mt-1 text-xs text-ink-500">
-              {PROCESSING_OPTIONS.find((o) => o.value === draft.processing)?.hint}
-            </p>
-          </Labeled>
-          <Labeled label="編集方法">
-            <Select
-              ariaLabel="編集方法"
-              value={draft.editing}
-              onChange={(v) => setDraft({ ...draft, editing: v as Editing })}
-              options={EDITING_OPTIONS}
-            />
-          </Labeled>
+      <div className="md:col-span-4">
+        <Labeled label="生成プロンプト（AIへの指示。ここを直せば出力の傾向を変えられます）">
+          <textarea
+            className="textarea"
+            rows={4}
+            value={draft.generationPrompt ?? ''}
+            onChange={(e) => setDraft({ ...draft, generationPrompt: e.target.value })}
+          />
+        </Labeled>
+      </div>
 
-          <div className="md:col-span-4">
-            <Labeled label="取得元の設問ID（カンマ区切り。繰り返し項目は E-x-6 のように x を使う）">
-              <input className="input" value={sources} onChange={(e) => setSources(e.target.value)} />
-            </Labeled>
-            {unknownSources.length > 0 ? (
-              <p className="mt-1 text-xs text-draft-ink">
-                ⚠ 現在のフォームに存在しない設問ID: {unknownSources.join('、')}
-              </p>
-            ) : null}
-          </div>
+      <div className="md:col-span-4">
+        <Labeled label="担当者向けの補足（編集画面にヒントとして表示されます）">
+          <textarea
+            className="textarea"
+            rows={2}
+            value={draft.helpText ?? ''}
+            onChange={(e) => setDraft({ ...draft, helpText: e.target.value })}
+          />
+        </Labeled>
+      </div>
 
-          <Labeled label="値の型">
-            <Select
-              ariaLabel="値の種類"
-              value={draft.valueType}
-              onChange={(v) => setDraft({ ...draft, valueType: v as ValueType })}
-              options={VALUE_TYPE_OPTIONS}
-            />
-          </Labeled>
-          <Labeled label="辞書の分類">
-            <Select
-              ariaLabel="辞書の分類"
-              value={draft.glossaryCategory ?? ''}
-              onChange={(v) =>
-                setDraft({ ...draft, glossaryCategory: (v || null) as GlossaryCategory | null })
-              }
-              options={GLOSSARY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            />
-          </Labeled>
-          <Labeled label="規則キー">
-            <Select
-              ariaLabel="規則キー"
-              value={draft.ruleKey ?? ''}
-              onChange={(v) => setDraft({ ...draft, ruleKey: v || null })}
-              options={RULE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            />
-          </Labeled>
-          <div className="grid grid-cols-2 gap-2">
-            <Labeled label="目安（下限）">
-              <input
-                type="number"
-                className="input"
-                value={draft.targetLengthMin ?? ''}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    targetLengthMin: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              />
-            </Labeled>
-            <Labeled label="目安（上限）">
-              <input
-                type="number"
-                className="input"
-                value={draft.targetLengthMax ?? ''}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    targetLengthMax: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              />
-            </Labeled>
-          </div>
+      <div className="flex flex-wrap gap-4 md:col-span-4">
+        <label className="flex items-center gap-2 text-xs text-ink-700">
+          <input
+            type="checkbox"
+            checked={draft.displayToggle}
+            onChange={(e) => setDraft({ ...draft, displayToggle: e.target.checked })}
+          />
+          提出先ごとに表示・非表示を切り替えられるようにする
+        </label>
+        <label className="flex items-center gap-2 text-xs text-ink-700">
+          <input
+            type="checkbox"
+            checked={draft.isRequired}
+            onChange={(e) => setDraft({ ...draft, isRequired: e.target.checked })}
+          />
+          必須
+        </label>
+        <label className="flex items-center gap-2 text-xs text-ink-700">
+          <input
+            type="checkbox"
+            checked={draft.isActive}
+            onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
+          />
+          有効（外すと編集画面にも出なくなります）
+        </label>
+      </div>
 
-          <div className="md:col-span-4">
-            <Labeled label="生成プロンプト（AIへの指示。ここを直せば出力の傾向を変えられる）">
-              <textarea
-                className="textarea"
-                rows={4}
-                value={draft.generationPrompt ?? ''}
-                onChange={(e) => setDraft({ ...draft, generationPrompt: e.target.value })}
-              />
-            </Labeled>
-          </div>
-
-          <div className="md:col-span-4">
-            <Labeled label="担当者向けの補足（編集画面にヒントとして表示される）">
-              <textarea
-                className="textarea"
-                rows={2}
-                value={draft.helpText ?? ''}
-                onChange={(e) => setDraft({ ...draft, helpText: e.target.value })}
-              />
-            </Labeled>
-          </div>
-
-          <div className="flex flex-wrap gap-4 md:col-span-4">
-            <label className="flex items-center gap-2 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={draft.includeInPdf}
-                onChange={(e) => setDraft({ ...draft, includeInPdf: e.target.checked })}
-              />
-              PDFに出力する
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={draft.displayToggle}
-                onChange={(e) => setDraft({ ...draft, displayToggle: e.target.checked })}
-              />
-              提出先ごとに表示/非表示を切り替えられるようにする
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={draft.isRequired}
-                onChange={(e) => setDraft({ ...draft, isRequired: e.target.checked })}
-              />
-              必須
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={draft.isActive}
-                onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
-              />
-              有効
-            </label>
-          </div>
-
-          <div className="md:col-span-4">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await updateFieldAction({
-                    ...draft,
-                    nameEn: draft.nameEn ?? undefined,
-                    generationPrompt: draft.generationPrompt ?? undefined,
-                    helpText: draft.helpText ?? undefined,
-                    sourceCodes: sources
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  });
-                  setNotice(result.message);
-                })
-              }
-            >
-              保存
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <div className="md:col-span-4">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const { order: _order, filledCount: _filled, ...rest } = draft;
+              const result = await updateFieldAction({
+                ...rest,
+                // The 表示 switch in the row saves itself; keep what it holds
+                // now rather than what this panel was opened with.
+                includeInPdf: field.includeInPdf,
+                nameEn: draft.nameEn ?? undefined,
+                generationPrompt: draft.generationPrompt ?? undefined,
+                helpText: draft.helpText ?? undefined,
+                sourceCodes: sources
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              });
+              onNotice({ ok: result.ok, text: result.message });
+            })
+          }
+        >
+          設定を保存
+        </button>
+      </div>
     </div>
   );
 }

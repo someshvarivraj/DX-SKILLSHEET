@@ -13,6 +13,10 @@ import {
  * The photo is shown at the proportions the printed sheet uses, so what an
  * operator approves here is what appears on the PDF rather than a differently
  * cropped preview.
+ *
+ * Sano-san's review (2026-09-23, item 7): the photo is part of 個人情報, not a
+ * section of its own. It is rendered as the first entry inside that section,
+ * laid out like the field entries around it.
  */
 export function PhotoPanel({
   personId,
@@ -67,13 +71,13 @@ export function PhotoPanel({
   const shown = preview ?? photoUrl;
 
   return (
-    <div className="card overflow-hidden">
-      <header className="panel-head" style={{ '--accent': '#3D5A8A', '--accent-tint': '#EAEFF7' } as React.CSSProperties}>
-        <span className="panel-title">写真</span>
-        <span className="panel-title-en">Photo</span>
-      </header>
+    <div className="px-4 py-3" data-field-anchor="" id={`field-photo-${personId}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-ink-900">写真</span>
+        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">画像</span>
+      </div>
 
-      <div className="flex flex-wrap items-start gap-4 border-t border-ink-100 p-4">
+      <div className="mt-2 flex flex-wrap items-start gap-4">
         {/* 30mm × 40mm, the proportion the printed sheet reserves. */}
         <div
           className="grid w-[120px] shrink-0 place-items-center overflow-hidden rounded-md border border-dashed border-ink-200 bg-sand-50"
@@ -99,7 +103,10 @@ export function PhotoPanel({
                 ref={inputRef}
                 type="file"
                 accept={PHOTO_ACCEPT_ATTR}
-                className="input mt-3 w-auto"
+                // The native control duplicated the 写真を選ぶ button beside it
+                // and showed the browser's own English text; the button opens it.
+                className="sr-only"
+                aria-label="写真のファイルを選ぶ"
                 disabled={pending}
                 onChange={(e) => onChoose(e.target.files?.[0] ?? null)}
               />

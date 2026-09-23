@@ -29,6 +29,7 @@ export function SectionPanel({
   readOnly,
   editableSectionCodes,
   canSelectRecords = true,
+  replacements = {},
 }: {
   personId: string;
   section: SectionView;
@@ -37,6 +38,12 @@ export function SectionPanel({
   editableSectionCodes: string[] | null;
   /** Whether this user may choose which records print. Engineers may not. */
   canSelectRecords?: boolean;
+  /**
+   * Content shown in place of a field, keyed by field code — the photo
+   * uploader takes the place of the プロフィール写真 definition, so the photo
+   * appears wherever that field is placed on the field-definition screen.
+   */
+  replacements?: Record<string, React.ReactNode>;
 }) {
   const [open, setOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -79,7 +86,7 @@ export function SectionPanel({
 
   // The same accent this section is printed in, so the editor and the PDF are
   // recognisably the same section rather than two unrelated lists.
-  const colour = SECTION_COLOURS[section.code] ?? { accent: '#044BA7', tint: '#EEF4FD' };
+  const colour = SECTION_COLOURS[section.code] ?? { accent: '#0879B6', tint: '#EAF6FC' };
 
   return (
     <section className="card overflow-hidden" id={`section-${section.code}`}>
@@ -262,15 +269,21 @@ export function SectionPanel({
           </div>
         ) : (
           <div>
-            {section.fields.map((field) => (
-              <FieldEditor
-                key={field.id}
-                personId={personId}
-                sectionCode={section.code}
-                field={field}
-                readOnly={sectionReadOnly}
-              />
-            ))}
+            {section.fields.map((field) =>
+              field.code in replacements ? (
+                <div key={field.id} className="border-t border-ink-100">
+                  {replacements[field.code]}
+                </div>
+              ) : (
+                <FieldEditor
+                  key={field.id}
+                  personId={personId}
+                  sectionCode={section.code}
+                  field={field}
+                  readOnly={sectionReadOnly}
+                />
+              ),
+            )}
           </div>
         )
       ) : null}

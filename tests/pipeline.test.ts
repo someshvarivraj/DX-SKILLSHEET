@@ -265,3 +265,44 @@ describe('glossary first-use annotation (spec §8.1)', () => {
     expect(text.match(/3次元CADソフト/g)).toHaveLength(1);
   });
 });
+
+describe('GRID assembled from single-answer questions (feedback 2026-09-23, item 6)', () => {
+  const scores = field({
+    code: 'jlpt_scores',
+    processing: 'COPY' as never,
+    valueType: 'GRID' as never,
+    sourceCodes: ['C-2-2', 'C-2-3', 'C-2-4', 'C-2-5', 'C-2-6'],
+  });
+
+  it('labels each JLPT score and skips the sections not taken', async () => {
+    const result = await processField(
+      scores,
+      ctx({ 'C-2-2': '120', 'C-2-3': '40', 'C-2-4': '38', 'C-2-5': '-', 'C-2-6': '42' }),
+    );
+    expect(result.valueJa).toBe(
+      [
+        '総合点：120点（180点満点）',
+        '言語知識（文字・語彙・文法）：40点（60点満点）',
+        '読解：38点（60点満点）',
+        '聴解：42点（60点満点）',
+      ].join('\n'),
+    );
+  });
+
+  it('uses the combined N4/N5 section when that is the one answered', async () => {
+    const result = await processField(
+      scores,
+      ctx({ 'C-2-2': '９５', 'C-2-3': '-', 'C-2-4': '-', 'C-2-5': '70点', 'C-2-6': '25' }),
+    );
+    expect(result.valueJa).toBe(
+      ['総合点：95点（180点満点）', '言語知識・読解：70点（120点満点）', '聴解：25点（60点満点）'].join(
+        '\n',
+      ),
+    );
+  });
+
+  it('stays empty when no score was entered', async () => {
+    const result = await processField(scores, ctx({ 'C-2-2': '-', 'C-2-6': '' }));
+    expect(result.valueJa).toBe('');
+  });
+});

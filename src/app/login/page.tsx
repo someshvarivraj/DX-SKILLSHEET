@@ -17,13 +17,13 @@ export default function LoginPage() {
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
       {/* The brand side. On a phone it collapses to a short band above the form
           rather than disappearing, so the screen still says whose tool this is. */}
-      <aside className="relative overflow-hidden bg-brand-700 px-8 py-10 text-white lg:px-14 lg:py-16">
+      <aside className="relative overflow-hidden bg-brand-500 px-8 py-10 text-white lg:px-14 lg:py-16">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-90"
           style={{
             background:
-              'radial-gradient(90% 70% at 15% 10%, #0069F0 0%, rgba(0,105,240,0) 55%), radial-gradient(70% 60% at 95% 95%, #044BA7 0%, rgba(4,75,167,0) 60%)',
+              'radial-gradient(90% 70% at 15% 10%, #139AD6 0%, rgba(19,154,214,0) 55%), radial-gradient(70% 60% at 95% 95%, #066A9F 0%, rgba(6,106,159,0) 60%)',
           }}
         />
         <div className="relative flex h-full flex-col justify-between gap-10">
@@ -31,7 +31,7 @@ export default function LoginPage() {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/15 text-xs ring-1 ring-white/25">
               SS
             </span>
-            株式会社モルブ阪神工業
+            モラブ阪神工業株式会社
           </div>
 
           <div className="max-w-md">
@@ -40,10 +40,10 @@ export default function LoginPage() {
               <br />
               管理システム
             </h1>
-            <p className="mt-4 text-sm leading-loose text-white/80">
+            <p className="mt-4 text-sm leading-loose text-white/90">
               アンケートの回答から、日本語のスキルシートを作成します。作成した内容は確認・修正のうえ確定し、A4のPDFとして出力できます。
             </p>
-            <ul className="mt-7 space-y-2.5 text-sm text-white/85">
+            <ul className="mt-7 space-y-2.5 text-sm text-white/90">
               {[
                 'アンケート回答の取り込みと項目への割り当て',
                 '日本語文章の生成と、担当者による確認・修正',
@@ -57,7 +57,7 @@ export default function LoginPage() {
             </ul>
           </div>
 
-          <p className="text-xs text-white/55">
+          <p className="text-xs text-white/85">
             社内利用限定。個人情報を扱うため、取り扱いにご注意ください。
           </p>
         </div>

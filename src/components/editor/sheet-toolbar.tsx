@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import type { SheetModel } from '@/lib/sheet/model';
 import {
   finaliseAction,
   submitForReviewAction,
 } from '@/app/(app)/people/[personId]/actions';
-import { previewScrollKey } from './scroll-restore';
+import { saveEditingPosition } from './scroll-restore';
 
 const STATUS_CLASS: Record<string, string> = {
   DRAFT: 'badge-draft',
@@ -40,8 +41,27 @@ export function SheetToolbar({
   >([]);
   const [showEmpty, setShowEmpty] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const isFinal = model.version.status === 'FINAL';
+
+  // The preview is opened with the tab that is open now (and the display
+  // preset), so that its 「編集に戻る」 comes back to the same section. The tab
+  // is read from the address at the moment of the click: the tabs record it
+  // there as they are switched. See scroll-restore.tsx.
+  const previewBase = `/people/${model.personId}/preview`;
+  const openPreview = (event: React.MouseEvent) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+    event.preventDefault();
+    saveEditingPosition(model.personId);
+    const current = new URLSearchParams(window.location.search);
+    const query = new URLSearchParams();
+    for (const key of ['preset', 'tab']) {
+      const value = current.get(key);
+      if (value) query.set(key, value);
+    }
+    router.push(query.size > 0 ? `${previewBase}?${query}` : previewBase);
+  };
 
   // Say plainly what this sheet needs next, so an operator does not have to
   // infer it from the badges. Sano-san's review (2026-09-22, item 4): she
@@ -97,23 +117,10 @@ export function SheetToolbar({
         </span>
 
         <Link
-          href={`/people/${model.personId}/preview`}
+          href={previewBase}
           className="btn btn-secondary"
-          title="印刷される状態のスキルシートを画面で確認する。PDFと同じ見た目である。"
-          onClick={() => {
-            // So that closing the preview can return to this position instead
-            // of the top of the page — see ScrollRestore, read on the editing
-            // screen's next load. Sano-san's review (2026-09-22, item 7).
-            try {
-              sessionStorage.setItem(
-                previewScrollKey(model.personId),
-                String(window.scrollY),
-              );
-            } catch {
-              // Private browsing / storage disabled: preview still works, it
-              // just reopens the editing screen at the top.
-            }
-          }}
+          title="印刷される状態のスキルシートを画面で確認します。PDFと同じ見た目です。"
+          onClick={openPreview}
         >
           プレビュー
         </Link>
@@ -192,7 +199,14 @@ export function SheetToolbar({
         ) : null}
       </div>
 
-        <p className="section-note mt-3">{nextStep}</p>
+        {/* Sano-san asked (2026-09-22 item 4, again 2026-09-23 item 3) what
+            this line is for. It is the sheet's to-do: where this sheet stands
+            in 下書き → 確認 → 確定 → PDF出力, and the one thing to do next. It
+            now says so itself instead of leaving the reader to infer it. */}
+        <p className="section-note next-step mt-3">
+          <span className="next-step-label">次にすること</span>
+          <span>{nextStep}</span>
+        </p>
       </div>
 
       {/* Everything below is reference material, not controls. It stays out of

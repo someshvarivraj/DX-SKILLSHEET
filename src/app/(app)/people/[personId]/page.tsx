@@ -13,15 +13,22 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * The field definition that stands for the photo. Its value is never used —
+ * the photo itself is a file — so on the editing screen the uploader is shown
+ * in its place, inside 個人情報, wherever the definition puts it.
+ */
+const PHOTO_FIELD = 'photo';
+
 export default async function PersonEditorPage({
   params,
   searchParams,
 }: {
   params: Promise<{ personId: string }>;
-  searchParams: Promise<{ preset?: string }>;
+  searchParams: Promise<{ preset?: string; tab?: string }>;
 }) {
   const { personId } = await params;
-  const { preset } = await searchParams;
+  const { preset, tab } = await searchParams;
   const user = await requireUser();
 
   if (!canAccessPerson(user, personId)) notFound();
@@ -59,6 +66,18 @@ export default async function PersonEditorPage({
     : model.sections.filter((section) => section.document !== 'SUPPLEMENT');
 
   const readOnly = !can(user, 'sheet.edit') && !can(user, 'sheet.editOwnExperience');
+
+  const photo = (
+    <PhotoPanel
+      personId={personId}
+      photoUrl={
+        model.person.photoKey
+          ? `/api/files/${encodeURIComponent(model.person.photoKey)}`
+          : null
+      }
+      readOnly={!can(user, 'sheet.edit')}
+    />
+  );
   const editableSectionCodes =
     user.role === 'ENGINEER' ? [...ENGINEER_EDITABLE_SECTIONS] : null;
 
@@ -73,16 +92,9 @@ export default async function PersonEditorPage({
         canExportSupplement={showSupplement && can(user, 'sheet.export')}
       />
 
-      <PhotoPanel
-        personId={personId}
-        photoUrl={
-          model.person.photoKey
-            ? `/api/files/${encodeURIComponent(model.person.photoKey)}`
-            : null
-        }
-        readOnly={!can(user, 'sheet.edit')}
-      />
-
+      {/* Sano-san's review (2026-09-23, item 7): the tabs come first, and the
+          photo sits inside 個人情報 rather than as a section of its own above
+          the tabs. */}
       <SectionTabs
         personId={personId}
         sections={editorSections}
@@ -90,7 +102,15 @@ export default async function PersonEditorPage({
         readOnly={readOnly}
         editableSectionCodes={editableSectionCodes}
         canSelectRecords={can(user, 'sheet.selectRecords')}
+        initialCode={tab ?? null}
+        fieldReplacements={{ [PHOTO_FIELD]: photo }}
       />
+
+      {editorSections.some((s) => s.fields.some((f) => f.code === PHOTO_FIELD)) ? null : (
+        // Only if the プロフィール写真 definition has been removed or switched
+        // off: the photo still needs somewhere to be managed.
+        <div className="card overflow-hidden">{photo}</div>
+      )}
 
       {showSupplement ? (
         <MemoPanel

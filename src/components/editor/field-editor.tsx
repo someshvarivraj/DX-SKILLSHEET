@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import type { FieldView } from '@/lib/sheet/model';
+import { fieldActions } from '@/lib/sheet/field-actions';
 import {
   generateFieldAction,
   loadHistoryAction,
@@ -67,20 +68,7 @@ export function FieldEditor({
 
   const dirty = value !== field.valueJa;
   const disabled = Boolean(readOnly) || field.isLocked || pending;
-  // GRID fields (e.g. JLPT の各スコア) are copied structured data, never AI
-  // output, so there is nothing to regenerate or to show "the original" of.
-  // Sano-san's review (2026-09-22, item 8): "Scores are not generated text,
-  // so regeneration in particular seems unnecessary." Applied to every GRID
-  // field, not just this one, since the reasoning is the same for all of
-  // them (§6.12's placement grids are COPY too).
-  const canRegenerate =
-    field.valueType !== 'GRID' &&
-    (field.processing === 'GENERATE' ||
-      field.processing === 'TRANSLATE' ||
-      field.processing === 'RULE_BASED' ||
-      field.processing === 'COPY' ||
-      field.processing === 'GLOSSARY' ||
-      field.processing === 'ENRICH');
+  const actions = fieldActions(field.processing, field.valueType);
 
   const run = (fn: () => Promise<{ message?: string; warnings?: string[] }>) =>
     startTransition(async () => {
@@ -107,7 +95,11 @@ export function FieldEditor({
 
   return (
     <div
-      className={`border-t border-ink-100 px-4 py-3 ${
+      // Lets the editing screen return to this field after the preview
+      // (see scroll-restore.tsx).
+      id={`field-${field.id}${recordId ? `-${recordId}` : ''}`}
+      data-field-anchor=""
+      className={`field-block border-t border-ink-100 px-4 py-3 ${
         field.isLocked ? 'bg-sand-50/70' : ''
       }`}
     >
@@ -149,7 +141,12 @@ export function FieldEditor({
         {isLongText ? (
           <textarea
             className="textarea"
-            rows={Math.min(10, Math.max(3, Math.ceil([...value].length / 48) + 1))}
+            // Enough rows for every line of a multi-line value (each JLPT
+            // score is its own line), or for a long paragraph's wrapped length.
+            rows={Math.min(
+              10,
+              Math.max(3, value.split('\n').length, Math.ceil([...value].length / 48) + 1),
+            )}
             value={value}
             disabled={disabled}
             onChange={(e) => setValue(e.target.value)}
@@ -205,7 +202,7 @@ export function FieldEditor({
           保存
         </button>
 
-        {canRegenerate && !readOnly ? (
+        {actions.regenerate && !readOnly ? (
           <button
             type="button"
             className="btn btn-secondary"
@@ -224,7 +221,7 @@ export function FieldEditor({
           </button>
         ) : null}
 
-        {field.editing === 'PROMPT_AND_MANUAL' && !readOnly ? (
+        {actions.regenerateWithInstructions && !readOnly ? (
           <button
             type="button"
             className="btn btn-secondary"
@@ -234,7 +231,7 @@ export function FieldEditor({
           </button>
         ) : null}
 
-        {field.sourceText && field.valueType !== 'GRID' ? (
+        {actions.showOriginal && field.sourceText ? (
           <button
             type="button"
             className="btn btn-secondary"

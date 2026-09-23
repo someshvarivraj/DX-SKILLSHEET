@@ -199,7 +199,10 @@ export const SECTIONS: SectionSeed[] = [
         code: 'photo',
         nameJa: 'プロフィール写真',
         nameEn: 'Profile photo',
-        order: 80,
+        // First in 個人情報: on the editing screen the photo uploader appears
+        // where this field is, and the printed sheet puts the photo at the top
+        // beside the name (Sano-san's review, 2026-09-23 item 7).
+        order: 5,
         processing: 'MANUAL',
         helpText: 'アプリ画面からアップロードする。差し替え可能。',
       },
