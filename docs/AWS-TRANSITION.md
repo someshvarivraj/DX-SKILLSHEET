@@ -20,13 +20,13 @@ production-grade by design — it was built to be thrown away.
 | Item | Trial | Production target |
 |---|---|---|
 | AWS account | Ours (`514917275273`) | Yours |
-| Region | `us-east-1` | `ap-northeast-1` (Tokyo) — see §4 warning |
+| Region | `us-east-1` | `ap-northeast-1` (Tokyo) — see §3a warning |
 | Instance | EC2 `t3.small` | EC2 `t3.medium` (per spec sizing) |
 | Domain / TLS | `https://3-94-22-106.sslip.io`, Caddy auto-HTTPS | `https://dx.morabu.com`, ACM cert |
 | Auth | Shared demo password (`DEMO_ACCOUNT_EMAIL`, role `ADMIN`) | One-time email links only, demo account disabled |
 | `MAIL_TRANSPORT` | `console` (no real email sent) | `smtp` via Amazon SES |
 | `STORAGE_DRIVER` | `local` (container filesystem) | `s3` |
-| `AI_PROVIDER` | `mock` (no generation, nothing leaves the box) | `bedrock` |
+| `AI_PROVIDER` | `mock` (no generation, nothing leaves the box) | `openai-compatible` → Google AI (Gemini) — see §3a warning |
 | Data | 5 dummy people from `data/sample-responses*.csv` | Real applicant data |
 | CI/CD | GitHub Actions → OIDC → this AWS account → this one EC2 instance | Same workflow file, pointed at your account |
 
@@ -41,10 +41,11 @@ production is provisioning plus configuration, not a new build.
 From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 
 - [ ] AWS account you control, with permission to create IAM roles, EC2, S3,
-      SES, Bedrock access, ACM certs, and (if you're handling DNS yourself)
-      Route 53 records
-- [ ] Decision: Bedrock model ID (Tokyo region) for `AI_MODEL`, or confirmation
-      to launch with `AI_PROVIDER=mock` until it's granted
+      SES, ACM certs, and (if you're handling DNS yourself) Route 53 records
+- [ ] **Written sign-off that sending applicant answers to Google's Gemini API
+      is acceptable** (see §3a) — this replaced Bedrock on 2026-09-24
+- [ ] Once that's settled: a Gemini API key and model name for `AI_MODEL`, or
+      confirmation to launch with `AI_PROVIDER=mock` until it is
 - [ ] SES sending identity for `morabu.com` verified, and confirmation of
       whether the account is out of the SES sandbox
 - [ ] Confirmation of the final routing for `dx.morabu.com` (ALB vs. an nginx
@@ -56,15 +57,41 @@ From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 ## 3. Provision the AWS resources
 
 Follow `docs/AWS-REQUIREMENTS.md` §1–§7 in your account: EC2 instance + swap,
-EBS, S3 bucket, instance IAM role (S3 + Bedrock + SSM read), SES, Bedrock model
-enablement, ACM cert, DNS record, SSM Parameter Store secrets, security group,
-optional CloudWatch alarms. That document has the exact resource shapes and
-IAM policy JSON already — nothing about that part is trial-specific, so there
-is no shortcut from the trial setup to reuse there.
+EBS, S3 bucket, instance IAM role (S3 + SSM read — no Bedrock permission needed
+any more, see §3a), SES, ACM cert, DNS record, SSM Parameter Store secrets,
+security group, optional CloudWatch alarms. That document has the exact
+resource shapes and IAM policy JSON already — nothing about that part is
+trial-specific, so there is no shortcut from the trial setup to reuse there.
 
 One trial detail worth copying deliberately: **the 2 GB swap file and
 `shm_size: 512mb`** (already in `docker-compose.prod.yml`) were not
 theoretical — the trial instance needed them. Don't skip either.
+
+### 3a. AI service changed from Bedrock to Google AI (Gemini) — read before you provision anything for it
+
+**This is a decision change from the original spec, made 2026-09-24, and it needs
+sign-off before it touches real data.** The original plan (`docs/AWS-REQUIREMENTS.md`
+§4, and the "Everything must stay inside AWS" line in its §1) was Bedrock, chosen
+specifically because it keeps applicant data inside AWS, per client spec §3 and §13.
+The Google AI Gemini Developer API is a public Google endpoint reached over the
+internet with an API key — using it means English answers (not names — those are
+filtered out, but hometowns, education and work history are not) leave AWS and go to
+Google. That's the same category of exception `docs/DEPLOY-TRIAL.md` already
+documents for Groq, which is explicitly marked **dummy-data trial only, never real
+applicant data** for this exact reason.
+
+Get written confirmation from 佐野様/the client that this is acceptable before
+`AI_PROVIDER` is anything other than `mock` in the environment that holds real data.
+If it isn't acceptable, nothing is lost — the Bedrock provider is still fully
+implemented in the codebase (`src/lib/ai/bedrock.ts`) and switching back is a
+config change, not a rebuild.
+
+Technically, this needs no code change either way: the app's AI provider is a
+pluggable interface (`src/lib/ai/provider.ts`), and Gemini's OpenAI-compatible
+endpoint (`https://generativelanguage.googleapis.com/v1beta/openai`) works through
+the `AI_PROVIDER=openai-compatible` path that already exists (the same one the trial
+uses for Groq). No Bedrock IAM permission on the instance role is needed — the
+Gemini key is an application secret in Parameter Store, like the SES password.
 
 ## 4. Set up CI/CD in your account
 
@@ -91,9 +118,10 @@ your AWS account**:
 role live in `us-east-1` — `deploy-permissions.json`'s resource ARNs say so,
 and so does `aws-region: us-east-1` inside `deploy.yml`. That was never meant
 to be the production region; `docs/AWS-REQUIREMENTS.md` specifies Tokyo
-(`ap-northeast-1`) throughout, both for latency to the client and because the
-Bedrock model access has to be requested in that region. If your instance goes
-up in `ap-northeast-1` (it should), update:
+(`ap-northeast-1`) throughout — confirmed necessary regardless of the AI
+provider decision (§3a): it's the region for the EC2 instance, S3 bucket, and
+SES sending identity either way. If your instance goes up in `ap-northeast-1`
+(it should), update:
 
 - The instance/role ARNs in the policy JSON (region segment)
 - `aws-region: us-east-1` → `aws-region: ap-northeast-1` in
@@ -142,9 +170,11 @@ S3_BUCKET=<your bucket>
 S3_REGION=ap-northeast-1
 # leave S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY unset — the instance role covers it
 
-AI_PROVIDER=bedrock                    # was: mock — or leave as mock if Bedrock isn't ready yet
-AI_MODEL=<bedrock model id>
-AI_REGION=ap-northeast-1
+# AI_PROVIDER: leave as "mock" until the Gemini sign-off in §3a is in writing
+AI_PROVIDER=openai-compatible          # was: mock
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_API_KEY=<gemini api key>            # from Parameter Store
+AI_MODEL=<gemini model name>           # check the current model list in AI Studio
 
 # Demo account: leave both blank and NEXT_PUBLIC_DEMO_ACCOUNT_ENABLED=false.
 # This is a real-data environment; the shared-password demo account from the
@@ -189,8 +219,9 @@ by hand after that deploy, same as during the trial.
 ## 8. Verify before handing off
 
 - `GET https://dx.morabu.com/api/health` → `200`, and the body's `checks`
-  show `ai: provider=bedrock` (or `mock` if deliberately deferred),
-  `storage: driver=s3`, `mail: transport=smtp`, `database: ok=true`
+  show `ai: provider=openai-compatible` (or `mock` if the Gemini sign-off in
+  §3a is still pending), `storage: driver=s3`, `mail: transport=smtp`,
+  `database: ok=true`
 - Send yourself a real login link and confirm it arrives via SES (not just
   logged to the console, which is all the trial ever did)
 - Import one real record and confirm the photo/PDF round-trip through S3
