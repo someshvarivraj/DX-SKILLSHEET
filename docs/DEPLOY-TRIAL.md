@@ -108,8 +108,15 @@ npm start              # 既定で :3000
 読み込む。画面から取り込んだ場合とまったく同じ経路なので、取り込み自体の
 確認にもなる。1名は確定済みにしてあるので、PDF出力をすぐ試せる。
 
-Docker を使う場合は `docker compose -f docker-compose.prod.yml up -d` のあと、
-同じ `db:deploy` / `db:seed` / `db:demo` をコンテナ内で実行する。
+Docker を使う場合は `docker compose -f docker-compose.prod.yml --env-file .env up -d` のあと、
+同じ `db:deploy` / `db:seed` / `db:demo` を `tools` サービスで実行する
+（本番イメージには Prisma CLI も tsx も入っていないため。`docker-compose.prod.yml` 参照）：
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npm run db:deploy
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npm run db:seed
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npm run db:demo
+```
 
 **Docker ビルドの注意点（体験環境の構築で実際に踏んだもの）。**
 

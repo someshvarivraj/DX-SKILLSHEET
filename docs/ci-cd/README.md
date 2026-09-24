@@ -140,7 +140,7 @@ root で clone するなら不要）。
 登録できる）。そうすれば、片方のインスタンスの鍵が漏れても、もう片方には
 影響しない。
 
-## 3. GitHub側にリポジトリ変数を2つ設定する
+## 3. GitHub側にリポジトリ変数を設定する
 
 GitHubの `someshvarivraj/DX-SKILLSHEET` → **Settings → Secrets and variables →
 Actions → Variables タブ** → **New repository variable** で以下を追加する。
@@ -151,6 +151,8 @@ Actions → Variables タブ** → **New repository variable** で以下を追�
 |---|---|
 | `AWS_DEPLOY_ROLE_ARN` | ステップ2で取得したロールのARN |
 | `DEPLOY_INSTANCE_ID` | `i-0521602aa68362440` |
+| `AWS_REGION` | 体験環境では設定しない（未設定なら `us-east-1`）。本番（東京）では `ap-northeast-1` |
+| `DEPLOY_DIR` | 体験環境では設定しない（未設定なら `/opt/dx-skillsheet`）。会社のサーバーでは `/opt/apps/skill-sheet-2` |
 
 ---
 
@@ -172,6 +174,6 @@ Actions → Variables タブ** → **New repository variable** で以下を追�
 アカウントID（`514917275273`）と、`deploy-permissions.json` のインスタンス
 ARNを新環境のものに差し替えてから、上のステップ1・2を新アカウントで実行する。
 ステップ2.5（デプロイキー）は新しいインスタンスごとに必ずやり直す — 使い回さない。
-GitHub側はステップ3の2つの変数を新しい値に差し替えるだけで、ワークフロー本体
+GitHub側はステップ3の変数（`AWS_REGION` を含む）を新しい値に差し替えるだけで、ワークフロー本体
 （`.github/workflows/deploy.yml`）は変更不要である。S3バケットは、この構成では
 どのAWSアカウントでも一切作る必要がない。

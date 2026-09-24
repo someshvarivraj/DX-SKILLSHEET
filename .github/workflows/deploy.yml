@@ -14,6 +14,8 @@
 #
 #   AWS_DEPLOY_ROLE_ARN  例: arn:aws:iam::514917275273:role/dx-skillsheet-github-deploy
 #   DEPLOY_INSTANCE_ID   例: i-0521602aa68362440
+#   AWS_REGION           例: ap-northeast-1（未設定なら体験環境の us-east-1）
+#   DEPLOY_DIR           例: /opt/apps/skill-sheet-2（未設定なら体験環境の /opt/dx-skillsheet）
 
 name: Deploy to trial EC2
 
@@ -34,19 +36,20 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Trigger rebuild on EC2
         env:
           SHA: ${{ github.sha }}
           INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/opt/dx-skillsheet' }}
         run: |
           set -e
           cat > /tmp/commands.json <<EOF
           {
             "commands": [
               "set -e",
-              "cd /opt/dx-skillsheet",
+              "cd ${DEPLOY_DIR}",
               "git fetch origin ${SHA}",
               "git reset --hard ${SHA}",
               "docker compose -f docker-compose.prod.yml --env-file .env build app",
