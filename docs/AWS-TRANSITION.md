@@ -48,9 +48,9 @@ production is provisioning plus configuration, not a new build.
 
 From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 
-- [ ] AWS account you control, with permission to create IAM roles, EC2, S3
-      (one small bucket only — see §3a, this is not the app-storage decision),
-      SES, ACM certs, and (if you're handling DNS yourself) Route 53 records
+- [ ] AWS account you control, with permission to create IAM roles, EC2, SES,
+      ACM certs, and (if you're handling DNS yourself) Route 53 records — no
+      S3 is needed anywhere in this setup (see §3a)
 - [ ] **Written sign-off that sending applicant answers to Google's Gemini API
       is acceptable** (see §3b) — this replaced Bedrock on 2026-09-24
 - [ ] Once that's settled: a Gemini API key and model name for `AI_MODEL`, or
@@ -143,19 +143,18 @@ Gemini key is an application secret in Parameter Store, like the SES password.
 
 ## 4. Set up CI/CD in your account
 
-**One small S3 bucket is still needed here — this is separate from the §3a
-decision.** The CI/CD pipeline itself (not the application) stages each
-deploy's source tarball in S3 before SSM pulls it onto the instance — that's
-what `DEPLOY_BUCKET` below is. It's tiny (a few MB per deploy, easy to put a
-lifecycle rule on), holds no applicant data at all, and the trial already
-runs on this exact mechanism. "No S3" in §3a means no S3 for *photos and
-PDFs* — the deploy pipeline's bucket is unrelated and still required, unless
-you'd rather redesign the deploy mechanism itself, which isn't in scope here.
+**No S3 bucket anywhere in this pipeline.** GitHub Actions doesn't stage or
+upload the source at all — it just tells the instance, over SSM, to
+`git fetch` and `git reset --hard` to the pushed commit itself, then rebuild.
+The instance reads straight from GitHub with its own read-only deploy key.
+This is the current mechanism (decided 2026-09-24, replacing an earlier
+tar-via-S3 design) — see `docs/ci-cd/README.md` for the full rationale.
 
 The deploy workflow itself (`.github/workflows/deploy.yml`) needs no code
-changes — it reads the target account, bucket and instance entirely from three
-GitHub repository variables. Follow `docs/ci-cd/README.md` steps 1–2.5 **in
-your AWS account**:
+changes for the account move — it reads the target account and instance
+entirely from two GitHub repository variables, plus the instance needs its
+own deploy key (a one-time step, not a GitHub variable). Follow
+`docs/ci-cd/README.md` steps 1–2.5 **in your AWS account**:
 
 1. Register GitHub as an OIDC identity provider (skip if this account already
    has one for any repo).
@@ -164,20 +163,22 @@ your AWS account**:
    first**:
    - `trust-policy.json` hard-codes our trial account ID (`514917275273`) in
      the `Federated` ARN. Replace it with yours.
-   - `deploy-permissions.json` and `ec2-read-deploy-artifact-policy.json`
-     hard-code the trial S3 bucket name and the trial instance ARN. Replace
-     both with your bucket name and your instance's ARN once it exists.
-3. Widen the EC2 instance's own role to read the deploy bucket
-   (`ec2-read-deploy-artifact-policy.json`), against whatever you name that
-   role in your account.
+   - `deploy-permissions.json` hard-codes the trial instance's ARN. Replace it
+     with your instance's ARN once it exists. It only grants `ssm:SendCommand`
+     against that one instance plus read access to the command result — no S3
+     permissions are in it, or needed.
+3. Generate a fresh SSH key pair **on the new instance itself** and register
+   its public half as a read-only deploy key on the GitHub repo (§2.5 of
+   `docs/ci-cd/README.md`). Don't reuse the trial instance's key — each
+   instance gets its own, so one leaking doesn't expose the other.
 
 **Region mismatch to fix while you're in these files:** the trial instance and
-role live in `us-east-1` — `deploy-permissions.json`'s resource ARNs say so,
+role live in `us-east-1` — `deploy-permissions.json`'s resource ARN says so,
 and so does `aws-region: us-east-1` inside `deploy.yml`. That was never meant
 to be the production region; `docs/AWS-REQUIREMENTS.md` specifies Tokyo
 (`ap-northeast-1`) throughout — confirmed necessary regardless of the AI
-provider decision (§3b): it's the region for the EC2 instance, S3 bucket, and
-SES sending identity either way. If your instance goes up in `ap-northeast-1`
+provider decision (§3b): it's the region for the EC2 instance and SES sending
+identity either way. If your instance goes up in `ap-northeast-1`
 (it should), update:
 
 - The instance/role ARNs in the policy JSON (region segment)
@@ -195,11 +196,12 @@ three trial values:
 | Variable | Trial value | Set to |
 |---|---|---|
 | `AWS_DEPLOY_ROLE_ARN` | role in account `514917275273` | the role ARN from §4.2, your account |
-| `DEPLOY_BUCKET` | `dx-skillsheet-deploy-514917275273` | your deploy bucket name |
 | `DEPLOY_INSTANCE_ID` | `i-0521602aa68362440` | your new EC2 instance ID |
 
 No GitHub Secrets are used anywhere in this workflow (OIDC issues temporary
-credentials per run) — only Variables. Nothing else in GitHub changes.
+credentials per run) — only Variables. The one other GitHub-side change is
+the deploy key from §4.3 (**Settings → Deploy keys**, not Variables) — that's
+per-instance, not per-account, so it isn't a repository variable.
 
 ## 6. Build the production `.env.production`
 
@@ -271,9 +273,10 @@ Set up the nightly backup cron from AWS-REQUIREMENTS.md §3 at this point too �
 it's not part of `docker-compose.prod.yml` and won't exist unless you add it.
 
 After this first deploy, subsequent ones are a `git push` to `main`: GitHub
-Actions packages the source, uploads it to your S3 bucket, and rebuilds the
-container on the instance via SSM. **Database migrations are not part of that
-workflow** — if a change includes a Prisma migration, run
+Actions tells the instance via SSM to `git fetch`/`git reset --hard` to that
+commit itself (using the deploy key from §4.3) and rebuilds the container.
+**Database migrations are not part of that workflow** — if a change includes
+a Prisma migration, run
 `docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy`
 by hand after that deploy, same as during the trial.
 
@@ -304,5 +307,8 @@ by hand after that deploy, same as during the trial.
 - Terminate the trial EC2 instance and its resources once you're confident in
   production, or keep it around as a staging box — your call; nothing in the
   application assumes it still exists
-- The trial's IAM deploy role and S3 deploy bucket in account `514917275273`
-  can be deleted once `DEPLOY_INSTANCE_ID` in GitHub no longer points at them
+- The trial's IAM deploy role in account `514917275273` can be deleted once
+  `DEPLOY_INSTANCE_ID` in GitHub no longer points at that instance
+- The trial instance's deploy key can be removed from **Settings → Deploy
+  keys** on the GitHub repo at the same time — it has no use once that
+  instance is gone

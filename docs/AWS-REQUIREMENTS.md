@@ -132,7 +132,7 @@ switched back to by changing `AI_PROVIDER` alone.
 2. No IAM change is needed — the key is an application-level secret like the SES
    password, not an AWS instance-role permission. This also means, unlike Bedrock,
    there is nothing to request access to per-region; the Tokyo requirement for this
-   environment (EC2, S3, SES) is unaffected and still stands.
+   environment (EC2, SES) is unaffected and still stands.
 3. Set in the environment (see §7):
    ```bash
    AI_PROVIDER=openai-compatible
