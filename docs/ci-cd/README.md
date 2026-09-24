@@ -76,36 +76,61 @@ aws iam get-role --role-name dx-skillsheet-github-deploy --query 'Role.Arn' --ou
 デプロイキー（このリポジトリ専用、書き込み不可）を使う — 個人のGitHub
 アカウントの認証情報や長期のPATはインスタンスに置かない。
 
-インスタンス上で（初回セットアップ時、`ubuntu`または実行ユーザーで）：
+**すべてインスタンス上の root で行う。** デプロイは SSM の `AWS-RunShellScript`
+経由で実行され、これは root として動くため、鍵・`ssh` 設定・git の設定はすべて
+`/root` 側に置く必要がある（`ssm-user` や `ec2-user` の `~/.ssh` に置いても
+デプロイからは見えない）。AWS CloudShell ではなく、EC2コンソール →
+インスタンス → **接続 → Session Manager** でインスタンス自体に入り、
+`sudo -i` で root になってから実行する。
+
+体験環境のインスタンスは Amazon Linux 2023 で、git は最初から入っていない
+（入っていないとデプロイは `git: command not found`（exit 127）で失敗する）。
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/dx-skillsheet-deploy -N "" -C "dx-skillsheet-ec2-deploy"
-cat ~/.ssh/dx-skillsheet-deploy.pub
-```
-
-表示された公開鍵を GitHub の `someshvarivraj/DX-SKILLSHEET` →
-**Settings → Deploy keys → Add deploy key** に登録する。**"Allow write access"
-はチェックしない**（read-onlyで十分、書き込み権限を与える理由がない）。
-
-インスタンス上の `~/.ssh/config` に追記し、このリポジトリへの接続だけこの鍵を
-使うようにする：
-
-```
+sudo -i
+dnf install -y git
+mkdir -p /root/.ssh && chmod 700 /root/.ssh
+ssh-keygen -t ed25519 -f /root/.ssh/dx-skillsheet-deploy -N "" -C "dx-skillsheet-ec2-deploy"
+cat >> /root/.ssh/config <<'EOF'
 Host github.com-dx-skillsheet
   HostName github.com
   User git
-  IdentityFile ~/.ssh/dx-skillsheet-deploy
+  IdentityFile /root/.ssh/dx-skillsheet-deploy
   IdentitiesOnly yes
+EOF
+chmod 600 /root/.ssh/config
+ssh-keyscan github.com >> /root/.ssh/known_hosts
+cat /root/.ssh/dx-skillsheet-deploy.pub
 ```
 
-`/opt/dx-skillsheet` のgit remoteをこのホスト名に向ける（初回 `git clone` を
-このURLで行うか、既存のcloneなら差し替える）：
+`~/.ssh/config` のエントリにより、このリポジトリへの接続だけこの鍵を使う。
+
+表示された公開鍵（`ssh-ed25519 ...` の1行全体）を GitHub の
+`someshvarivraj/DX-SKILLSHEET` → **Settings → Deploy keys → Add deploy key**
+に登録する。**"Allow write access" はチェックしない**（read-onlyで十分、
+書き込み権限を与える理由がない）。
+
+次に `/opt/dx-skillsheet` をgitの作業ツリーにする。以前のS3方式で展開された
+ディレクトリには `.git` が無いので、その場で `git init` してから最新の `main`
+に合わせる。`.env` と `.env.production` は `.gitignore` 対象なので
+`reset --hard` で消えない。念のため先にバックアップを取る。
+ディレクトリの所有者は `ssm-user` だが git は root で動くため、
+`safe.directory` の設定が必須（無いと "dubious ownership" で失敗する）。
 
 ```bash
+cp -a /opt/dx-skillsheet /opt/dx-skillsheet-prev-before-git
 cd /opt/dx-skillsheet
-git remote set-url origin git@github.com-dx-skillsheet:someshvarivraj/DX-SKILLSHEET.git
-git fetch origin main   # 疎通確認
+git init -b main
+git remote add origin git@github.com-dx-skillsheet:someshvarivraj/DX-SKILLSHEET.git
+git config --global --add safe.directory /opt/dx-skillsheet
+git fetch origin main && git reset --hard origin/main   # 疎通確認を兼ねる
+git log --oneline -1
 ```
+
+新しいインスタンスで最初から作る場合は、上の代わりに
+`git clone git@github.com-dx-skillsheet:someshvarivraj/DX-SKILLSHEET.git /opt/dx-skillsheet`
+としてから `.env` / `.env.production` を置けばよい（`safe.directory` は
+root で clone するなら不要）。
 
 **新しいインスタンス（本番などの別AWSアカウント）に移すときは、この鍵は
 使い回さない。** インスタンスごとに新しい鍵ペアを作り、GitHub側にも
