@@ -10,6 +10,13 @@ services:
     env_file: .env.production
     ports:
       - '127.0.0.1:3000:3000'
+    # STORAGE_DRIVER=local (docs/AWS-REQUIREMENTS.md §2a) writes to ./storage,
+    # i.e. /app/storage inside the container (Dockerfile WORKDIR). Without this
+    # volume, a rebuild on every CI/CD deploy (docker compose ... build && up -d)
+    # would silently wipe every uploaded photo and generated PDF, since nothing
+    # would be outside the rebuilt container's own filesystem.
+    volumes:
+      - /var/lib/skillsheet/storage:/app/storage
     depends_on:
       db:
         condition: service_healthy
