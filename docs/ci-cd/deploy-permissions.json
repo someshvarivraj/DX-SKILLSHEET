@@ -2,12 +2,6 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "UploadDeployArtifact",
-      "Effect": "Allow",
-      "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::dx-skillsheet-deploy-514917275273/*"
-    },
-    {
       "Sid": "TriggerDeployOnInstance",
       "Effect": "Allow",
       "Action": ["ssm:SendCommand"],

@@ -1,18 +1,18 @@
 # 体験環境への自動デプロイ。
 #
 # main への push をトリガーに、GitHub Actions が AWS に一時的な認証情報で
-# ログインし（OIDC。長期のアクセスキーはどこにも保存しない）、最新のソースを
-# S3 に置いてから、SSM 経由で EC2 上に再展開する。手順は今まで手動でやって
-# いたもの（tar 作成 → S3 アップロード → SSM でビルド・再起動）と同じで、
-# それを push のたびに自動で行うだけである。
+# ログインし（OIDC。長期のアクセスキーはどこにも保存しない）、SSM 経由で
+# EC2 上のインスタンスに「git pull して再ビルド」を指示するだけである。
+# S3は使わない — インスタンス自身がGitHubから直接 `git fetch` する
+# （リポジトリはprivateなので、インスタンス側にread-onlyのデプロイキーが
+# 必要。docs/ci-cd/README.md 参照）。
 #
 # 一度きりのAWS側セットアップは docs/ci-cd/README.md を参照。本番の別AWSアカウント
-# へ移すときは、そちらの手順を新アカウントでもう一度実行し、下の3つの
+# へ移すときは、そちらの手順を新アカウントでもう一度実行し、下の2つの
 # リポジトリ変数（Settings → Secrets and variables → Actions → Variables）を
 # 新しい値に差し替えるだけでよい。シークレットは一切使わない。
 #
 #   AWS_DEPLOY_ROLE_ARN  例: arn:aws:iam::514917275273:role/dx-skillsheet-github-deploy
-#   DEPLOY_BUCKET        例: dx-skillsheet-deploy-514917275273
 #   DEPLOY_INSTANCE_ID   例: i-0521602aa68362440
 
 name: Deploy to trial EC2
@@ -30,27 +30,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Configure AWS credentials (OIDC — 保存された鍵は使わない)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Package source
-        run: |
-          tar --exclude='.git' --exclude='node_modules' --exclude='.next' --exclude='storage' \
-              -czf /tmp/app.tar.gz .
-
-      - name: Upload to S3
-        run: |
-          aws s3 cp /tmp/app.tar.gz "s3://${{ vars.DEPLOY_BUCKET }}/app-${{ github.sha }}.tar.gz"
-
       - name: Trigger rebuild on EC2
         env:
-          BUCKET: ${{ vars.DEPLOY_BUCKET }}
-          KEY: app-${{ github.sha }}.tar.gz
+          SHA: ${{ github.sha }}
           INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
         run: |
           set -e
@@ -58,18 +46,11 @@ jobs:
           {
             "commands": [
               "set -e",
-              "cd /opt",
-              "aws s3 cp s3://${BUCKET}/${KEY} /opt/app.tar.gz",
-              "rm -rf dx-skillsheet-new && mkdir dx-skillsheet-new",
-              "tar -xzf /opt/app.tar.gz -C dx-skillsheet-new",
-              "cp /opt/dx-skillsheet/.env dx-skillsheet-new/.env",
-              "cp /opt/dx-skillsheet/.env.production dx-skillsheet-new/.env.production",
-              "mv /opt/dx-skillsheet /opt/dx-skillsheet-prev-$(date +%s)",
-              "mv /opt/dx-skillsheet-new /opt/dx-skillsheet",
               "cd /opt/dx-skillsheet",
+              "git fetch origin ${SHA}",
+              "git reset --hard ${SHA}",
               "docker compose -f docker-compose.prod.yml --env-file .env build app",
               "docker compose -f docker-compose.prod.yml --env-file .env up -d app",
-              "rm -f /opt/app.tar.gz",
               "echo DEPLOY_DONE"
             ]
           }
