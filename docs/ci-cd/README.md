@@ -116,13 +116,15 @@ cat /root/.ssh/dx-skillsheet-deploy.pub
 `reset --hard` で消えない。念のため先にバックアップを取る。
 ディレクトリの所有者は `ssm-user` だが git は root で動くため、
 `safe.directory` の設定が必須（無いと "dubious ownership" で失敗する）。
+**`--global` ではなく `--system`（`/etc/gitconfig`）に書くこと** — SSM は `HOME` を
+設定せずにコマンドを実行するため、`/root/.gitconfig` はデプロイ時に読まれない。
 
 ```bash
 cp -a /opt/dx-skillsheet /opt/dx-skillsheet-prev-before-git
 cd /opt/dx-skillsheet
 git init -b main
 git remote add origin git@github.com-dx-skillsheet:someshvarivraj/DX-SKILLSHEET.git
-git config --global --add safe.directory /opt/dx-skillsheet
+git config --system --add safe.directory /opt/dx-skillsheet   # --globalは不可（下記）
 git fetch origin main && git reset --hard origin/main   # 疎通確認を兼ねる
 git log --oneline -1
 ```
