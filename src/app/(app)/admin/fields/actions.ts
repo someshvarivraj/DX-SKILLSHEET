@@ -242,6 +242,8 @@ export async function createSectionAction(input: {
   code: string;
   nameJa: string;
   nameEn?: string;
+  /** The screen has an add button above the list and one below it. */
+  position?: 'first' | 'last';
 }): Promise<SaveResult> {
   const user = await guard();
   const code = input.code.trim();
@@ -256,15 +258,21 @@ export async function createSectionAction(input: {
   const exists = await prisma.sheetSection.findUnique({ where: { code } });
   if (exists) return { ok: false, message: 'そのセクションコードはすでに使われています' };
 
-  const last = await prisma.sheetSection.findFirst({ orderBy: { order: 'desc' } });
-  const section = await prisma.sheetSection.create({
-    data: {
-      code,
-      nameJa,
-      nameEn: input.nameEn || null,
-      order: (last?.order ?? 0) + 10,
-    },
-  });
+  const data = { code, nameJa, nameEn: input.nameEn || null };
+  let section;
+  if (input.position === 'first') {
+    // Shift everything down one step rather than going below the first order
+    // value, so the stored numbers stay positive.
+    [, section] = await prisma.$transaction([
+      prisma.sheetSection.updateMany({ data: { order: { increment: 10 } } }),
+      prisma.sheetSection.create({ data: { ...data, order: 10 } }),
+    ]);
+  } else {
+    const last = await prisma.sheetSection.findFirst({ orderBy: { order: 'desc' } });
+    section = await prisma.sheetSection.create({
+      data: { ...data, order: (last?.order ?? 0) + 10 },
+    });
+  }
 
   await recordAudit({
     userId: user.id,

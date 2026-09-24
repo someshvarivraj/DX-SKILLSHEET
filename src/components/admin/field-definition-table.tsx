@@ -365,7 +365,27 @@ export function FieldDefinitionTable({
 }) {
   const [notice, setNotice] = useState<Notice>(null);
   const reorder = useReorder(sections, reorderSectionsAction, setNotice);
-  const [adding, setAdding] = useState(false);
+  // Which add button is open. There is one above the list and one below it:
+  // with many sections the bottom one is off screen, and a new section goes
+  // where the button that was pressed is.
+  const [adding, setAdding] = useState<'first' | 'last' | null>(null);
+
+  const addControl = (position: 'first' | 'last') =>
+    adding === position ? (
+      <AddSectionForm
+        position={position}
+        onDone={(result) => {
+          setNotice({ ok: result.ok, text: result.message });
+          if (result.ok) setAdding(null);
+        }}
+        onCancel={() => setAdding(null)}
+      />
+    ) : (
+      <button type="button" className="def-add" onClick={() => setAdding(position)}>
+        <Plus size={16} aria-hidden />
+        {position === 'first' ? '先頭にセクションを追加する' : '末尾にセクションを追加する'}
+      </button>
+    );
 
   return (
     <div className="def-table">
@@ -375,6 +395,8 @@ export function FieldDefinitionTable({
       </div>
 
       <NoticeLine notice={notice} />
+
+      {addControl('first')}
 
       <div className="def-row def-head" aria-hidden>
         <span>並び替え</span>
@@ -397,19 +419,7 @@ export function FieldDefinitionTable({
         />
       ))}
 
-      {adding ? (
-        <AddSectionForm
-          onDone={(result) => {
-            setNotice({ ok: result.ok, text: result.message });
-            if (result.ok) setAdding(false);
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      ) : (
-        <button type="button" className="def-add" onClick={() => setAdding(true)}>
-          <Plus size={16} aria-hidden /> セクションを追加する
-        </button>
-      )}
+      {addControl('last')}
     </div>
   );
 }
@@ -631,9 +641,11 @@ function SectionSettings({
 }
 
 function AddSectionForm({
+  position,
   onDone,
   onCancel,
 }: {
+  position: 'first' | 'last';
   onDone: (result: SaveResult) => void;
   onCancel: () => void;
 }) {
@@ -667,7 +679,7 @@ function AddSectionForm({
           disabled={pending || !code.trim() || !nameJa.trim()}
           onClick={() =>
             startTransition(async () => {
-              onDone(await createSectionAction({ code, nameJa, nameEn }));
+              onDone(await createSectionAction({ code, nameJa, nameEn, position }));
             })
           }
         >
