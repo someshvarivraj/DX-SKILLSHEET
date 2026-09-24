@@ -15,10 +15,10 @@ AWS-specific except through these variables, so the same build runs locally and 
 | # | Resource | Purpose | Notes |
 |---|---|---|---|
 | 1 | EC2 instance, `t3.medium` (2 vCPU / 4 GiB), Tokyo `ap-northeast-1` | Runs the app, PostgreSQL and Chromium | Sized per the client specification |
-| 2 | EBS gp3, 20 GB | Root + data volume | |
-| 3 | 2 GB swap file on the instance | Prevents the OOM killer from stopping PostgreSQL when Chromium spikes | Required — see §6 |
-| 4 | S3 bucket, e.g. `morabu-dx-skillsheet` | Profile photos, generated PDFs, nightly DB dumps | Private, SSE-S3, versioning on |
-| 5 | IAM instance role | S3 access + SSM parameter read | No access keys in the app for S3; see §4 — the AI provider now used needs none |
+| 2 | EBS gp3, **≥30 GB** (was 20 GB) | Root + data volume | Not optional — this is the instance's own disk, every EC2 instance needs one. Bumped from the original 20GB because §2a below now puts photos, PDFs *and* DB backups on it too, where the original plan put those on S3 |
+| 3 | 2 GB swap file on the instance | Prevents the OOM killer from stopping PostgreSQL when Chromium spikes | Required — see §6. Free (a file on the EBS volume above, not a billed AWS resource) — there's no cost saving in skipping it, only crash risk |
+| 4 | ~~S3 bucket~~ — **deferred, see §2a** | Was: profile photos, generated PDFs, nightly DB dumps | **Not being created for now** — decision 2026-09-24, see §2a. Everything that was going to live in S3 lives on the EBS volume (row 2) instead, until this is revisited |
+| 5 | IAM instance role | SSM parameter read only | No S3 permission needed while storage is local; no access keys in the app either way; see §4 — the AI provider now used needs no AWS permission at all |
 | 6 | Amazon SES (production access) + SMTP credentials | Sends the one-time login links | Verify the sending domain |
 | 7 | Google AI (Gemini) API key | The AI that rewrites English answers into Japanese | See §4 — **decision changed 2026-09-24: away from Bedrock, see the warning below** |
 | 8 | ACM certificate for `dx.morabu.com` | HTTPS | Auto-renew |
@@ -46,23 +46,57 @@ Groq option in the trial environment does.**
   `Dockerfile` and `docker-compose.prod.yml` that start the app and PostgreSQL together.
 - **Time zone:** set the instance and the database to `Asia/Tokyo`.
 
+## 2a. Storage — deferred from S3 to local disk (decision 2026-09-24)
+
+**No S3 bucket for now.** `STORAGE_DRIVER=local` (already the trial's setting — this
+is not new code, just staying on the default the app already ships with) writes photos
+and generated PDFs to a folder on the instance's own EBS volume instead. Nothing in the
+application changes to support this; `STORAGE_DRIVER=s3` is a config flip whenever S3
+gets added later, per `src/lib/storage.ts`.
+
+**What this trades away, so it's a real decision and not a free lunch:**
+- Files live only on this one instance's disk. If the instance or its volume is lost,
+  photos, PDFs *and* the nightly database backup (see below) go with it — there is no
+  off-instance copy. Take an EBS snapshot on a schedule if you want any recovery story
+  at all before S3 is added.
+- Disk usage grows over time instead of staying flat — see the EBS sizing note in §1.
+- The `client_max_body_size` / disk-full failure mode is now something to actually
+  monitor (a CloudWatch disk alarm, §1 row 12, matters more here than it would with S3).
+
+Adding S3 later is small and non-disruptive: create the bucket, set `STORAGE_DRIVER=s3`
++ `S3_BUCKET` + `S3_REGION`, copy the existing files up, restart the app. Nothing about
+running this way now blocks that later — this is explicitly an interim choice, not a
+redesign.
+
 ## 3. Database
 
 - **PostgreSQL 16**, initially on the same instance (the client asked for this to avoid
   additional cost now).
 - The design keeps an RDS move cheap: the connection string is a single environment
   variable, so migration means changing `DATABASE_URL` and restoring a dump. Nothing
-  else in the application changes.
-- **Nightly dump to S3 is required from day one.** The client wants to be able to state
-  that backups run automatically every day. A cron entry is enough:
+  else in the application changes. (Photos/PDFs are a separate concern from the
+  database — see §2a; RDS would only ever hold the structured data, never the binary
+  files, the storage driver never targets RDS.)
+- **Nightly dump — required from day one, currently to local disk instead of S3 (see
+  §2a).** The client wants to be able to state that backups run automatically every
+  day; that requirement doesn't go away just because S3 isn't set up yet, but the
+  destination does, for now:
 
 ```bash
 # /etc/cron.d/skillsheet-backup
-0 3 * * * root docker exec skillsheet-db pg_dump -U skillsheet skillsheet | gzip | \
-  aws s3 cp - s3://morabu-dx-skillsheet/backups/$(date +\%Y\%m\%d).sql.gz
+# Interim: local disk (see §2a). Swap the last line for an `aws s3 cp` once a
+# bucket exists — the pg_dump/gzip part doesn't change.
+0 3 * * * root docker exec skillsheet-db pg_dump -U skillsheet skillsheet | gzip > \
+  /var/backups/skillsheet/$(date +\%Y\%m\%d).sql.gz
+find /var/backups/skillsheet -mtime +90 -delete
 ```
 
-Set an S3 lifecycle rule to expire backups after, say, 90 days.
+This is weaker than the original S3 plan — a backup sitting on the same disk as the
+database it's backing up doesn't protect against losing the whole instance or volume,
+only against a bad migration or accidental deletion. Worth an EBS snapshot schedule
+in the meantime, and worth moving to S3 sooner rather than later given this now holds
+real applicant data. Once a bucket exists, swap the last line for the original
+`aws s3 cp - s3://.../backups/...` and set an S3 lifecycle rule to expire at 90 days.
 
 ## 4. AI service (Google AI / Gemini API)
 
@@ -157,9 +191,11 @@ SMTP_PORT=587
 SMTP_USER=<SES SMTP username>
 SMTP_PASSWORD=<SES SMTP password>
 MAIL_FROM=skillsheet@morabu.com              # must be a verified SES identity
-STORAGE_DRIVER=s3
-S3_BUCKET=morabu-dx-skillsheet
-S3_REGION=ap-northeast-1
+STORAGE_DRIVER=local                         # was s3 — deferred, see §2a
+STORAGE_LOCAL_PATH=./storage                 # = /app/storage in the container; mounted from
+                                              # the host at /var/lib/skillsheet/storage,
+                                              # see docker-compose.prod.yml — do not change
+                                              # this without updating that mount too
 AI_PROVIDER=openai-compatible                # use "mock" until the AI decision (see §4) is final
 AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 AI_API_KEY=<gemini api key>                  # from Parameter Store
@@ -226,3 +262,6 @@ server {
 4. Confirmation that **running the app, PostgreSQL and Chromium on one `t3.medium`** is
    acceptable to you. It fits the specification, but if you would rather split the
    database out to RDS now, the only change on our side is one environment variable.
+5. Nothing needed from you on S3 right now — that's deferred to local disk storage
+   (§2a), decided 2026-09-24. Flagging so it isn't assumed forgotten: it's an
+   intentional interim choice, revisit it once this environment is stable.

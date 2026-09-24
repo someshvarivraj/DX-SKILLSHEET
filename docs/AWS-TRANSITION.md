@@ -10,6 +10,14 @@ to be. `docs/AWS-REQUIREMENTS.md` is the reference for *what* the production
 environment needs; this document is the *how* — specifically, what changes
 relative to the trial environment that is already running, and in what order.
 
+**This whole build happens in a separate AWS account and does not touch the
+trial.** Everything in §3 onward stands up new, independent resources in your
+account. The trial keeps running on its own account exactly as it is —
+nothing here stops it, changes it, or shares any resource with it — until
+§9 (decommission), which is written as an optional last step you do on your
+own schedule once you're confident in production, not something this
+transition requires.
+
 ---
 
 ## 1. Where things stand today (the trial environment)
@@ -20,13 +28,13 @@ production-grade by design — it was built to be thrown away.
 | Item | Trial | Production target |
 |---|---|---|
 | AWS account | Ours (`514917275273`) | Yours |
-| Region | `us-east-1` | `ap-northeast-1` (Tokyo) — see §3a warning |
+| Region | `us-east-1` | `ap-northeast-1` (Tokyo) — see §3b warning |
 | Instance | EC2 `t3.small` | EC2 `t3.medium` (per spec sizing) |
 | Domain / TLS | `https://3-94-22-106.sslip.io`, Caddy auto-HTTPS | `https://dx.morabu.com`, ACM cert |
 | Auth | Shared demo password (`DEMO_ACCOUNT_EMAIL`, role `ADMIN`) | One-time email links only, demo account disabled |
 | `MAIL_TRANSPORT` | `console` (no real email sent) | `smtp` via Amazon SES |
-| `STORAGE_DRIVER` | `local` (container filesystem) | `s3` |
-| `AI_PROVIDER` | `mock` (no generation, nothing leaves the box) | `openai-compatible` → Google AI (Gemini) — see §3a warning |
+| `STORAGE_DRIVER` | `local` (EBS volume) | `local` too, for now — see §3a. No S3 in either environment yet |
+| `AI_PROVIDER` | `mock` (no generation, nothing leaves the box) | `openai-compatible` → Google AI (Gemini) — see §3b warning |
 | Data | 5 dummy people from `data/sample-responses*.csv` | Real applicant data |
 | CI/CD | GitHub Actions → OIDC → this AWS account → this one EC2 instance | Same workflow file, pointed at your account |
 
@@ -40,10 +48,11 @@ production is provisioning plus configuration, not a new build.
 
 From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 
-- [ ] AWS account you control, with permission to create IAM roles, EC2, S3,
+- [ ] AWS account you control, with permission to create IAM roles, EC2, S3
+      (one small bucket only — see §3a, this is not the app-storage decision),
       SES, ACM certs, and (if you're handling DNS yourself) Route 53 records
 - [ ] **Written sign-off that sending applicant answers to Google's Gemini API
-      is acceptable** (see §3a) — this replaced Bedrock on 2026-09-24
+      is acceptable** (see §3b) — this replaced Bedrock on 2026-09-24
 - [ ] Once that's settled: a Gemini API key and model name for `AI_MODEL`, or
       confirmation to launch with `AI_PROVIDER=mock` until it is
 - [ ] SES sending identity for `morabu.com` verified, and confirmation of
@@ -57,17 +66,56 @@ From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 ## 3. Provision the AWS resources
 
 Follow `docs/AWS-REQUIREMENTS.md` §1–§7 in your account: EC2 instance + swap,
-EBS, S3 bucket, instance IAM role (S3 + SSM read — no Bedrock permission needed
-any more, see §3a), SES, ACM cert, DNS record, SSM Parameter Store secrets,
-security group, optional CloudWatch alarms. That document has the exact
-resource shapes and IAM policy JSON already — nothing about that part is
-trial-specific, so there is no shortcut from the trial setup to reuse there.
+EBS (sized ≥30GB now — see §3a), instance IAM role (SSM read only — no S3, no
+Bedrock permission needed, see §3a and §3b), SES, ACM cert, DNS record, SSM
+Parameter Store secrets, security group, optional CloudWatch alarms. That
+document has the exact resource shapes and IAM policy JSON already — nothing
+about that part is trial-specific, so there is no shortcut from the trial
+setup to reuse there.
 
-One trial detail worth copying deliberately: **the 2 GB swap file and
-`shm_size: 512mb`** (already in `docker-compose.prod.yml`) were not
-theoretical — the trial instance needed them. Don't skip either.
+**The EBS volume and the swap file are not optional line items to trim —
+here's why, since it's a fair question to ask about anything with "extra"
+in front of it:**
+- **EBS** is the instance's own disk. Every EC2 instance has one; there's no
+  version of "no EBS." The only real lever is size, and §3a below is the
+  reason it went from the original 20GB to ≥30GB recommended now — it holds
+  the database, and now photos/PDFs/backups too (see §3a).
+- **Swap** costs nothing extra — it's a file on that same EBS volume, not a
+  separate billed AWS service. There's no cost saved by skipping it, only
+  crash risk taken on: `t3.medium` ships with no swap, and the trial hit
+  exactly the failure mode this prevents (PostgreSQL getting OOM-killed when
+  Chromium spikes memory during a PDF export). Keep it.
 
-### 3a. AI service changed from Bedrock to Google AI (Gemini) — read before you provision anything for it
+### 3a. No S3 for app storage, for now — decision 2026-09-24
+
+**Photos and PDFs go on the EC2 instance's own disk (`STORAGE_DRIVER=local`),
+not S3.** This is not new engineering — it's the exact setting the trial
+already runs with (`docs/DEPLOY-TRIAL.md`), so production starts out
+identical to the trial on this one axis, and picking up S3 later is a config
+change (`STORAGE_DRIVER=s3` + a bucket), not a rebuild — see
+`src/lib/storage.ts`.
+
+**Two things worth knowing before treating this as free, though:**
+1. **`docker-compose.prod.yml` needed a fix for this to actually persist.**
+   The `app` service had no volume for `./storage` (`/app/storage` inside the
+   container) — every CI/CD redeploy rebuilds that container, which would
+   have silently deleted every uploaded photo and generated PDF on the next
+   `git push`. Fixed: it now mounts
+   `/var/lib/skillsheet/storage:/app/storage`. This bug existed in the trial
+   too, not just here — worth knowing if any trial photos have gone missing
+   after a deploy.
+2. **No off-instance copy of anything.** Photos, PDFs, *and* the nightly
+   database backup (`docs/AWS-REQUIREMENTS.md` §3) all end up on this one
+   EBS volume. Lose the instance or the volume, lose all three at once —
+   there's no S3 copy to fall back on. An EBS snapshot schedule is the cheap
+   mitigation until S3 gets added; this matters more here than it did for
+   the trial's dummy data, since this environment holds real applicants.
+
+This is explicitly reversible and not a blocker — it only affects
+`STORAGE_DRIVER` env var and one `docker-compose.prod.yml` volume line, and
+nothing else in the app needs to change to add S3 later.
+
+### 3b. AI service changed from Bedrock to Google AI (Gemini) — read before you provision anything for it
 
 **This is a decision change from the original spec, made 2026-09-24, and it needs
 sign-off before it touches real data.** The original plan (`docs/AWS-REQUIREMENTS.md`
@@ -95,6 +143,15 @@ Gemini key is an application secret in Parameter Store, like the SES password.
 
 ## 4. Set up CI/CD in your account
 
+**One small S3 bucket is still needed here — this is separate from the §3a
+decision.** The CI/CD pipeline itself (not the application) stages each
+deploy's source tarball in S3 before SSM pulls it onto the instance — that's
+what `DEPLOY_BUCKET` below is. It's tiny (a few MB per deploy, easy to put a
+lifecycle rule on), holds no applicant data at all, and the trial already
+runs on this exact mechanism. "No S3" in §3a means no S3 for *photos and
+PDFs* — the deploy pipeline's bucket is unrelated and still required, unless
+you'd rather redesign the deploy mechanism itself, which isn't in scope here.
+
 The deploy workflow itself (`.github/workflows/deploy.yml`) needs no code
 changes — it reads the target account, bucket and instance entirely from three
 GitHub repository variables. Follow `docs/ci-cd/README.md` steps 1–2.5 **in
@@ -119,7 +176,7 @@ role live in `us-east-1` — `deploy-permissions.json`'s resource ARNs say so,
 and so does `aws-region: us-east-1` inside `deploy.yml`. That was never meant
 to be the production region; `docs/AWS-REQUIREMENTS.md` specifies Tokyo
 (`ap-northeast-1`) throughout — confirmed necessary regardless of the AI
-provider decision (§3a): it's the region for the EC2 instance, S3 bucket, and
+provider decision (§3b): it's the region for the EC2 instance, S3 bucket, and
 SES sending identity either way. If your instance goes up in `ap-northeast-1`
 (it should), update:
 
@@ -165,12 +222,11 @@ SMTP_USER=<SES SMTP username>
 SMTP_PASSWORD=<SES SMTP password>
 MAIL_FROM=skillsheet@morabu.com        # must be the verified SES identity
 
-STORAGE_DRIVER=s3                      # was: local
-S3_BUCKET=<your bucket>
-S3_REGION=ap-northeast-1
-# leave S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY unset — the instance role covers it
+# STORAGE_DRIVER: unchanged from the trial — still "local" for now, see §3a
+STORAGE_DRIVER=local
+STORAGE_LOCAL_PATH=./storage           # maps to the docker-compose.prod.yml volume
 
-# AI_PROVIDER: leave as "mock" until the Gemini sign-off in §3a is in writing
+# AI_PROVIDER: leave as "mock" until the Gemini sign-off in §3b is in writing
 AI_PROVIDER=openai-compatible          # was: mock
 AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 AI_API_KEY=<gemini api key>            # from Parameter Store
@@ -195,6 +251,11 @@ before the automated pipeline has anything to redeploy onto:
 ```bash
 git clone <repo> /opt/dx-skillsheet && cd /opt/dx-skillsheet
 cp .env.production.example .env.production      # fill in from Parameter Store, per §6 above
+
+# The app's storage volume (see §3a) — create it before first `up`, same as
+# the postgres data directory already needs:
+sudo mkdir -p /var/lib/skillsheet/storage /var/lib/skillsheet/postgres
+
 docker compose -f docker-compose.prod.yml up -d --build
 
 docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
@@ -220,16 +281,20 @@ by hand after that deploy, same as during the trial.
 
 - `GET https://dx.morabu.com/api/health` → `200`, and the body's `checks`
   show `ai: provider=openai-compatible` (or `mock` if the Gemini sign-off in
-  §3a is still pending), `storage: driver=s3`, `mail: transport=smtp`,
+  §3b is still pending), `storage: driver=local`, `mail: transport=smtp`,
   `database: ok=true`
 - Send yourself a real login link and confirm it arrives via SES (not just
   logged to the console, which is all the trial ever did)
-- Import one real record and confirm the photo/PDF round-trip through S3
+- Import one real record, upload a photo, confirm it's actually on
+  `/var/lib/skillsheet/storage` on the host (not just inside the container —
+  that's the volume mount from §3a doing its job) and still there after a
+  redeploy
 - Generate a PDF and confirm Japanese text renders (the `fonts-noto-cjk`
   package is already in the Docker image, but worth checking once on real
   infrastructure)
-- Confirm the nightly `pg_dump → S3` cron entry is present and points at your
-  bucket
+- Confirm the nightly `pg_dump` cron entry is present and its output is
+  actually landing in `/var/backups/skillsheet` (interim local destination,
+  §3 of AWS-REQUIREMENTS.md)
 
 ## 9. Decommission the trial
 
