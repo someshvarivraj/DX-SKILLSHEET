@@ -186,12 +186,12 @@ identity either way. If your instance goes up in `ap-northeast-1`
   `.github/workflows/deploy.yml`
 
 That line is the one piece of the workflow that *does* need a code change —
-everything else is the three repository variables below.
+everything else is the two repository variables below.
 
 ## 5. Point GitHub at the new account
 
 Repo → **Settings → Secrets and variables → Actions → Variables**. Replace the
-three trial values:
+two trial values:
 
 | Variable | Trial value | Set to |
 |---|---|---|
