@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { STATUS_LABELS } from '@/lib/sheet/version';
+import { matchesPersonQuery } from '@/lib/people-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,13 @@ const STATUS_CLASS: Record<string, string> = {
   FINAL: 'badge-final',
 };
 
-export default async function PeoplePage() {
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const user = await requireUser();
+  const query = ((await searchParams).q ?? '').trim();
   // Hiding the nav link is not a permission check. An engineer or the read-only
   // demo account could type the address and read every recruit's name, employee
   // number, JLPT level and sheet status, with a link into each editor.
@@ -56,6 +62,10 @@ export default async function PeoplePage() {
     }, 0),
   };
 
+  // Filtered after the totals above, so the four figures always describe
+  // everyone, not just the current search.
+  const shown = query ? people.filter((p) => matchesPersonQuery(p, query)) : people;
+
   return (
     <div className="space-y-5 rise">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -85,6 +95,43 @@ export default async function PeoplePage() {
           </Link>
         </div>
       ) : (
+        <>
+        {/* A plain GET form: works without JavaScript, and the URL
+            (/people?q=...) can be bookmarked or shared. */}
+        <form method="get" role="search" className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="氏名（英語・カタカナ・ひらがな）、社員番号、メールで検索"
+            aria-label="対象者を検索"
+            className="input w-full max-w-md"
+          />
+          <button type="submit" className="btn btn-secondary">
+            検索
+          </button>
+          {query && (
+            <>
+              <Link href="/people" className="btn btn-quiet">
+                クリア
+              </Link>
+              <span className="text-sm text-ink-500">
+                {people.length}名中 {shown.length}名
+              </span>
+            </>
+          )}
+        </form>
+
+        {shown.length === 0 ? (
+          <div className="card p-12 text-center">
+            <p className="text-sm text-ink-500">
+              「{query}」に一致する対象者はいません。
+            </p>
+            <Link href="/people" className="btn btn-secondary mt-4">
+              すべて表示
+            </Link>
+          </div>
+        ) : (
         <div className="card overflow-hidden">
           <div className="table-scroll">
             <table className="data-table">
@@ -100,7 +147,7 @@ export default async function PeoplePage() {
               </tr>
             </thead>
             <tbody>
-              {people.map((person) => {
+              {shown.map((person) => {
                 const version = person.skillSheet?.currentVersion;
                 const unreviewed = version
                   ? (unreviewedByVersion.get(version.id) ?? 0)
@@ -161,6 +208,8 @@ export default async function PeoplePage() {
             </table>
           </div>
         </div>
+        )}
+        </>
       )}
     </div>
   );
