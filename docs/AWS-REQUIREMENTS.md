@@ -18,18 +18,22 @@ AWS-specific except through these variables, so the same build runs locally and 
 | 2 | EBS gp3, 20 GB | Root + data volume | |
 | 3 | 2 GB swap file on the instance | Prevents the OOM killer from stopping PostgreSQL when Chromium spikes | Required — see §6 |
 | 4 | S3 bucket, e.g. `morabu-dx-skillsheet` | Profile photos, generated PDFs, nightly DB dumps | Private, SSE-S3, versioning on |
-| 5 | IAM instance role | S3 access + Bedrock access + SSM parameter read | No access keys in the app |
+| 5 | IAM instance role | S3 access + SSM parameter read | No access keys in the app for S3; see §4 — the AI provider now used needs none |
 | 6 | Amazon SES (production access) + SMTP credentials | Sends the one-time login links | Verify the sending domain |
-| 7 | Amazon Bedrock model access | The AI that rewrites English answers into Japanese | See §4 — needs an explicit model enable |
+| 7 | Google AI (Gemini) API key | The AI that rewrites English answers into Japanese | See §4 — **decision changed 2026-09-24: away from Bedrock, see the warning below** |
 | 8 | ACM certificate for `dx.morabu.com` | HTTPS | Auto-renew |
 | 9 | Route 53 (or existing DNS) record for `dx.morabu.com` | Points at the instance / ALB | You mentioned IT is handling this |
-| 10 | SSM Parameter Store entries (SecureString) | Secrets: DB password, `AUTH_SECRET`, SES credentials | See §5 |
+| 10 | SSM Parameter Store entries (SecureString) | Secrets: DB password, `AUTH_SECRET`, SES credentials, Gemini API key | See §5 |
 | 11 | Security group | 443 in from the internet (or from the ALB), 22 in from admin only, all out | App listens on 127.0.0.1:3000 only |
 | 12 | CloudWatch alarm on disk and memory | Small instance; early warning | Optional but recommended |
 
-Everything must stay inside AWS. The client specification states explicitly that no
-data may be sent to external services, because the sheets contain names, dates of birth
-and hometowns.
+**Everything else must stay inside AWS.** The client specification states explicitly
+that no data may be sent to external services, because the sheets contain names, dates
+of birth and hometowns — this is why Bedrock was the original choice. Using the Google
+AI (Gemini) API instead means the English answers that get rewritten into Japanese leave
+AWS and go to Google's servers for that one call. **See the warning in §4 — this needs
+the client's explicit sign-off before it touches real applicant data, the same way the
+Groq option in the trial environment does.**
 
 ---
 
@@ -60,32 +64,56 @@ and hometowns.
 
 Set an S3 lifecycle rule to expire backups after, say, 90 days.
 
-## 4. AI service (Amazon Bedrock)
+## 4. AI service (Google AI / Gemini API)
 
-The application calls an AI service to rewrite English answers into Japanese. Bedrock is
-recommended because it runs inside AWS and does not use submitted data for training,
-which is what the specification requires.
+The application calls an AI service to rewrite English answers into Japanese.
 
-**What to do:**
-1. In the Bedrock console (Tokyo region), request access to a model with good Japanese
-   output. Tell us the resulting **model ID** — it goes into `AI_MODEL`.
-2. Attach to the instance role:
+**⚠ Decision change, 2026-09-24: away from Bedrock, to the Google AI (Gemini)
+API.** Bedrock was originally chosen specifically *because* it runs inside AWS and
+keeps data off external services, per spec §3 ("all processing must be completed
+inside AWS; do not send data to external services") and §13. The Google AI Gemini
+Developer API (`generativelanguage.googleapis.com`) is a public, multi-tenant Google
+endpoint reached over the internet with an API key — it is not inside AWS, and it is
+the same category of service as the Groq option already flagged in
+`docs/DEPLOY-TRIAL.md` as **trial/dummy-data only, never with real applicant data**,
+for exactly this reason.
 
-```json
-{
-  "Effect": "Allow",
-  "Action": ["bedrock:InvokeModel", "bedrock:Converse"],
-  "Resource": "arn:aws:bedrock:ap-northeast-1::foundation-model/*"
-}
-```
+This is not a technical blocker — the application's AI provider is a pluggable
+interface (`src/lib/ai/provider.ts`) built precisely so the vendor can change without
+touching code, and Gemini's OpenAI-compatible endpoint slots into the existing
+`AI_PROVIDER=openai-compatible` path unchanged. It **is** a policy question: whether
+sending applicant answers (names are filtered out — see `FIELDS_NEVER_SENT_TO_AI` in
+`src/lib/ai/provider.ts` — but hometowns, education and work history are not) to
+Google's servers is acceptable under what was told to 佐野様/the client. **Get that
+confirmed in writing before this runs against real data.** If it is not acceptable,
+the Bedrock path is still fully implemented (`src/lib/ai/bedrock.ts`) and can be
+switched back to by changing `AI_PROVIDER` alone.
 
-3. Confirm in writing that data submitted to the chosen model is not used for training —
-   the client asks for this explicitly.
+**What to do, once approved:**
+1. In [Google AI Studio](https://aistudio.google.com/), create an API key under the
+   Google Cloud project you want billed. Tell us the key (via Parameter Store, not
+   chat/email — see §5) and which model you want (e.g. a current `gemini-*-flash`
+   model for cost, or a `-pro` model for quality — check AI Studio for the current
+   list, model names move quickly).
+2. No IAM change is needed — the key is an application-level secret like the SES
+   password, not an AWS instance-role permission. This also means, unlike Bedrock,
+   there is nothing to request access to per-region; the Tokyo requirement for this
+   environment (EC2, S3, SES) is unaffected and still stands.
+3. Set in the environment (see §7):
+   ```bash
+   AI_PROVIDER=openai-compatible
+   AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+   AI_API_KEY=<Gemini API key, from Parameter Store>
+   AI_MODEL=<model name from AI Studio>
+   ```
+4. Confirm Google's current data-use terms for this API (whether prompts/responses
+   are used to improve their models) and pass that confirmation along — the same
+   ask the client made for Bedrock in §13 of the spec.
 
-**Until this is ready**, the application runs with `AI_PROVIDER=mock`. Everything else —
-import, editing, review, versioning, PDF output — works normally; only the generated
-Japanese is placeholder text clearly marked as such. So this is not a blocker for
-setting up the environment.
+**Until this is decided**, the application runs with `AI_PROVIDER=mock`. Everything
+else — import, editing, review, versioning, PDF output — works normally; only the
+generated Japanese is placeholder text clearly marked as such. So this is not a
+blocker for setting up the rest of the environment.
 
 ## 5. Secrets
 
@@ -98,6 +126,7 @@ them into the container environment at start-up. Do not put them in the reposito
 | `/dx-skillsheet/POSTGRES_PASSWORD` | `openssl rand -base64 32` |
 | `/dx-skillsheet/SMTP_USER` | SES SMTP username |
 | `/dx-skillsheet/SMTP_PASSWORD` | SES SMTP password |
+| `/dx-skillsheet/AI_API_KEY` | Gemini API key from Google AI Studio |
 
 Instance role needs `ssm:GetParameter*` and `kms:Decrypt` for that path.
 
@@ -131,9 +160,10 @@ MAIL_FROM=skillsheet@morabu.com              # must be a verified SES identity
 STORAGE_DRIVER=s3
 S3_BUCKET=morabu-dx-skillsheet
 S3_REGION=ap-northeast-1
-AI_PROVIDER=bedrock                          # use "mock" until Bedrock is ready
-AI_MODEL=<bedrock model id>
-AI_REGION=ap-northeast-1
+AI_PROVIDER=openai-compatible                # use "mock" until the AI decision (see §4) is final
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_API_KEY=<gemini api key>                  # from Parameter Store
+AI_MODEL=<gemini model name>                 # check current model list in AI Studio
 CHROMIUM_PATH=/usr/bin/chromium
 ```
 
@@ -185,7 +215,10 @@ server {
 
 ## 10. What we still need from you
 
-1. The **Bedrock model ID** once model access is granted (or tell us to stay on `mock`).
+1. **Written confirmation that sending applicant answers to Google's Gemini API is
+   acceptable** under what's been told to the client (see the §4 warning) — this is
+   the one open item that changed with the move away from Bedrock. Once that's
+   settled: the **Gemini API key and model name** (or tell us to stay on `mock`).
 2. The **SES sending identity** and SMTP credentials, and whether SES is out of the
    sandbox in this account.
 3. The **final routing structure** for `dx.morabu.com` you mentioned, so we can confirm
