@@ -5,6 +5,12 @@
 AWS account) to the production environment (real data, your AWS account,
 `https://dx.morabu.com`)
 
+**Just want the commands?** `docs/DEPLOY-COMPANY-AWS.md` is the hands-on runbook
+for this move, every command in order. It assumes the app goes onto the
+company's **existing** EC2 instance alongside what already runs there (a
+dedicated new instance is covered in its appendix). This document explains the
+why, and was written assuming a new dedicated instance.
+
 This is the step-by-step path from where things stand today to where they need
 to be. `docs/AWS-REQUIREMENTS.md` is the reference for *what* the production
 environment needs; this document is the *how* — specifically, what changes
@@ -30,7 +36,7 @@ production-grade by design — it was built to be thrown away.
 | AWS account | Ours (`514917275273`) | Yours |
 | Region | `us-east-1` | `ap-northeast-1` (Tokyo) — see §3b warning |
 | Instance | EC2 `t3.small` | EC2 `t3.medium` (per spec sizing) |
-| Domain / TLS | `https://3-94-22-106.sslip.io`, Caddy auto-HTTPS | `https://dx.morabu.com`, ACM cert |
+| Domain / TLS | `https://3-94-22-106.sslip.io`, Caddy auto-HTTPS | `https://dx.morabu.com` — Caddy auto-HTTPS again, or ALB + ACM cert |
 | Auth | Shared demo password (`DEMO_ACCOUNT_EMAIL`, role `ADMIN`) | One-time email links only, demo account disabled |
 | `MAIL_TRANSPORT` | `console` (no real email sent) | `smtp` via Amazon SES |
 | `STORAGE_DRIVER` | `local` (EBS volume) | `local` too, for now — see §3a. No S3 in either environment yet |
@@ -66,8 +72,9 @@ From `docs/AWS-REQUIREMENTS.md` §10, restated as a checklist:
 ## 3. Provision the AWS resources
 
 Follow `docs/AWS-REQUIREMENTS.md` §1–§7 in your account: EC2 instance + swap,
-EBS (sized ≥30GB now — see §3a), instance IAM role (SSM read only — no S3, no
-Bedrock permission needed, see §3a and §3b), SES, ACM cert, DNS record, SSM
+EBS (sized ≥30GB now — see §3a), instance IAM role (`AmazonSSMManagedInstanceCore` + Parameter Store
+read — no S3, no Bedrock permission needed, see §3a and §3b), SES, TLS
+(Caddy on the instance, or ACM on an ALB), DNS record, SSM
 Parameter Store secrets, security group, optional CloudWatch alarms. That
 document has the exact resource shapes and IAM policy JSON already — nothing
 about that part is trial-specific, so there is no shortcut from the trial
@@ -174,7 +181,7 @@ own deploy key (a one-time step, not a GitHub variable). Follow
 
 **Region mismatch to fix while you're in these files:** the trial instance and
 role live in `us-east-1` — `deploy-permissions.json`'s resource ARN says so,
-and so does `aws-region: us-east-1` inside `deploy.yml`. That was never meant
+and so does the workflow's default region when `AWS_REGION` is unset. That was never meant
 to be the production region; `docs/AWS-REQUIREMENTS.md` specifies Tokyo
 (`ap-northeast-1`) throughout — confirmed necessary regardless of the AI
 provider decision (§3b): it's the region for the EC2 instance and SES sending
@@ -182,11 +189,9 @@ identity either way. If your instance goes up in `ap-northeast-1`
 (it should), update:
 
 - The instance/role ARNs in the policy JSON (region segment)
-- `aws-region: us-east-1` → `aws-region: ap-northeast-1` in
-  `.github/workflows/deploy.yml`
-
-That line is the one piece of the workflow that *does* need a code change —
-everything else is the two repository variables below.
+- The `AWS_REGION` repository variable → `ap-northeast-1` (§5). The workflow
+  reads its region from that variable and falls back to `us-east-1` (the
+  trial) when it is unset, so no code change is needed.
 
 ## 5. Point GitHub at the new account
 
@@ -197,6 +202,11 @@ two trial values:
 |---|---|---|
 | `AWS_DEPLOY_ROLE_ARN` | role in account `514917275273` | the role ARN from §4.2, your account |
 | `DEPLOY_INSTANCE_ID` | `i-0521602aa68362440` | your new EC2 instance ID |
+| `AWS_REGION` | unset (= `us-east-1`) | `ap-northeast-1` |
+
+**These variables decide where every push to `main` deploys.** Changing them
+switches auto-deploy from the trial to production in one go; the trial keeps
+running, it just stops receiving updates.
 
 No GitHub Secrets are used anywhere in this workflow (OIDC issues temporary
 credentials per run) — only Variables. The one other GitHub-side change is
@@ -253,15 +263,19 @@ before the automated pipeline has anything to redeploy onto:
 ```bash
 git clone <repo> /opt/dx-skillsheet && cd /opt/dx-skillsheet
 cp .env.production.example .env.production      # fill in from Parameter Store, per §6 above
+echo "POSTGRES_PASSWORD=<same password as in DATABASE_URL>" > .env
 
 # The app's storage volume (see §3a) — create it before first `up`, same as
-# the postgres data directory already needs:
+# the postgres data directory already needs. The app runs as uid 1001, so it
+# must own the storage folder or photo uploads fail:
 sudo mkdir -p /var/lib/skillsheet/storage /var/lib/skillsheet/postgres
+sudo chown 1001:1001 /var/lib/skillsheet/storage
 
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
-docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
-docker compose -f docker-compose.prod.yml exec app npm run db:seed
+# The runtime image has no Prisma CLI / tsx — use the `tools` service:
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml --env-file .env run --rm -e SEED_ADMIN_EMAIL=<your address> tools npm run db:seed
 ```
 
 **Do not run `npm run db:demo`.** That command loads the trial's dummy
@@ -277,8 +291,8 @@ Actions tells the instance via SSM to `git fetch`/`git reset --hard` to that
 commit itself (using the deploy key from §4.3) and rebuilds the container.
 **Database migrations are not part of that workflow** — if a change includes
 a Prisma migration, run
-`docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy`
-by hand after that deploy, same as during the trial.
+`docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy`
+by hand after that deploy.
 
 ## 8. Verify before handing off
 

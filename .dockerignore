@@ -1,0 +1,20 @@
+# Docker build context excludes.
+#
+# .env / .env.production are intentionally NOT excluded: `next build` reads
+# them and inlines NEXT_PUBLIC_* values at build time (e.g. the trial's
+# NEXT_PUBLIC_DEMO_ACCOUNT_ENABLED). Excluding them would silently change
+# what gets built. They only reach the builder stage, never the final image.
+.git
+node_modules
+.next
+out
+build
+dist
+coverage
+storage
+tmp
+var
+*.log
+.DS_Store
+.vscode
+.idea

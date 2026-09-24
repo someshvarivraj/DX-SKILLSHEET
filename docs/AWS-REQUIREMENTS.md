@@ -18,10 +18,10 @@ AWS-specific except through these variables, so the same build runs locally and 
 | 2 | EBS gp3, **≥30 GB** (was 20 GB) | Root + data volume | Not optional — this is the instance's own disk, every EC2 instance needs one. Bumped from the original 20GB because §2a below now puts photos, PDFs *and* DB backups on it too, where the original plan put those on S3 |
 | 3 | 2 GB swap file on the instance | Prevents the OOM killer from stopping PostgreSQL when Chromium spikes | Required — see §6. Free (a file on the EBS volume above, not a billed AWS resource) — there's no cost saving in skipping it, only crash risk |
 | 4 | ~~S3 bucket~~ — **deferred, see §2a** | Was: profile photos, generated PDFs, nightly DB dumps | **Not being created for now** — decision 2026-09-24, see §2a. Everything that was going to live in S3 lives on the EBS volume (row 2) instead, until this is revisited |
-| 5 | IAM instance role | SSM parameter read only | No S3 permission needed while storage is local; no access keys in the app either way; see §4 — the AI provider now used needs no AWS permission at all |
+| 5 | IAM instance role | `AmazonSSMManagedInstanceCore` + read of `/dx-skillsheet/*` parameters | The managed policy is required — without it neither Session Manager nor the CI/CD deploy (SSM) can reach the instance. No S3 permission needed while storage is local; no access keys in the app either way; see §4 — the AI provider now used needs no AWS permission at all |
 | 6 | Amazon SES (production access) + SMTP credentials | Sends the one-time login links | Verify the sending domain |
 | 7 | Google AI (Gemini) API key | The AI that rewrites English answers into Japanese | See §4 — **decision changed 2026-09-24: away from Bedrock, see the warning below** |
-| 8 | ACM certificate for `dx.morabu.com` | HTTPS | Auto-renew |
+| 8 | TLS certificate for `dx.morabu.com` | HTTPS | Either Caddy on the instance with Let's Encrypt (as in the trial), or an ACM certificate on an ALB — ACM certificates cannot be installed on an EC2 instance itself (§9) |
 | 9 | Route 53 (or existing DNS) record for `dx.morabu.com` | Points at the instance / ALB | You mentioned IT is handling this |
 | 10 | SSM Parameter Store entries (SecureString) | Secrets: DB password, `AUTH_SECRET`, SES credentials, Gemini API key | See §5 |
 | 11 | Security group | 443 in from the internet (or from the ALB), 22 in from admin only, all out | App listens on 127.0.0.1:3000 only |
@@ -86,9 +86,10 @@ redesign.
 # /etc/cron.d/skillsheet-backup
 # Interim: local disk (see §2a). Swap the last line for an `aws s3 cp` once a
 # bucket exists — the pg_dump/gzip part doesn't change.
-0 3 * * * root docker exec skillsheet-db pg_dump -U skillsheet skillsheet | gzip > \
-  /var/backups/skillsheet/$(date +\%Y\%m\%d).sql.gz
-find /var/backups/skillsheet -mtime +90 -delete
+# (cron entries must be one line each; cronie is not installed by default on
+# Amazon Linux 2023: dnf install -y cronie && systemctl enable --now crond)
+0 3 * * * root docker compose -f /opt/dx-skillsheet/docker-compose.prod.yml --env-file /opt/dx-skillsheet/.env exec -T db pg_dump -U skillsheet skillsheet | gzip > /var/backups/skillsheet/$(date +\%Y\%m\%d).sql.gz
+30 3 * * * root find /var/backups/skillsheet -name '*.sql.gz' -mtime +90 -delete
 ```
 
 This is weaker than the original S3 plan — a backup sitting on the same disk as the
@@ -162,7 +163,9 @@ them into the container environment at start-up. Do not put them in the reposito
 | `/dx-skillsheet/SMTP_PASSWORD` | SES SMTP password |
 | `/dx-skillsheet/AI_API_KEY` | Gemini API key from Google AI Studio |
 
-Instance role needs `ssm:GetParameter*` and `kms:Decrypt` for that path.
+Instance role needs `ssm:GetParameter*` for that path (plus `kms:Decrypt` only if the
+parameters use a customer-managed KMS key rather than the default `aws/ssm` key), and
+the `AmazonSSMManagedInstanceCore` managed policy.
 
 ## 6. Settings that matter on a small instance
 
@@ -178,11 +181,13 @@ The specification calls these out and they are real; please do not skip them.
 ## 7. Environment variables the application expects
 
 Copy `.env.production.example` to `.env.production` and fill it in. Full list with
-explanations is in that file; the ones that need your input:
+explanations is in that file; the ones that need your input. **Write values without
+quotes** — Docker's `env_file` keeps quotes as part of the value. `docker-compose.prod.yml`
+also needs a separate `.env` containing `POSTGRES_PASSWORD=<same password>`:
 
 ```bash
 APP_URL=https://dx.morabu.com
-DATABASE_URL=postgresql://skillsheet:<password>@127.0.0.1:5432/skillsheet?schema=public
+DATABASE_URL=postgresql://skillsheet:<password>@db:5432/skillsheet?schema=public   # host is the compose service "db", not 127.0.0.1
 AUTH_SECRET=<from parameter store>
 AUTH_ALLOWED_EMAIL_DOMAINS=morabu.com        # only these may sign in
 MAIL_TRANSPORT=smtp
@@ -208,19 +213,25 @@ CHROMIUM_PATH=/usr/bin/chromium
 ```bash
 git clone <repo> /opt/dx-skillsheet && cd /opt/dx-skillsheet
 cp .env.production.example .env.production      # then fill in from Parameter Store
-docker compose -f docker-compose.prod.yml up -d --build
+echo "POSTGRES_PASSWORD=<same password as in DATABASE_URL>" > .env
+mkdir -p /var/lib/skillsheet/storage /var/lib/skillsheet/postgres
+chown 1001:1001 /var/lib/skillsheet/storage     # the app container runs as uid 1001
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
-# first deploy only: create the schema and load the initial configuration
-docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
-docker compose -f docker-compose.prod.yml exec app npm run db:seed
+# first deploy only: create the schema and load the initial configuration.
+# The runtime image has no Prisma CLI / tsx, so these run in the `tools`
+# service (the Dockerfile's builder stage) — see docker-compose.prod.yml.
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml --env-file .env run --rm -e SEED_ADMIN_EMAIL=<your address> tools npm run db:seed
 ```
 
 Subsequent deployments:
 
 ```bash
+# normally done by GitHub Actions (docs/ci-cd/README.md); by hand:
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build app
+docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy
 ```
 
 **Health check:** `GET https://dx.morabu.com/api/health` returns HTTP 200 with a JSON

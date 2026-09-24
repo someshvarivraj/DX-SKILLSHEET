@@ -8,15 +8,20 @@ services:
     image: dx-skillsheet:latest
     restart: unless-stopped
     env_file: .env.production
+    # 既定は 127.0.0.1:3000（体験環境と同じ）。既存サーバーに同居させる場合、
+    # 3000番が使用中なら .env に APP_PORT=3100 等を、ALB から直接受ける場合は
+    # APP_BIND=0.0.0.0 を書く（docs/DEPLOY-COMPANY-AWS.md 参照）。
+    # データの置き場所（DB・写真・PDF）は .env の DATA_DIR で変えられる
+    # （既定 /var/lib/skillsheet = 体験環境）。同じサーバーに別の環境を置く場合に使う。
     ports:
-      - '127.0.0.1:3000:3000'
+      - '${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000'
     # STORAGE_DRIVER=local (docs/AWS-REQUIREMENTS.md §2a) writes to ./storage,
     # i.e. /app/storage inside the container (Dockerfile WORKDIR). Without this
     # volume, a rebuild on every CI/CD deploy (docker compose ... build && up -d)
     # would silently wipe every uploaded photo and generated PDF, since nothing
     # would be outside the rebuilt container's own filesystem.
     volumes:
-      - /var/lib/skillsheet/storage:/app/storage
+      - ${DATA_DIR:-/var/lib/skillsheet}/storage:/app/storage
     depends_on:
       db:
         condition: service_healthy
@@ -29,6 +34,24 @@ services:
       retries: 3
       start_period: 30s
 
+  # 一回限りの管理コマンド用（マイグレーション・初期データ投入）。
+  # 本番イメージ(runner)はNext.jsのstandalone出力だけでPrisma CLIもtsxも
+  # 入っていないため、Dockerfileのbuilderステージ（全依存とソース入り）を使う。
+  # profiles により `up` / CI/CDのデプロイ（build app / up -d app）では
+  # 起動もビルドもされない。使うときだけ:
+  #   docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy
+  #   docker compose -f docker-compose.prod.yml --env-file .env run --rm -e SEED_ADMIN_EMAIL=... tools npm run db:seed
+  tools:
+    profiles: ['tools']
+    build:
+      context: .
+      target: builder
+    image: dx-skillsheet-tools:latest
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -38,7 +61,7 @@ services:
       POSTGRES_DB: skillsheet
       TZ: Asia/Tokyo
     volumes:
-      - /var/lib/skillsheet/postgres:/var/lib/postgresql/data
+      - ${DATA_DIR:-/var/lib/skillsheet}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U skillsheet']
       interval: 10s
