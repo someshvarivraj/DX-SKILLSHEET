@@ -362,6 +362,58 @@ export async function setFieldPrintedAction(
   return { ok: true, message: includeInPdf ? '表示にしました' : '非表示にしました' };
 }
 
+export async function setFieldRequiredAction(
+  id: string,
+  isRequired: boolean,
+): Promise<SaveResult> {
+  const user = await guard();
+  const field = await prisma.sheetField.update({ where: { id }, data: { isRequired } });
+  await recordAudit({
+    userId: user.id,
+    action: 'definition.update',
+    entityType: 'SheetField',
+    entityId: id,
+    summary: `項目「${field.nameJa}」を${isRequired ? '必須' : '任意'}にした`,
+  });
+  refresh();
+  return { ok: true, message: isRequired ? '必須にしました' : '任意にしました' };
+}
+
+/**
+ * The section-level 必須 checkbox is not a stored property of the section —
+ * SheetSection has no isRequired column. It is a bulk action on the fields
+ * inside it: check it to mark every field in the section required in one
+ * step, then adjust individual fields from their own checkbox. Unchecking it
+ * again clears isRequired on every field the same way.
+ */
+export async function setSectionFieldsRequiredAction(
+  sectionId: string,
+  isRequired: boolean,
+): Promise<SaveResult> {
+  const user = await guard();
+  const section = await prisma.sheetSection.findUnique({
+    where: { id: sectionId },
+    select: { nameJa: true },
+  });
+  if (!section) return { ok: false, message: 'そのセクションはすでに削除されています' };
+  const { count } = await prisma.sheetField.updateMany({
+    where: { sectionId, isActive: true },
+    data: { isRequired },
+  });
+  await recordAudit({
+    userId: user.id,
+    action: 'definition.update',
+    entityType: 'SheetSection',
+    entityId: sectionId,
+    summary: `セクション「${section.nameJa}」の項目${count}件を${isRequired ? '必須' : '任意'}にした`,
+  });
+  refresh();
+  return {
+    ok: true,
+    message: isRequired ? `${count}件を必須にしました` : `${count}件を任意にしました`,
+  };
+}
+
 /**
  * Deleting a field also deletes what has been entered in it for every person,
  * so the screen asks for confirmation and states how many people that affects

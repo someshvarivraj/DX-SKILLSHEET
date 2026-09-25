@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { startTransition, useEffect, useRef, useState } from 'react';
+import { FileSpreadsheet, UploadCloud, X } from 'lucide-react';
 import { useActionState } from 'react';
 import {
   previewImportAction,
@@ -33,7 +34,23 @@ export function ImportForm() {
 
   const [file, setFile] = useState<File | null>(null);
   const [generate, setGenerate] = useState(true);
+  const [dragActive, setDragActive] = useState(false);
+  const [dropError, setDropError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // .csv/.xlsx/.xls by extension, since a dragged file's `type` is often empty
+  // or inconsistent across OSes (Explorer, Finder, etc. all report it
+  // differently, or not at all).
+  const isAcceptedFile = (f: File) => /\.(csv|xlsx|xls)$/i.test(f.name);
+
+  const chooseFile = (f: File | null) => {
+    if (f && !isAcceptedFile(f)) {
+      setDropError('CSVまたはXLSXファイルを選択してください。');
+      return;
+    }
+    setDropError(null);
+    setFile(f);
+  };
 
   const preview = previewState.preview;
   const busy = previewPending || importPending;
@@ -45,7 +62,7 @@ export function ImportForm() {
   // After a successful import the same file must not be sent again by accident.
   useEffect(() => {
     if (importState.step === 'done' && !importState.error) {
-      setFile(null);
+      chooseFile(null);
       if (inputRef.current) inputRef.current.value = '';
     }
   }, [importState]);
@@ -64,21 +81,82 @@ export function ImportForm() {
   return (
     <div className="space-y-4">
       <div className="card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="field-label" htmlFor="file">
-              回答ファイル（CSV / XLSX）
-            </label>
+        <div>
+          <label className="field-label" htmlFor="file">
+            回答ファイル（CSV / XLSX）
+          </label>
+          <div
+            className={`dropzone ${dragActive ? 'dropzone-active' : ''}`}
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                inputRef.current?.click();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-describedby="file-hint"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragActive(false);
+              chooseFile(e.dataTransfer.files?.[0] ?? null);
+            }}
+          >
             <input
               id="file"
               ref={inputRef}
               name="file"
               type="file"
               accept=".csv,.xlsx,.xls"
-              className="input w-auto"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="sr-only"
+              onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
             />
+            {file ? (
+              <div className="dropzone-file">
+                <FileSpreadsheet size={18} aria-hidden className="text-brand-500" />
+                <span>
+                  {file.name}（{Math.max(1, Math.round(file.size / 1024))} KB）
+                </span>
+                <button
+                  type="button"
+                  className="text-ink-400 hover:text-ink-700"
+                  aria-label="選択を解除する"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    chooseFile(null);
+                    if (inputRef.current) inputRef.current.value = '';
+                  }}
+                >
+                  <X size={16} aria-hidden />
+                </button>
+              </div>
+            ) : (
+              <>
+                <UploadCloud size={28} aria-hidden className="dropzone-icon" />
+                <p className="dropzone-title">
+                  ファイルをここにドラッグ、またはクリックして選択
+                </p>
+                <p className="dropzone-hint">CSV または XLSX</p>
+              </>
+            )}
           </div>
+          {dropError ? (
+            <p className="field-hint text-[#b03a22]">{dropError}</p>
+          ) : (
+            <p id="file-hint" className="field-hint">
+              {file
+                ? null
+                : 'ファイルを選択すると、確認と取り込みができるようになる。'}
+            </p>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="flex items-center gap-2 pb-2 text-xs text-ink-700">
             <input
               type="checkbox"
@@ -106,14 +184,6 @@ export function ImportForm() {
             {importPending ? '取り込み中…' : '取り込む'}
           </button>
         </div>
-
-        {/* The chosen file, named here rather than only inside the file control,
-            because the control is cleared each time an action runs. */}
-        <p className="field-hint mt-2">
-          {file
-            ? `選択中: ${file.name}（${Math.max(1, Math.round(file.size / 1024))} KB）`
-            : 'ファイルを選択すると、確認と取り込みができるようになる。'}
-        </p>
 
         {previewState.error ? (
           <p className="mt-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
