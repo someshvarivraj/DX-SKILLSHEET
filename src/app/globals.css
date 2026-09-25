@@ -535,6 +535,58 @@ body {
   resize: vertical;
 }
 
+/* Drag-and-drop file target on the import screen. Sano-san's review
+   (2026-09-25): the plain browser "Choose File" button read as too
+   technical. This is still a real <input type="file">, just styled and
+   given a drop target, so keyboard and screen-reader use is unaffected. */
+.dropzone {
+  display: flex;
+  min-height: 132px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 2px dashed var(--color-ink-200);
+  border-radius: 12px;
+  background: var(--color-sand-50);
+  padding: 1.25rem;
+  text-align: center;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.dropzone:hover {
+  border-color: var(--color-brand-300);
+}
+.dropzone-active {
+  border-color: var(--color-brand-400);
+  background: var(--color-brand-50);
+}
+.dropzone-icon {
+  color: var(--color-brand-400);
+}
+.dropzone-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+.dropzone-hint {
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.dropzone-file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid var(--color-brand-200);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+}
+
 /* A form control's own label, and the one-line explanation under it. Labelling
    every field with what it is for is the difference between an operator
    guessing and an operator knowing. */
@@ -872,9 +924,10 @@ body {
 
 /* One grid for the heading row and every item row, so the columns line up:
    grip | ↑↓ | name | details | 表示 | 削除 | 詳細 */
+/* grip | ↑↓ | name | details | 表示 | 必須 | 削除 | 詳細 */
 .def-row {
   display: grid;
-  grid-template-columns: 2rem 4.5rem minmax(10rem, 1.2fr) minmax(0, 1.6fr) 4.5rem 3.5rem 3.5rem;
+  grid-template-columns: 2rem 4.5rem minmax(10rem, 1.2fr) minmax(0, 1.6fr) 4.5rem 4.5rem 3.5rem 3.5rem;
   align-items: center;
   gap: 0.25rem;
   min-height: 3.25rem;
@@ -940,6 +993,20 @@ body {
   padding: 0.15rem 0.25rem;
   cursor: pointer;
 }
+/* Wraps .def-name plus the per-section preview link, as the single grid item
+   the name column expects — keeps section rows and field rows on the same
+   column count (field rows have no preview link). */
+.def-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.def-name-cell .def-name {
+  flex: 1;
+  min-width: 0;
+}
+
 .def-name-ja {
   display: inline-flex;
   flex-wrap: wrap;
@@ -989,6 +1056,17 @@ body {
   font-weight: 700;
   background: var(--color-accent-500);
   color: #fff;
+}
+
+.def-required-checkbox {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-brand-400);
+  cursor: pointer;
+}
+.def-required-checkbox:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 .def-chevron {
   transition: transform 0.15s ease;
@@ -1257,5 +1335,93 @@ body {
   }
   .card-hover:hover {
     transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Side-by-side preview panel on the person editor.
+   --------------------------------------------------------------------------- */
+
+/* Floating button that opens the panel. Fixed to the viewport, bottom-right,
+   so it stays reachable regardless of how long the editor page is. */
+.split-preview-fab {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-brand-200);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  padding: 0.6rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-brand-600);
+  cursor: pointer;
+}
+.split-preview-fab:hover {
+  background: var(--color-brand-50);
+}
+
+.split-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.split-preview-editor {
+  flex: 1 1 55%;
+  min-width: 0;
+}
+.split-preview-panel {
+  flex: 1 1 45%;
+  min-width: 0;
+  position: sticky;
+  top: calc(var(--app-header-h) + 0.75rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-ink-100);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  background: #fff;
+  height: calc(100vh - var(--app-header-h) - 1.5rem);
+}
+/* Maximised: the editor is hidden (see split-preview.tsx) and the panel takes
+   the whole row. */
+.split-preview-max .split-preview-panel {
+  flex: 1 1 100%;
+}
+.split-preview-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-sand-50);
+  padding: 0.4rem 0.6rem;
+}
+.split-preview-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--color-sand-200);
+}
+
+@media (max-width: 900px) {
+  /* No room to show both at once: stack instead of side by side, and the
+     panel takes a fixed viewport-relative height rather than the full one. */
+  .split-preview {
+    flex-direction: column;
+  }
+  .split-preview-editor,
+  .split-preview-panel {
+    flex-basis: auto;
+    width: 100%;
+  }
+  .split-preview-panel {
+    position: static;
+    height: 70vh;
   }
 }

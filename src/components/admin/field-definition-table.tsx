@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useRef, useState, useTransition } from 'react';
 import {
   ArrowDown,
   ArrowUp,
   ChevronRight,
+  Eye,
   GripVertical,
   Plus,
   Trash2,
@@ -24,6 +26,8 @@ import {
   reorderFieldsAction,
   reorderSectionsAction,
   setFieldPrintedAction,
+  setFieldRequiredAction,
+  setSectionFieldsRequiredAction,
   setSectionVisibleAction,
   updateFieldAction,
   updateSectionAction,
@@ -282,6 +286,94 @@ function Switch({
   );
 }
 
+/** A checkbox that saves itself, and goes back if the save fails. */
+function SavingCheckbox({
+  initial,
+  save,
+  label,
+  onNotice,
+}: {
+  initial: boolean;
+  save: (next: boolean) => Promise<SaveResult>;
+  label: string;
+  onNotice: (n: Notice) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [source, setSource] = useState(initial);
+  if (source !== initial) {
+    setSource(initial);
+    setValue(initial);
+  }
+  const [pending, startTransition] = useTransition();
+  return (
+    <input
+      type="checkbox"
+      className="def-required-checkbox"
+      checked={value}
+      disabled={pending}
+      aria-label={label}
+      title={value ? '必須（押すと任意に）' : '任意（押すと必須に）'}
+      onChange={(e) => {
+        const next = e.target.checked;
+        setValue(next);
+        startTransition(async () => {
+          const result = await save(next);
+          onNotice({ ok: result.ok, text: result.message });
+          if (!result.ok) setValue(!next);
+        });
+      }}
+    />
+  );
+}
+
+/**
+ * The section header's 必須 checkbox. It has no state of its own — it
+ * reflects the fields inside the section (all / some / none required) and,
+ * when clicked, bulk-sets every field in one step. `indeterminate` can only be
+ * set imperatively on the DOM node, not as a JSX prop.
+ */
+function SectionRequiredCheckbox({
+  section,
+  onNotice,
+}: {
+  section: SectionRow;
+  onNotice: (n: Notice) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [pending, startTransition] = useTransition();
+  const activeFields = section.fields.filter((f) => f.isActive);
+  const requiredCount = activeFields.filter((f) => f.isRequired).length;
+  const allRequired = activeFields.length > 0 && requiredCount === activeFields.length;
+  const someRequired = requiredCount > 0 && !allRequired;
+
+  if (ref.current) ref.current.indeterminate = someRequired;
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      className="def-required-checkbox"
+      checked={allRequired}
+      disabled={pending || activeFields.length === 0}
+      aria-label={`${section.nameJa}の項目をすべて必須にする`}
+      title={
+        activeFields.length === 0
+          ? '項目がありません'
+          : allRequired
+            ? 'すべて必須（押すとすべて任意に）'
+            : '押すとこのセクションの項目をすべて必須にする'
+      }
+      onChange={(e) => {
+        const next = e.target.checked;
+        startTransition(async () => {
+          const result = await setSectionFieldsRequiredAction(section.id, next);
+          onNotice({ ok: result.ok, text: result.message });
+        });
+      }}
+    />
+  );
+}
+
 /** A switch that saves itself, and goes back if the save fails. */
 function SavingSwitch({
   initial,
@@ -403,6 +495,7 @@ export function FieldDefinitionTable({
         <span>セクション名</span>
         <span className="def-col-meta">内容</span>
         <span className="text-center">表示</span>
+        <span className="text-center">必須</span>
         <span className="text-center">削除</span>
         <span className="text-center">詳細</span>
       </div>
@@ -469,10 +562,22 @@ function SectionItem({
           onMove={(to) => reorder.move(index, to)}
           label={section.nameJa}
         />
-        <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
-          <span className="def-name-ja">{section.nameJa}</span>
-          <span className="def-name-sub">{section.nameEn ?? section.code}</span>
-        </button>
+        <div className="def-name-cell">
+          <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
+            <span className="def-name-ja">{section.nameJa}</span>
+            <span className="def-name-sub">{section.nameEn ?? section.code}</span>
+          </button>
+          <Link
+            href={`/admin/fields/preview?section=${encodeURIComponent(section.code)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="icon-btn flex-none"
+            aria-label={`「${section.nameJa}」だけをプレビューする`}
+            title="このセクションだけをプレビュー（別タブで開く）"
+          >
+            <Eye size={16} aria-hidden />
+          </Link>
+        </div>
         <span className="def-col-meta def-meta">
           {section.kind === 'REPEATING'
             ? `繰り返し・最大${section.maxDisplayed}件`
@@ -487,6 +592,9 @@ function SectionItem({
             save={(next) => setSectionVisibleAction(section.id, next)}
             onNotice={onNotice}
           />
+        </span>
+        <span className="grid place-items-center">
+          <SectionRequiredCheckbox section={section} onNotice={onNotice} />
         </span>
         <span className="grid place-items-center">
           <button
@@ -725,6 +833,7 @@ function FieldList({
         <span>項目名</span>
         <span className="def-col-meta">処理・取得元</span>
         <span className="text-center">表示</span>
+        <span className="text-center">必須</span>
         <span className="text-center">削除</span>
         <span className="text-center">詳細</span>
       </div>
@@ -824,6 +933,14 @@ function FieldItem({
             initial={field.includeInPdf}
             label={`${field.nameJa}をシートに表示する`}
             save={(next) => setFieldPrintedAction(field.id, next)}
+            onNotice={onNotice}
+          />
+        </span>
+        <span className="grid place-items-center">
+          <SavingCheckbox
+            initial={field.isRequired}
+            label={`${field.nameJa}を必須にする`}
+            save={(next) => setFieldRequiredAction(field.id, next)}
             onNotice={onNotice}
           />
         </span>

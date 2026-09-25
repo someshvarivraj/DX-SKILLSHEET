@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
@@ -101,19 +102,25 @@ export default async function FieldDefinitionPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="page-title">項目定義</h1>
-        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-500">
-          どの設問がスキルシートのどの位置に入るかは、この画面の設定で決まります。
-          来年フォームが変わったときは、ここに行を追加するか取得元の設問IDを直すだけで対応でき、
-          プログラムの修正や再デプロイは必要ありません。生成プロンプトもここで調整できます。
-        </p>
-        <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-700">
-          <li>並び替え：行の左端をドラッグするか、↑↓ボタン</li>
-          <li>表示・非表示：「表示」のスイッチ</li>
-          <li>削除：ゴミ箱のボタン</li>
-          <li>詳しい設定：行の右端の ＞</li>
-        </ul>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title">項目定義</h1>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-500">
+            どの設問がスキルシートのどの位置に入るかは、この画面の設定で決まります。
+            来年フォームが変わったときは、ここに行を追加するか取得元の設問IDを直すだけで対応でき、
+            プログラムの修正や再デプロイは必要ありません。生成プロンプトもここで調整できます。
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-700">
+            <li>並び替え：行の左端をドラッグするか、↑↓ボタン</li>
+            <li>表示・非表示：「表示」のスイッチ</li>
+            <li>必須・任意：「必須」のチェック（セクションの行でまとめてチェックすると、中の項目が一括で必須になる）</li>
+            <li>削除：ゴミ箱のボタン</li>
+            <li>詳しい設定：行の右端の ＞</li>
+          </ul>
+        </div>
+        <Link href="/admin/fields/preview" className="btn btn-secondary flex-none">
+          テンプレートを確認する
+        </Link>
       </div>
 
       {unassigned.length > 0 ? (

@@ -9,6 +9,7 @@ import { SheetToolbar } from '@/components/editor/sheet-toolbar';
 import { MemoPanel } from '@/components/editor/memo-panel';
 import { PhotoPanel } from '@/components/editor/photo-panel';
 import { ScrollRestore } from '@/components/editor/scroll-restore';
+import { SplitPreview } from '@/components/editor/split-preview';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -92,37 +93,41 @@ export default async function PersonEditorPage({
         canExportSupplement={showSupplement && can(user, 'sheet.export')}
       />
 
-      {/* Sano-san's review (2026-09-23, item 7): the tabs come first, and the
-          photo sits inside 個人情報 rather than as a section of its own above
-          the tabs. */}
-      <SectionTabs
-        personId={personId}
-        sections={editorSections}
-        presetId={model.preset?.id ?? null}
-        readOnly={readOnly}
-        editableSectionCodes={editableSectionCodes}
-        canSelectRecords={can(user, 'sheet.selectRecords')}
-        initialCode={tab ?? null}
-        fieldReplacements={{ [PHOTO_FIELD]: photo }}
-      />
+      <SplitPreview personId={personId} tab={tab ?? null} preset={preset ?? null}>
+        <div className="space-y-4">
+          {/* Sano-san's review (2026-09-23, item 7): the tabs come first, and
+              the photo sits inside 個人情報 rather than as a section of its own
+              above the tabs. */}
+          <SectionTabs
+            personId={personId}
+            sections={editorSections}
+            presetId={model.preset?.id ?? null}
+            readOnly={readOnly}
+            editableSectionCodes={editableSectionCodes}
+            canSelectRecords={can(user, 'sheet.selectRecords')}
+            initialCode={tab ?? null}
+            fieldReplacements={{ [PHOTO_FIELD]: photo }}
+          />
 
-      {editorSections.some((s) => s.fields.some((f) => f.code === PHOTO_FIELD)) ? null : (
-        // Only if the プロフィール写真 definition has been removed or switched
-        // off: the photo still needs somewhere to be managed.
-        <div className="card overflow-hidden">{photo}</div>
-      )}
+          {editorSections.some((s) => s.fields.some((f) => f.code === PHOTO_FIELD)) ? null : (
+            // Only if the プロフィール写真 definition has been removed or
+            // switched off: the photo still needs somewhere to be managed.
+            <div className="card overflow-hidden">{photo}</div>
+          )}
 
-      {showSupplement ? (
-        <MemoPanel
-          personId={personId}
-          memos={memos.map((m) => ({
-            id: m.id,
-            body: m.body,
-            createdAt: m.createdAt.toISOString(),
-            authorName: m.createdBy?.displayName ?? null,
-          }))}
-        />
-      ) : null}
+          {showSupplement ? (
+            <MemoPanel
+              personId={personId}
+              memos={memos.map((m) => ({
+                id: m.id,
+                body: m.body,
+                createdAt: m.createdAt.toISOString(),
+                authorName: m.createdBy?.displayName ?? null,
+              }))}
+            />
+          ) : null}
+        </div>
+      </SplitPreview>
     </div>
   );
 }
