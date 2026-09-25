@@ -18,6 +18,27 @@ async function guard() {
   return user;
 }
 
+/**
+ * `code` (SheetSection.code / SheetField.code) is an internal, unique slug —
+ * a handful of built-in codes are read by name elsewhere (e.g. `full_name`,
+ * `internships`), but for anything created from this screen it means nothing
+ * beyond "unique row identifier". Sano-san's review (2026-09-25, item 6):
+ * asking the operator to invent an English code to create a section or field
+ * was pure friction with no payoff for them, so it is generated here instead
+ * and never shown as something to fill in. `exists` is injected so this stays
+ * testable without a database.
+ */
+async function generateUniqueCode(
+  prefix: 'section' | 'field',
+  exists: (code: string) => Promise<boolean>,
+): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = `${prefix}_${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`;
+    if (!(await exists(code))) return code;
+  }
+  throw new Error('一意なコードを生成できなかった。もう一度試すこと。');
+}
+
 function refresh() {
   revalidatePath('/admin/fields');
   revalidatePath('/people');
@@ -172,37 +193,21 @@ export async function updateFieldAction(input: {
   return { ok: true, message: '保存しました' };
 }
 
-/**
- * A field code is used in URLs, in the seed definition and in the display
- * presets, so it is restricted to the shape the screen already promises:
- * lower-case letters, digits and underscores.
- */
-const FIELD_CODE_RE = /^[a-z][a-z0-9_]*$/;
-
 export async function createFieldAction(input: {
   sectionId: string;
-  code: string;
   nameJa: string;
   processing: Processing;
   sourceCodes: string[];
 }): Promise<SaveResult> {
   const user = await guard();
 
-  // Validate before the uniqueness check. Whitespace-only input used to pass
-  // the screen's `!code` guard, be trimmed to '' here, and create a permanent
-  // phantom row that no screen can delete.
-  const code = input.code.trim();
   const nameJa = input.nameJa.trim();
-  if (!FIELD_CODE_RE.test(code)) {
-    return {
-      ok: false,
-      message: '項目コードは英小文字で始まり、英小文字・数字・アンダースコアのみ使えます',
-    };
-  }
   if (!nameJa) return { ok: false, message: '表示名を入力してください' };
 
-  const exists = await prisma.sheetField.findUnique({ where: { code } });
-  if (exists) return { ok: false, message: 'その項目コードはすでに使われています' };
+  const code = await generateUniqueCode(
+    'field',
+    async (c) => (await prisma.sheetField.findUnique({ where: { code: c } })) !== null,
+  );
 
   const last = await prisma.sheetField.findFirst({
     where: { sectionId: input.sectionId },
@@ -239,24 +244,19 @@ export async function createFieldAction(input: {
 }
 
 export async function createSectionAction(input: {
-  code: string;
   nameJa: string;
   nameEn?: string;
   /** The screen has an add button above the list and one below it. */
   position?: 'first' | 'last';
 }): Promise<SaveResult> {
   const user = await guard();
-  const code = input.code.trim();
   const nameJa = input.nameJa.trim();
-  if (!FIELD_CODE_RE.test(code)) {
-    return {
-      ok: false,
-      message: 'セクションコードは英小文字で始まり、英小文字・数字・アンダースコアのみ使えます',
-    };
-  }
   if (!nameJa) return { ok: false, message: '表示名を入力してください' };
-  const exists = await prisma.sheetSection.findUnique({ where: { code } });
-  if (exists) return { ok: false, message: 'そのセクションコードはすでに使われています' };
+
+  const code = await generateUniqueCode(
+    'section',
+    async (c) => (await prisma.sheetSection.findUnique({ where: { code: c } })) !== null,
+  );
 
   const data = { code, nameJa, nameEn: input.nameEn || null };
   let section;

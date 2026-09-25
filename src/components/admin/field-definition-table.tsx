@@ -426,7 +426,7 @@ function DeleteConfirm({
       <Trash2 size={16} aria-hidden className="flex-none text-[#b03a22]" />
       <p className="flex-1">{message}</p>
       <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-        やめる
+        キャンセル
       </button>
       <button type="button" className="btn btn-delete" onClick={onConfirm} disabled={pending}>
         {pending ? '削除中…' : '削除する'}
@@ -757,7 +757,6 @@ function AddSectionForm({
   onDone: (result: SaveResult) => void;
   onCancel: () => void;
 }) {
-  const [code, setCode] = useState('');
   const [nameJa, setNameJa] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [pending, startTransition] = useTransition();
@@ -769,25 +768,17 @@ function AddSectionForm({
       <Labeled label="表示名（英語）">
         <input className="input" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
       </Labeled>
-      <Labeled label="セクションコード（英小文字）">
-        <input
-          className="input"
-          placeholder="例：certifications"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
-      </Labeled>
       <div className="flex items-end gap-2">
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-          やめる
+          キャンセル
         </button>
         <button
           type="button"
           className="btn btn-primary"
-          disabled={pending || !code.trim() || !nameJa.trim()}
+          disabled={pending || !nameJa.trim()}
           onClick={() =>
             startTransition(async () => {
-              onDone(await createSectionAction({ code, nameJa, nameEn, position }));
+              onDone(await createSectionAction({ nameJa, nameEn, position }));
             })
           }
         >
@@ -1011,7 +1002,6 @@ function AddFieldForm({
   onDone: (result: SaveResult) => void;
   onCancel: () => void;
 }) {
-  const [code, setCode] = useState('');
   const [nameJa, setNameJa] = useState('');
   const [processing, setProcessing] = useState<Processing>('COPY');
   const [sources, setSources] = useState('');
@@ -1021,14 +1011,6 @@ function AddFieldForm({
     <div className="def-add-form">
       <Labeled label="表示名">
         <input className="input" value={nameJa} onChange={(e) => setNameJa(e.target.value)} />
-      </Labeled>
-      <Labeled label="項目コード（英小文字）">
-        <input
-          className="input"
-          placeholder="例：hobby"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
       </Labeled>
       <Labeled label="処理区分">
         <Select
@@ -1052,18 +1034,17 @@ function AddFieldForm({
       </Labeled>
       <div className="flex items-end gap-2">
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-          やめる
+          キャンセル
         </button>
         <button
           type="button"
           className="btn btn-primary"
-          disabled={pending || !code.trim() || !nameJa.trim()}
+          disabled={pending || !nameJa.trim()}
           onClick={() =>
             startTransition(async () => {
               onDone(
                 await createFieldAction({
                   sectionId,
-                  code: code.trim(),
                   nameJa: nameJa.trim(),
                   processing,
                   sourceCodes: sources
