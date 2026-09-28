@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { requireUser } from '@/lib/auth/session';
+import { notFound, redirect } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth/session';
 import { can, canAccessPerson } from '@/lib/auth/permissions';
 import { loadSheetModel, toPrintableModel } from '@/lib/sheet/model';
 import { SHEET_STYLES, SkillSheetDocument } from '@/components/sheet-document';
@@ -17,6 +17,16 @@ export const dynamic = 'force-dynamic';
  * The sheet is the whole point of this screen, so it is given a stage of its
  * own: fitted to the window by default, zoomable, and able to fill the screen
  * with nothing else on it.
+ *
+ * Deliberately outside the `(app)` route group, so it renders without the
+ * header/nav/AI banner — Sano-san's review (2026-09-28): the split-preview
+ * panel embeds this in an iframe, and the full app chrome squeezed into that
+ * panel was pointless (and confusing) next to the editor it already sits
+ * beside. A standalone visit loses nothing: the "編集に戻る" link and the
+ * stage's own toolbar already cover getting back. Because that also removes
+ * the `(app)` layout's own login check, this page does its own, matching it
+ * exactly (`redirect('/login')`, not `requireUser()`'s thrown error, which
+ * had no layout left to catch it).
  */
 export default async function PreviewPage({
   params,
@@ -27,7 +37,8 @@ export default async function PreviewPage({
 }) {
   const { personId } = await params;
   const { preset, tab } = await searchParams;
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
   if (!canAccessPerson(user, personId)) notFound();
 
   const model = await loadSheetModel(personId, { presetId: preset ?? null });
@@ -46,7 +57,7 @@ export default async function PreviewPage({
   const backHref = `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="page-title text-base">
           プレビュー: {model.person.fullNameKatakana ?? model.person.fullNameEnglish}

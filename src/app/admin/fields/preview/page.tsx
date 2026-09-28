@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { requireUser } from '@/lib/auth/session';
+import { notFound, redirect } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { loadTemplateModel } from '@/lib/sheet/template';
 import { toPrintableModel } from '@/lib/sheet/model';
@@ -13,19 +13,28 @@ export const dynamic = 'force-dynamic';
  * Template preview: what the current field definitions produce, with no
  * particular person's data. Opened from the field-definition screen, either
  * for the whole sheet or, with `?section=`, for one section only — the
- * "セクションのプレビュー" link on that section's row.
+ * "セクションのプレビュー" overlay on that section's row.
  *
  * This uses `loadTemplateModel` + the same `SkillSheetDocument`/
  * `toPrintableModel` the real per-person preview uses (§11.2: preview and PDF
  * always match), so what is shown here is exactly the layout a finished sheet
  * would have, just with placeholder text instead of a real person's answers.
+ *
+ * Deliberately outside the `(app)` route group, so it renders without the
+ * header/nav/AI banner — Sano-san's review (2026-09-28): the section-preview
+ * overlay embeds this in an iframe inside a small modal, and the full app
+ * chrome squeezed in there was pointless. Because that also removes the
+ * `(app)` layout's own login check, this page does its own, matching it
+ * exactly (`redirect('/login')`, not `requireUser()`'s thrown error, which
+ * had no layout left to catch it).
  */
 export default async function TemplatePreviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ section?: string }>;
 }) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
   if (!can(user, 'definition.manage')) notFound();
   const { section } = await searchParams;
 
@@ -34,7 +43,7 @@ export default async function TemplatePreviewPage({
   const printable = toPrintableModel(model, true);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="page-title text-base">
           {section ? `セクションのプレビュー: ${model.sections[0]?.nameJa ?? section}` : 'テンプレートのプレビュー'}
