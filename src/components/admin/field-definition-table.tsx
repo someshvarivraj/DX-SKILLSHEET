@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Select } from '@/components/ui/select';
+import { withBasePath } from '@/lib/base-path';
 import type {
   Editing,
   GlossaryCategory,
@@ -703,7 +704,7 @@ function SectionPreviewOverlay({
           </button>
         </div>
         <iframe
-          src={`/admin/fields/preview?section=${encodeURIComponent(sectionCode)}`}
+          src={withBasePath(`/admin/fields/preview?section=${encodeURIComponent(sectionCode)}`)}
           title={`「${sectionName}」のプレビュー`}
           className="def-preview-frame"
         />

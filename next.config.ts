@@ -1,6 +1,13 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
+  // Set only when this deployment is served under a subpath, e.g.
+  // https://dx.morabu.com/skill-sheet-2 — the trial and any root-domain
+  // deployment leave this unset, per-server in .env.production (see
+  // src/lib/base-path.ts, .env.production.example). basePath is baked in at
+  // build time, so this must be present when `docker build` / `next build`
+  // runs, not only at container start.
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',

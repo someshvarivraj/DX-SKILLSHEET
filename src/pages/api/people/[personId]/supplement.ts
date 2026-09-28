@@ -15,6 +15,7 @@ import { getUserFromToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { can, canAccessPerson } from '@/lib/auth/permissions';
 import { sendDownloadProblem } from '@/lib/pdf/error-page';
 import { exportSupplement } from '@/lib/pdf/supplement';
+import { withBasePath } from '@/lib/base-path';
 
 export const config = {
   api: {
@@ -41,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sendDownloadProblem(req, res, {
       status: 401,
       title: 'ログインが必要である',
-      backHref: '/login',
+      backHref: withBasePath('/login'),
       backLabel: 'ログイン画面へ',
     });
     return;

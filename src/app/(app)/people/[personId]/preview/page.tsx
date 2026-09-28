@@ -6,6 +6,7 @@ import { loadSheetModel, toPrintableModel } from '@/lib/sheet/model';
 import { SHEET_STYLES, SkillSheetDocument } from '@/components/sheet-document';
 import { PreviewStage } from '@/components/editor/preview-stage';
 import { STATUS_LABELS } from '@/lib/sheet/version';
+import { withBasePath } from '@/lib/base-path';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +67,7 @@ export default async function PreviewPage({
             </Link>
             {can(user, 'sheet.export') ? (
               isFinal ? (
-                <a href={`/api/people/${personId}/pdf`} className="btn btn-primary">
+                <a href={withBasePath(`/api/people/${personId}/pdf`)} className="btn btn-primary">
                   PDFをダウンロード
                 </a>
               ) : (

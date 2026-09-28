@@ -12,6 +12,7 @@ import { cache } from 'react';
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getEnv } from '@/lib/env';
+import { BASE_PATH } from '@/lib/base-path';
 import { generateToken, hashToken } from './crypto';
 
 export const SESSION_COOKIE = 'skillsheet_session';
@@ -44,7 +45,9 @@ export async function createSession(userId: string): Promise<string> {
     httpOnly: true,
     sameSite: 'lax',
     secure: env.NODE_ENV === 'production',
-    path: '/',
+    // BASE_PATH is '' outside a subpath deployment — a cookie's path can never
+    // be empty, so this falls back to the whole-site root in that case.
+    path: BASE_PATH || '/',
     maxAge: env.AUTH_SESSION_TTL_DAYS * 86_400,
   });
 
@@ -64,7 +67,9 @@ export async function destroySession(): Promise<void> {
       .deleteMany({ where: { tokenHash: hashToken(token) } })
       .catch(() => undefined);
   }
-  store.delete(SESSION_COOKIE);
+  // A cookie must be cleared with the same `path` it was set with, or the
+  // browser treats this as a different cookie and leaves the real one behind.
+  store.set(SESSION_COOKIE, '', { path: BASE_PATH || '/', maxAge: 0 });
 }
 
 /**
