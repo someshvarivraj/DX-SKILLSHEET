@@ -844,6 +844,12 @@ body {
   color: #b03a22;
 }
 
+.icon-btn-active {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-200);
+  color: var(--color-brand-600);
+}
+
 .btn-delete {
   background: var(--color-accent-500);
   color: #fff;
@@ -1424,4 +1430,44 @@ body {
     position: static;
     height: 70vh;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Per-section preview overlay on the field-definition screen.
+   --------------------------------------------------------------------------- */
+
+.def-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 24, 31, 0.55);
+  padding: 3vh 4vw;
+}
+.def-preview-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+.def-preview-modal-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-sand-50);
+  padding: 0.6rem 0.9rem;
+}
+.def-preview-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--color-sand-200);
 }
