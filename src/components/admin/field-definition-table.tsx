@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -10,6 +9,7 @@ import {
   GripVertical,
   Plus,
   Trash2,
+  X,
 } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import type {
@@ -535,6 +535,7 @@ function SectionItem({
   const rowRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const isDragging = reorder.dragId === section.id;
@@ -567,16 +568,16 @@ function SectionItem({
             <span className="def-name-ja">{section.nameJa}</span>
             <span className="def-name-sub">{section.nameEn ?? section.code}</span>
           </button>
-          <Link
-            href={`/admin/fields/preview?section=${encodeURIComponent(section.code)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="icon-btn flex-none"
+          <button
+            type="button"
+            className={`icon-btn flex-none ${previewOpen ? 'icon-btn-active' : ''}`}
+            onClick={() => setPreviewOpen((v) => !v)}
+            aria-expanded={previewOpen}
             aria-label={`「${section.nameJa}」だけをプレビューする`}
-            title="このセクションだけをプレビュー（別タブで開く）"
+            title={previewOpen ? 'プレビューを閉じる' : 'このセクションだけをプレビュー'}
           >
             <Eye size={16} aria-hidden />
-          </Link>
+          </button>
         </div>
         <span className="def-col-meta def-meta">
           {section.kind === 'REPEATING'
@@ -648,6 +649,65 @@ function SectionItem({
           <FieldList section={section} questionCodes={questionCodes} onNotice={onNotice} />
         </div>
       ) : null}
+
+      {previewOpen ? (
+        <SectionPreviewOverlay
+          sectionCode={section.code}
+          sectionName={section.nameJa}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The per-section preview, opened on the same page rather than a new tab
+ * (Sano-san's review, 2026-09-28): a panel over the current screen, closed by
+ * the × button, the backdrop, or Esc — clicking the eye icon again also
+ * closes it (SectionItem toggles `previewOpen`).
+ */
+function SectionPreviewOverlay({
+  sectionCode,
+  sectionName,
+  onClose,
+}: {
+  sectionCode: string;
+  sectionName: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="def-preview-overlay" onClick={onClose}>
+      <div className="def-preview-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="def-preview-modal-bar">
+          <span className="text-sm font-semibold text-ink-900">
+            セクションのプレビュー: {sectionName}
+          </span>
+          <span className="flex-1" />
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            aria-label="プレビューを閉じる"
+            title="閉じる（Escキーでも閉じる）"
+          >
+            <X size={18} aria-hidden />
+          </button>
+        </div>
+        <iframe
+          src={`/admin/fields/preview?section=${encodeURIComponent(sectionCode)}`}
+          title={`「${sectionName}」のプレビュー`}
+          className="def-preview-frame"
+        />
+      </div>
     </div>
   );
 }
