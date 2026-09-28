@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withBasePath } from '@/lib/base-path';
 
 /**
  * Redirect to a path on this site, whatever address the browser is using.
@@ -14,5 +15,5 @@ import { NextResponse } from 'next/server';
  * such as logout needs, and is equally correct after a GET.
  */
 export function redirectToPath(path: string): NextResponse {
-  return new NextResponse(null, { status: 303, headers: { Location: path } });
+  return new NextResponse(null, { status: 303, headers: { Location: withBasePath(path) } });
 }

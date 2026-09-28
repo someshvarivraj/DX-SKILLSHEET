@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db';
 import { recordAudit } from '@/lib/audit';
 import { getEnv } from '@/lib/env';
 import { buildReviewRequestEmail, sendMail } from '@/lib/mail';
+import { withBasePath } from '@/lib/base-path';
 
 export async function getOrCreateSkillSheet(personId: string) {
   const existing = await prisma.skillSheet.findUnique({
@@ -217,7 +218,7 @@ async function notifyAdministrators(
     });
     if (admins.length === 0) return;
 
-    const link = `${env.APP_URL.replace(/\/$/, '')}/people/${personId}`;
+    const link = `${env.APP_URL.replace(/\/$/, '')}${withBasePath(`/people/${personId}`)}`;
     const mail = buildReviewRequestEmail({ ...details, link });
     for (const admin of admins) {
       await sendMail({ ...mail, to: admin.email });

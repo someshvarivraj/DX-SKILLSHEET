@@ -4,6 +4,7 @@ import { can, canAccessPerson, ENGINEER_EDITABLE_SECTIONS } from '@/lib/auth/per
 import { recordAudit } from '@/lib/audit';
 import { loadSheetModel } from '@/lib/sheet/model';
 import { getOrCreateSkillSheet } from '@/lib/sheet/version';
+import { withBasePath } from '@/lib/base-path';
 import { SectionTabs } from '@/components/editor/section-tabs';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
 import { MemoPanel } from '@/components/editor/memo-panel';
@@ -73,7 +74,7 @@ export default async function PersonEditorPage({
       personId={personId}
       photoUrl={
         model.person.photoKey
-          ? `/api/files/${encodeURIComponent(model.person.photoKey)}`
+          ? withBasePath(`/api/files/${encodeURIComponent(model.person.photoKey)}`)
           : null
       }
       readOnly={!can(user, 'sheet.edit')}

@@ -5,6 +5,7 @@ import { prisma, isDatabaseUnreachable, DATABASE_UNREACHABLE_MESSAGE } from '@/l
 import { getEnv } from '@/lib/env';
 import { recordAudit } from '@/lib/audit';
 import { buildLoginEmail, sendMail } from '@/lib/mail';
+import { withBasePath } from '@/lib/base-path';
 import { generateToken, hashToken, verifyPassword } from '@/lib/auth/crypto';
 import { createSession, isEmailDomainAllowed } from '@/lib/auth/session';
 
@@ -65,7 +66,10 @@ export async function requestLoginLink(
     },
   });
 
-  const link = `${env.APP_URL.replace(/\/$/, '')}/auth/verify?token=${token}`;
+  // APP_URL is the bare domain (e.g. https://dx.morabu.com) — the login
+  // link must additionally carry the base path when this deployment lives
+  // under a subpath, or the emailed link 404s.
+  const link = `${env.APP_URL.replace(/\/$/, '')}${withBasePath(`/auth/verify?token=${token}`)}`;
   const mail = buildLoginEmail(link, env.AUTH_LINK_TTL_MINUTES);
   await sendMail({ ...mail, to: email });
 

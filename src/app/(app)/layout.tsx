@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { ROLE_LABELS } from '@/lib/auth/permissions';
 import { getEnv } from '@/lib/env';
+import { withBasePath } from '@/lib/base-path';
 import { NavLink } from '@/components/nav-link';
 import { HeaderOffset } from '@/components/header-offset';
 
@@ -52,7 +53,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <span className="block font-semibold">{user.displayName}</span>
               <span className="header-user-role block">{ROLE_LABELS[user.role]}</span>
             </span>
-            <form action="/auth/logout" method="post">
+            {/* A plain form action, not next/link's href — Next does not
+                rewrite this for the base path on its own. */}
+            <form action={withBasePath('/auth/logout')} method="post">
               <button type="submit" className="btn btn-on-bar">
                 ログアウト
               </button>

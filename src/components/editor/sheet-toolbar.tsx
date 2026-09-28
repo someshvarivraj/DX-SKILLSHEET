@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import type { SheetModel } from '@/lib/sheet/model';
+import { withBasePath } from '@/lib/base-path';
 import {
   finaliseAction,
   submitForReviewAction,
@@ -168,7 +169,7 @@ export function SheetToolbar({
         {canExport ? (
           isFinal ? (
             <a
-              href={`/api/people/${model.personId}/pdf`}
+              href={withBasePath(`/api/people/${model.personId}/pdf`)}
               className="btn btn-primary"
               title="確定版のスキルシートをA4のPDFとして出力する。"
             >
@@ -190,7 +191,7 @@ export function SheetToolbar({
         ) : null}
         {canExportSupplement ? (
           <a
-            href={`/api/people/${model.personId}/supplement`}
+            href={withBasePath(`/api/people/${model.personId}/supplement`)}
             className="btn btn-secondary"
             title="配属検討用の情報・備考・営業メモをまとめた社内用の資料。スキルシートには出力されない内容である。確定前でも出力できる。"
           >

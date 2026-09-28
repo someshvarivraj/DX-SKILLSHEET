@@ -19,6 +19,7 @@ import { getUserFromToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { can, canAccessPerson } from '@/lib/auth/permissions';
 import { exportSkillSheet } from '@/lib/pdf/render';
 import { sendDownloadProblem } from '@/lib/pdf/error-page';
+import { withBasePath } from '@/lib/base-path';
 
 export const config = {
   api: {
@@ -46,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sendDownloadProblem(req, res, {
       status: 401,
       title: 'ログインが必要である',
-      backHref: '/login',
+      backHref: withBasePath('/login'),
       backLabel: 'ログイン画面へ',
     });
     return;
@@ -69,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       detail:
         'PDFは確定した版だけを出力できます。編集画面で未確認の項目を確認し、「確定する」を実行してから、もう一度お試しください。',
       items: result.unreviewed,
-      backHref: `/people/${personId}`,
+      backHref: withBasePath(`/people/${personId}`),
       backLabel: '編集画面に戻る',
       json: { unreviewed: result.unreviewed },
     });

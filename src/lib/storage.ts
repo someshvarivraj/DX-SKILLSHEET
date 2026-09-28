@@ -8,6 +8,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
 import { getEnv } from './env';
+import { withBasePath } from './base-path';
 
 export interface StorageDriver {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
@@ -38,7 +39,7 @@ class LocalStorage implements StorageDriver {
     return readFile(this.path(key));
   }
   async url(key: string) {
-    return `/api/files/${encodeURIComponent(key)}`;
+    return withBasePath(`/api/files/${encodeURIComponent(key)}`);
   }
 }
 

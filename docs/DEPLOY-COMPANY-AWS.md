@@ -1,5 +1,14 @@
 # Deploying skill-sheet-2 to the company AWS account — step by step
 
+> **Update, 2026-09-28:** the actual deployment ended up at
+> `https://dx.morabu.com/skill-sheet-2` — a subpath of the existing
+> `dx.morabu.com` site, not a new subdomain as this guide's §9 assumes. That
+> needs `NEXT_PUBLIC_BASE_PATH=/skill-sheet-2` in `.env.production` (see §7
+> below and `src/lib/base-path.ts`) and an nginx `location` block under the
+> existing `dx.morabu.com` server block rather than a brand new `server {}`
+> site. The nginx side of that isn't captured here yet — whoever set it up on
+> the instance should add the exact config to this doc.
+
 **For:** whoever sets up the production environment in the company's AWS account
 **Result:** this application running as **`skill-sheet-2`** on the company's
 existing EC2 instance, next to the apps already there, auto-deploying on every
@@ -240,6 +249,13 @@ DATABASE_URL=postgresql://skillsheet:$(p POSTGRES_PASSWORD)@db:5432/skillsheet?s
 APP_URL=https://<APP_DOMAIN>
 APP_NAME=スキルシート管理システム
 COMPANY_NAME=モラブ阪神工業株式会社
+
+# <APP_DOMAIN> がサブパス(例: dx.morabu.com/skill-sheet-2)の場合のみ設定する。
+# ビルド時に読まれる(next build に焼き込まれる)ため、必ずこの up --build の前に
+# 設定しておくこと — 抜けているとサブパス無しの扱いに戻り、実際にこの環境の
+# 公開後に一度起きた事故と同じ壊れ方をする(src/lib/base-path.ts参照)。
+# 独自サブドメイン(skill-sheet-2.morabu.com等)の場合は空のままにする。
+# NEXT_PUBLIC_BASE_PATH=/skill-sheet-2
 
 AUTH_SECRET=$(p AUTH_SECRET)
 AUTH_ALLOWED_EMAIL_DOMAINS=morabu.com
@@ -510,3 +526,5 @@ docker run -d --name caddy --restart unless-stopped --network host \
 | Storage folder owned by root — the app runs as uid 1001 | `chown 1001:1001` |
 | Git set up for a normal user — SSM runs deploys as root without `HOME` | key under `/root`, `safe.directory` via `--system` |
 | Deploy region / folder hardcoded to the trial's | `AWS_REGION` and `DEPLOY_DIR` repository variables |
+| Hardcoding `/skill-sheet-2` into `next.config.ts` / `docker-compose.prod.yml` — those files are shared by every deployment, including the trial, which has no subpath | `NEXT_PUBLIC_BASE_PATH` env var, unset elsewhere (see the 2026-09-28 note above) |
+| Login-link emails 404ing because they're built from `APP_URL` alone, without the subpath | `withBasePath()` applied everywhere a URL is built by hand rather than through `next/link` — see `src/lib/base-path.ts` |

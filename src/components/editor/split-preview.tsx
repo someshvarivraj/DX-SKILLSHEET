@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Maximize2, Minimize2, RefreshCw, SplitSquareHorizontal, X } from 'lucide-react';
+import { withBasePath } from '@/lib/base-path';
 
 type Mode = 'hidden' | 'split' | 'max';
 
@@ -37,7 +38,9 @@ export function SplitPreview({
   const query = new URLSearchParams();
   if (preset) query.set('preset', preset);
   if (tab) query.set('tab', tab);
-  const previewSrc = `/people/${personId}/preview${query.size > 0 ? `?${query}` : ''}`;
+  // A raw iframe src — Next's basePath rewriting only applies to next/link
+  // and router navigation, not to this.
+  const previewSrc = withBasePath(`/people/${personId}/preview${query.size > 0 ? `?${query}` : ''}`);
 
   const reload = () => {
     // Changing the src (even to the same value) does not reload an iframe;
