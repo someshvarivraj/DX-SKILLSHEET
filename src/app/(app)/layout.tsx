@@ -20,7 +20,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: '/admin/fields', label: '項目定義', show: can(user, 'definition.manage') },
     { href: '/admin/glossary', label: '対訳辞書', show: can(user, 'glossary.manage') },
     { href: '/admin/users', label: '利用者', show: can(user, 'user.manage') },
-    { href: '/admin/audit', label: '操作ログ', show: can(user, 'audit.view') },
   ];
 
   return (
