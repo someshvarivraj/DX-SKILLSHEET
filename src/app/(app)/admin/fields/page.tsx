@@ -6,6 +6,7 @@ import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
 import { FormScriptImport } from '@/components/admin/form-script-import';
 import { expandSourceCodes } from '@/lib/sheet/question-coverage';
+import { PageHeader } from '@/components/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,52 +97,36 @@ export default async function FieldDefinitionPage() {
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="page-title">項目定義</h1>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-500">
-            どの設問がスキルシートのどの位置に入るかは、この画面の設定で決まります。
-            来年フォームが変わったときは、ここに行を追加するか取得元の設問IDを直すだけで対応でき、
-            プログラムの修正や再デプロイは必要ありません。生成プロンプトもここで調整できます。
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-700">
-            <li>並び替え：行の左端をドラッグするか、↑↓ボタン</li>
-            <li>表示・非表示：「表示」のスイッチ</li>
-            <li>必須・任意：「必須」のチェック（セクションの行でまとめてチェックすると、中の項目が一括で必須になる）</li>
-            <li>削除：ゴミ箱のボタン</li>
-            <li>詳しい設定：行の右端の ＞</li>
-          </ul>
-        </div>
-        <Link href="/admin/fields/preview" className="btn btn-secondary flex-none">
-          テンプレートを確認する
-        </Link>
-      </div>
+    <div className="space-y-5">
+      {/* Kept for the next developer: which answer lands where on the sheet
+          is decided by the rows on this screen, not by code — a new year's
+          form needs rows added here, never a redeploy. */}
+      <PageHeader
+        title="項目定義"
+        lead="スキルシートに載せる項目と、その並び順を決めます。行を押すと詳しい設定を開きます。"
+        actions={
+          <Link href="/admin/fields/preview" className="btn btn-secondary">
+            シートの見本を見る
+          </Link>
+        }
+      />
 
       <FormScriptImport />
 
       {unassigned.length > 0 ? (
-        <div className="card border-draft-line bg-draft-bg p-4">
-          <h2 className="text-sm font-semibold text-draft-ink">
-            未割当の設問（{unassigned.length}件）
-          </h2>
-          <p className="mt-1 text-xs text-draft-ink">
-            フォームには存在するが、どの項目にも割り当てられていない設問です。
-            スキルシートに載せる必要があれば、該当セクションに項目を追加して取得元に設定してください。
-          </p>
-          <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-0.5 text-xs text-draft-ink md:grid-cols-2">
+        // Collapsed: most days nobody needs this list. It matters after a
+        // form change, when a new question has no field to land in yet.
+        <details className="card px-4 py-3 text-sm">
+          <summary className="cursor-pointer text-ink-700">
+            シートに使われていない設問が{unassigned.length}件あります
+          </summary>
+          <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-0.5 text-ink-500 md:grid-cols-2">
             {unassigned.map((q) => (
-              <li key={q.id}>
-                <code className="font-semibold">{q.code}</code> {q.titleJa}
-              </li>
+              <li key={q.id}>{q.titleJa}</li>
             ))}
           </ul>
-        </div>
-      ) : (
-        <div className="card border-final-line bg-final-bg p-3 text-xs text-final-ink">
-          フォームのすべての設問が項目に割り当てられています。
-        </div>
-      )}
+        </details>
+      ) : null}
 
       <FieldDefinitionTable
         sections={rows}

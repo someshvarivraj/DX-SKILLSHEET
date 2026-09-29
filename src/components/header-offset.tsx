@@ -1,37 +1,45 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
 /**
- * Publishes the sticky header's real height as `--app-header-h`.
+ * Publishes the real heights of the pinned bars as CSS variables:
  *
- * Anything else that sticks below the header (the sheet toolbar) needs to know
- * where the header ends. A hardcoded value is wrong the moment the header is
- * any other height than the one it was measured at — and it changes for real
- * reasons: the environment banner appears in development and disappears in
- * production, and the navigation wraps to a second row on a narrow window. When
- * the guess is too small the toolbar slides under the header and is cut in half.
+ * - `--app-header-h`: the phone-width top bar (0 on a wide screen, where it is
+ *   hidden and the menu is a sidebar instead);
+ * - `--toolbar-h`: the editing screen's pinned toolbar, so the section list
+ *   beside the form can stick just below it.
  *
- * So it is measured rather than assumed, and re-measured whenever the header
- * resizes.
+ * They are measured rather than assumed because both change height for real
+ * reasons (the window width, buttons wrapping onto a second row), and a wrong
+ * guess slides one bar underneath another.
  */
 export function HeaderOffset() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    const root = document.documentElement;
     const header = document.querySelector<HTMLElement>('header.app-header');
-    if (!header) return;
+    const toolbar = document.querySelector<HTMLElement>('.sticky-below-header');
 
     const apply = () => {
-      document.documentElement.style.setProperty(
+      root.style.setProperty(
         '--app-header-h',
-        `${Math.round(header.getBoundingClientRect().height)}px`,
+        `${header ? Math.round(header.getBoundingClientRect().height) : 0}px`,
+      );
+      root.style.setProperty(
+        '--toolbar-h',
+        `${toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0}px`,
       );
     };
 
     apply();
     const observer = new ResizeObserver(apply);
-    observer.observe(header);
+    if (header) observer.observe(header);
+    if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
-  }, []);
+  }, [pathname]);
 
   return null;
 }

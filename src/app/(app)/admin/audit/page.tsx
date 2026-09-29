@@ -44,7 +44,7 @@ export default async function AuditPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-ink-900">操作ログ</h1>
+      <h1 className="page-title">操作ログ</h1>
 
       <section className="card overflow-hidden">
         <h2 className="border-b border-ink-100 bg-sand-50 px-4 py-2 text-sm font-semibold">

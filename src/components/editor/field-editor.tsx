@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
 import {
@@ -10,16 +10,6 @@ import {
   saveFieldAction,
   setFieldFlagsAction,
 } from '@/app/(app)/people/[personId]/actions';
-
-const PROCESSING_LABELS: Record<string, string> = {
-  COPY: '転記',
-  GLOSSARY: '辞書',
-  ENRICH: '補完',
-  TRANSLATE: '翻訳',
-  GENERATE: '生成',
-  RULE_BASED: '規則生成',
-  MANUAL: '手入力',
-};
 
 type HistoryEntry = Awaited<ReturnType<typeof loadHistoryAction>>[number];
 
@@ -34,6 +24,21 @@ const CHANGE_LABELS: Record<string, string> = {
   REVIEW: '確認',
 };
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+/**
+ * One field on the editing screen.
+ *
+ * Redesigned 2026-09-29 (Sano-san: "too complicated"). What an operator needs
+ * on every field is the label, the value and one 確認 tick; that is all that
+ * is shown. The value saves itself when the operator leaves the box — there
+ * is no per-field 保存 button. Everything else (regenerate, the original
+ * answer, history, lock, PDF on/off) sits in the ⋯ menu, and the technical
+ * detail (question codes, processing type) is only in the ? help.
+ *
+ * Saving on blur rather than on every keystroke is deliberate: each save
+ * writes one history entry, so one edit becomes one entry, not dozens.
+ */
 export function FieldEditor({
   personId,
   sectionCode,
@@ -50,23 +55,22 @@ export function FieldEditor({
   const [value, setValue] = useState(field.valueJa);
   // What the server last told us this field holds. When a server action changes
   // it — a regeneration, a revert, or the save-time Japanese normalisation —
-  // the box has to follow, or it keeps showing the old text, reports itself as
-  // unsaved, and one click writes the stale text back over the new value.
-  // Edits typed since the last server value are kept.
+  // the box has to follow, or it keeps showing the old text and the next blur
+  // writes the stale text back over the new value. Edits typed since the last
+  // server value are kept.
   const [serverValue, setServerValue] = useState(field.valueJa);
   if (serverValue !== field.valueJa) {
     setServerValue(field.valueJa);
     if (value === serverValue) setValue(field.valueJa);
   }
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [panel, setPanel] = useState<null | 'prompt' | 'source' | 'history' | 'help'>(null);
   const [prompt, setPrompt] = useState('');
-  const [showSource, setShowSource] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
-  const dirty = value !== field.valueJa;
   const disabled = Boolean(readOnly) || field.isLocked || pending;
   const actions = fieldActions(field.processing, field.valueType);
 
@@ -83,15 +87,122 @@ export function FieldEditor({
       }
     });
 
+  const save = () => {
+    if (readOnly || field.isLocked || value === field.valueJa) return;
+    setSaveState('saving');
+    startTransition(async () => {
+      try {
+        const result = await saveFieldAction(personId, {
+          fieldId: field.id,
+          recordId,
+          sectionCode,
+          valueJa: value,
+        });
+        setSaveState(result.ok === false ? 'error' : 'saved');
+        if (result.ok === false && result.message) setNotice(result.message);
+      } catch (error) {
+        setSaveState('error');
+        setNotice((error as Error).message);
+      }
+    });
+  };
+
+  // "保存しました" fades back to nothing after a moment.
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    const t = setTimeout(() => setSaveState('idle'), 2500);
+    return () => clearTimeout(t);
+  }, [saveState]);
+
+  // Leaving the page with an edit still in the box: the browser asks first.
+  const dirty = value !== field.valueJa;
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  const togglePanel = (next: NonNullable<typeof panel>) =>
+    setPanel((current) => (current === next ? null : next));
+
+  const openHistory = () => {
+    if (panel === 'history') {
+      setPanel(null);
+      return;
+    }
+    setPanel('history');
+    startTransition(async () => {
+      setHistory(await loadHistoryAction(personId, field.valueId!));
+    });
+  };
+
   // GRID also renders as a textarea: its value is several "ラベル：値" lines
-  // (see processCopy), which a single-line <input> collapses into one
-  // unreadable run. Sano-san's review, item 8: "please label each one —
-  // language knowledge, reading, listening — rather than listing bare
-  // numbers." The labels are already in the stored value; they just were not
-  // visible as separate lines.
+  // (see processCopy), which a single-line <input> would collapse into one
+  // unreadable run.
   const isLongText = field.valueType === 'TEXT' || field.valueType === 'GRID';
-  const overLimit =
-    field.targetLengthMax !== null && [...value].length > field.targetLengthMax;
+  const length = [...value].length;
+  const overLimit = field.targetLengthMax !== null && length > field.targetLengthMax;
+  const hasTarget = field.targetLengthMin !== null || field.targetLengthMax !== null;
+
+  const canReview = Boolean(field.valueId) && !readOnly;
+  const needsReview = Boolean(field.valueJa) && !field.isReviewed;
+
+  const menuItems: MenuEntry[] = [];
+  if (!readOnly && actions.regenerate) {
+    menuItems.push({
+      label: 'AIで作り直す',
+      disabled,
+      onClick: () =>
+        run(async () =>
+          generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode }),
+        ),
+    });
+  }
+  if (!readOnly && actions.regenerateWithInstructions) {
+    menuItems.push({ label: '指示してAIで作り直す', disabled, onClick: () => togglePanel('prompt') });
+  }
+  if (actions.showOriginal && field.sourceText) {
+    menuItems.push({
+      label: panel === 'source' ? '回答の原文を隠す' : '回答の原文を見る',
+      onClick: () => togglePanel('source'),
+    });
+  }
+  if (field.valueId) {
+    menuItems.push({
+      label: `変更履歴${field.historyCount > 0 ? `（${field.historyCount}）` : ''}`,
+      onClick: openHistory,
+    });
+  }
+  if (field.valueId && !readOnly) {
+    menuItems.push({ separator: true });
+    menuItems.push({
+      label: field.isLocked ? 'ロックを解除する' : 'ロックする（AIで上書きさせない）',
+      disabled: pending,
+      onClick: () =>
+        run(async () =>
+          setFieldFlagsAction(personId, {
+            valueId: field.valueId!,
+            sectionCode,
+            isLocked: !field.isLocked,
+          }),
+        ),
+    });
+    if (field.displayToggle) {
+      menuItems.push({
+        label: field.isDisplayed ? 'PDFに載せない' : 'PDFに載せる',
+        disabled: pending,
+        onClick: () =>
+          run(async () =>
+            setFieldFlagsAction(personId, {
+              valueId: field.valueId!,
+              sectionCode,
+              isDisplayed: !field.isDisplayed,
+            }),
+          ),
+      });
+    }
+  }
 
   return (
     <div
@@ -99,273 +210,158 @@ export function FieldEditor({
       // (see scroll-restore.tsx).
       id={`field-${field.id}${recordId ? `-${recordId}` : ''}`}
       data-field-anchor=""
-      className={`field-block border-t border-ink-100 px-4 py-3 ${
-        field.isLocked ? 'bg-sand-50/70' : ''
-      }`}
+      className={`field-block ${field.isLocked ? 'bg-sand-50' : ''}`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-ink-900">{field.nameJa}</span>
-        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">
-          {PROCESSING_LABELS[field.processing] ?? field.processing}
-        </span>
-        {field.sourceCodes.length > 0 ? (
-          <span className="text-xs text-ink-400">{field.sourceCodes.join(' + ')}</span>
-        ) : null}
-        {!field.includeInPdf ? (
-          <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">
-            PDF非出力
-          </span>
-        ) : null}
-        {field.valueJa && !field.isReviewed ? (
-          <span className="badge badge-warn">未確認</span>
-        ) : null}
-        {field.isLocked ? <span className="badge badge-review">ロック中</span> : null}
-
-        <span className="flex-1" />
-
-        <span
-          className={`text-xs ${overLimit ? 'font-semibold text-[#b03a22]' : 'text-ink-400'}`}
-        >
-          {[...value].length}字
-          {field.targetLengthMin || field.targetLengthMax
-            ? `（目安 ${field.targetLengthMin ?? ''}〜${field.targetLengthMax ?? ''}）`
-            : ''}
-        </span>
-      </div>
-
-      {field.helpText ? (
-        <p className="mt-1 text-xs leading-relaxed text-ink-500">{field.helpText}</p>
-      ) : null}
-
-      <div className="mt-2">
-        {isLongText ? (
-          <textarea
-            className="textarea"
-            // Enough rows for every line of a multi-line value (each JLPT
-            // score is its own line), or for a long paragraph's wrapped length.
-            rows={Math.min(
-              10,
-              Math.max(3, value.split('\n').length, Math.ceil([...value].length / 48) + 1),
-            )}
-            value={value}
-            disabled={disabled}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        ) : (
-          <input
-            className="input"
-            value={value}
-            disabled={disabled}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        )}
-      </div>
-
-      {field.styleIssues.length > 0 ? (
-        <ul className="mt-1.5 space-y-0.5">
-          {field.styleIssues.map((issue, i) => (
-            <li key={i} className="text-xs text-draft-ink">
-              ⚠ {issue.message}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {warnings.length > 0 ? (
-        <ul className="mt-1.5 space-y-0.5">
-          {warnings.map((w, i) => (
-            <li key={i} className="text-xs text-draft-ink">
-              ⚠ {w}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {notice ? <p className="mt-1.5 text-xs text-final-ink">{notice}</p> : null}
-
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="field-label-row">
+        <label className="field-name" htmlFor={`input-${field.id}${recordId ?? ''}`}>
+          {field.nameJa}
+        </label>
         <button
           type="button"
-          className="btn btn-primary"
-          disabled={disabled || !dirty}
-          onClick={() =>
-            run(async () =>
-              saveFieldAction(personId, {
-                fieldId: field.id,
-                recordId,
-                sectionCode,
-                valueJa: value,
-              }),
-            )
-          }
+          className="field-help-btn"
+          aria-label="この項目について"
+          aria-expanded={panel === 'help'}
+          onClick={() => togglePanel('help')}
         >
-          保存
+          ?
         </button>
-
-        {actions.regenerate && !readOnly ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={disabled}
-            onClick={() =>
-              run(async () =>
-                generateFieldAction(personId, {
-                  fieldId: field.id,
-                  recordId,
-                  sectionCode,
-                }),
-              )
-            }
-          >
-            再生成
-          </button>
-        ) : null}
-
-        {actions.regenerateWithInstructions && !readOnly ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowPrompt((v) => !v)}
-          >
-            指示して再生成
-          </button>
-        ) : null}
-
-        {actions.showOriginal && field.sourceText ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowSource((v) => !v)}
-          >
-            {showSource ? '原文を隠す' : '原文を表示'}
-          </button>
-        ) : null}
-
-        {field.valueId ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() =>
-              startTransition(async () => {
-                if (history) {
-                  setHistory(null);
-                  return;
-                }
-                setHistory(await loadHistoryAction(personId, field.valueId!));
-              })
-            }
-          >
-            履歴{field.historyCount > 0 ? `（${field.historyCount}）` : ''}
-          </button>
-        ) : null}
+        {field.isLocked ? <span className="tag">ロック中</span> : null}
+        {field.displayToggle && !field.isDisplayed ? <span className="tag">PDFに載せない</span> : null}
 
         <span className="flex-1" />
 
-        {field.valueId && !readOnly ? (
-          <>
-            <label className="flex items-center gap-1 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={field.isReviewed}
-                disabled={pending}
-                onChange={(e) =>
-                  run(async () =>
-                    setFieldFlagsAction(personId, {
-                      valueId: field.valueId!,
-                      sectionCode,
-                      isReviewed: e.target.checked,
-                    }),
-                  )
-                }
-              />
-              確認済み
-            </label>
-            <label className="flex items-center gap-1 text-xs text-ink-700">
-              <input
-                type="checkbox"
-                checked={field.isLocked}
-                disabled={pending}
-                onChange={(e) =>
-                  run(async () =>
-                    setFieldFlagsAction(personId, {
-                      valueId: field.valueId!,
-                      sectionCode,
-                      isLocked: e.target.checked,
-                    }),
-                  )
-                }
-              />
-              ロック
-            </label>
-            {field.displayToggle ? (
-              <label className="flex items-center gap-1 text-xs text-ink-700">
-                <input
-                  type="checkbox"
-                  checked={field.isDisplayed}
-                  disabled={pending}
-                  onChange={(e) =>
-                    run(async () =>
-                      setFieldFlagsAction(personId, {
-                        valueId: field.valueId!,
-                        sectionCode,
-                        isDisplayed: e.target.checked,
-                      }),
-                    )
-                  }
-                />
-                PDFに出力
-              </label>
-            ) : null}
-          </>
+        <SaveIndicator state={saveState} />
+        {hasTarget ? (
+          <span className={`field-count ${overLimit ? 'field-count-over' : ''}`}>
+            {length}字
+            {field.targetLengthMax ? ` / 目安${field.targetLengthMax}字` : ''}
+          </span>
         ) : null}
+
+        {canReview ? (
+          <label
+            className={`review-check ${
+              field.isReviewed ? 'review-check-on' : needsReview ? 'review-check-todo' : ''
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={field.isReviewed}
+              disabled={pending}
+              onChange={(e) =>
+                run(async () =>
+                  setFieldFlagsAction(personId, {
+                    valueId: field.valueId!,
+                    sectionCode,
+                    isReviewed: e.target.checked,
+                  }),
+                )
+              }
+            />
+            {field.isReviewed ? '確認済み' : '確認'}
+          </label>
+        ) : null}
+
+        {menuItems.length > 0 ? <FieldMenu items={menuItems} /> : null}
       </div>
 
-      {showPrompt ? (
-        <div className="mt-2 rounded-md border border-final-line bg-final-bg/60 p-2">
-          <textarea
-            className="textarea"
-            rows={2}
-            placeholder="例：もう少し短くまとめてください／専門用語を減らしてください／使用したツール名を必ず本文に含めてください"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-primary mt-2"
-            disabled={pending || prompt.trim() === ''}
-            onClick={() =>
-              run(async () => {
-                const result = await generateFieldAction(personId, {
-                  fieldId: field.id,
-                  recordId,
-                  sectionCode,
-                  operatorPrompt: prompt,
-                });
-                setPrompt('');
-                return result;
-              })
-            }
-          >
-            この指示で再生成
-          </button>
+      {panel === 'help' ? (
+        <div className="field-help">
+          {field.helpText ? <p>{field.helpText}</p> : null}
+          <p className="text-xs text-ink-500">
+            {field.includeInPdf ? 'スキルシート（PDF）に載る項目です。' : 'スキルシート（PDF）には載りません。'}
+            {field.sourceCodes.length > 0 ? ` 元になる設問：${field.sourceCodes.join('、')}` : ' 手で入力する項目です。'}
+          </p>
         </div>
       ) : null}
 
-      {showSource ? (
-        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-md border border-ink-100 bg-sand-50 p-2 text-xs leading-relaxed text-ink-700">
+      {isLongText ? (
+        <textarea
+          id={`input-${field.id}${recordId ?? ''}`}
+          className="textarea"
+          // Enough rows for every line of a multi-line value (each JLPT score
+          // is its own line), or for a long paragraph's wrapped length.
+          rows={Math.min(10, Math.max(3, value.split('\n').length, Math.ceil(length / 48) + 1))}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+        />
+      ) : (
+        <input
+          id={`input-${field.id}${recordId ?? ''}`}
+          className="input"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur();
+          }}
+        />
+      )}
+
+      {[...field.styleIssues.map((i) => i.message), ...warnings].map((message, i) => (
+        <p key={i} className="field-msg">
+          ⚠ {message}
+        </p>
+      ))}
+      {notice ? <p className="field-msg text-ink-700">{notice}</p> : null}
+
+      {panel === 'prompt' ? (
+        <div className="field-extra">
+          <textarea
+            className="textarea"
+            rows={2}
+            placeholder="例：もう少し短くまとめてください／専門用語を減らしてください"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={pending || prompt.trim() === ''}
+              onClick={() =>
+                run(async () => {
+                  const result = await generateFieldAction(personId, {
+                    fieldId: field.id,
+                    recordId,
+                    sectionCode,
+                    operatorPrompt: prompt,
+                  });
+                  setPrompt('');
+                  setPanel(null);
+                  return result;
+                })
+              }
+            >
+              この指示で作り直す
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => setPanel(null)}>
+              やめる
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {panel === 'source' ? (
+        <pre className="field-extra max-h-56 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-ink-700">
           {field.sourceText}
         </pre>
       ) : null}
 
-      {history ? (
-        <div className="mt-2 space-y-1.5 rounded-md border border-ink-100 bg-white p-2">
-          {history.length === 0 ? (
-            <p className="text-xs text-ink-400">履歴はまだない。</p>
+      {panel === 'history' ? (
+        <div className="field-extra space-y-2">
+          {history === null ? (
+            <p className="text-xs text-ink-400">読み込み中…</p>
+          ) : history.length === 0 ? (
+            <p className="text-xs text-ink-400">履歴はまだありません。</p>
           ) : (
             history.map((entry) => (
-              <div key={entry.id} className="border-b border-ink-100 pb-1.5 last:border-0">
-                <div className="flex items-center gap-2 text-xs text-ink-500">
-                  <span className="font-medium text-ink-700">
+              <div key={entry.id} className="border-b border-ink-100 pb-2 last:border-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
+                  <span className="font-semibold text-ink-700">
                     {CHANGE_LABELS[entry.changeType] ?? entry.changeType}
                   </span>
                   <span>{new Date(entry.createdAt).toLocaleString('ja-JP')}</span>
@@ -374,13 +370,10 @@ export function FieldEditor({
                   {!readOnly ? (
                     <button
                       type="button"
-                      className="text-brand-500 underline"
+                      className="font-semibold text-brand-500 hover:underline"
                       onClick={() =>
                         run(async () =>
-                          revertFieldAction(personId, {
-                            historyId: entry.id,
-                            sectionCode,
-                          }),
+                          revertFieldAction(personId, { historyId: entry.id, sectionCode }),
                         )
                       }
                     >
@@ -388,14 +381,86 @@ export function FieldEditor({
                     </button>
                   ) : null}
                 </div>
-                {entry.prompt ? (
-                  <p className="text-xs text-final-ink">指示: {entry.prompt}</p>
-                ) : null}
-                <p className="whitespace-pre-wrap text-xs text-ink-700">
+                {entry.prompt ? <p className="text-xs text-ink-500">指示: {entry.prompt}</p> : null}
+                <p className="whitespace-pre-wrap text-sm text-ink-700">
                   {entry.valueJa || '（空欄）'}
                 </p>
               </div>
             ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SaveIndicator({ state }: { state: SaveState }) {
+  if (state === 'saving') return <span className="save-state">保存中…</span>;
+  if (state === 'saved') return <span className="save-state save-state-ok">✓ 保存しました</span>;
+  if (state === 'error') return <span className="save-state save-state-error">保存できませんでした</span>;
+  return null;
+}
+
+type MenuEntry =
+  | { separator: true }
+  | { separator?: false; label: string; onClick: () => void; disabled?: boolean };
+
+/** The ⋯ button and its drop-down of less common actions. */
+export function FieldMenu({ items, label = 'その他の操作' }: { items: MenuEntry[]; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+
+  return (
+    <div className="menu-root" ref={rootRef}>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="menu" role="menu">
+          {items.map((item, i) =>
+            item.separator ? (
+              <div key={i} className="menu-sep" role="separator" />
+            ) : (
+              <button
+                key={i}
+                type="button"
+                role="menuitem"
+                className="menu-item"
+                disabled={item.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  item.onClick();
+                }}
+              >
+                {item.label}
+              </button>
+            ),
           )}
         </div>
       ) : null}

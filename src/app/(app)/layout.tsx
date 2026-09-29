@@ -1,11 +1,9 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { ROLE_LABELS } from '@/lib/auth/permissions';
 import { getEnv } from '@/lib/env';
-import { withBasePath } from '@/lib/base-path';
-import { NavLink } from '@/components/nav-link';
+import { AppSidebar, type NavItem } from '@/components/app-sidebar';
 import { HeaderOffset } from '@/components/header-offset';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -13,63 +11,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/login');
   const env = getEnv();
 
-  const links: Array<{ href: string; label: string; show: boolean }> = [
-    { href: '/people', label: '対象者一覧', show: user.role !== 'ENGINEER' },
-    { href: '/my-sheet', label: '自分のスキルシート', show: user.role === 'ENGINEER' },
-    { href: '/admin/import', label: '取り込み', show: can(user, 'import.run') },
-    { href: '/admin/fields', label: '項目定義', show: can(user, 'definition.manage') },
-    { href: '/admin/glossary', label: '対訳辞書', show: can(user, 'glossary.manage') },
-    { href: '/admin/users', label: '利用者', show: can(user, 'user.manage') },
+  const links: Array<NavItem & { show: boolean }> = [
+    { href: '/people', label: '対象者一覧', icon: 'people', show: user.role !== 'ENGINEER' },
+    { href: '/my-sheet', label: '自分のスキルシート', icon: 'sheet', show: user.role === 'ENGINEER' },
+    { href: '/admin/import', label: '回答の取り込み', icon: 'import', show: can(user, 'import.run') },
+    { href: '/admin/fields', label: '項目定義', icon: 'fields', show: can(user, 'definition.manage') },
+    { href: '/admin/glossary', label: '対訳辞書', icon: 'glossary', show: can(user, 'glossary.manage') },
+    { href: '/admin/users', label: '利用者', icon: 'users', show: can(user, 'user.manage') },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="app-shell">
       <HeaderOffset />
-      <header className="app-header sticky top-0 z-30">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-2.5">
-          <Link href="/" className="wordmark">
-            <span className="mark" aria-hidden>
-              SS
-            </span>
-            スキルシート管理システム
-          </Link>
-          {/* order-last on a narrow screen: the nav drops to its own scrollable
-              row rather than pushing the whole header sideways. */}
-          <nav
-            className="order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto md:order-none md:w-auto md:flex-1"
-            aria-label="主要メニュー"
-          >
-            {links
-              .filter((l) => l.show)
-              .map((link) => (
-                <NavLink key={link.href} href={link.href}>
-                  {link.label}
-                </NavLink>
-              ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="header-user text-right text-xs leading-tight">
-              <span className="block font-semibold">{user.displayName}</span>
-              <span className="header-user-role block">{ROLE_LABELS[user.role]}</span>
-            </span>
-            {/* A plain form action, not next/link's href — Next does not
-                rewrite this for the base path on its own. */}
-            <form action={withBasePath('/auth/logout')} method="post">
-              <button type="submit" className="btn btn-on-bar">
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-        {env.NODE_ENV !== 'production' || env.AI_PROVIDER === 'mock' ? (
-          <div className="env-banner">
-            {env.AI_PROVIDER === 'mock'
-              ? 'AIサービスは未接続です（モックプロバイダで動作中）。生成された文章は仮のものです。'
-              : `環境: ${env.NODE_ENV}`}
-          </div>
-        ) : null}
-      </header>
-      <main className="mx-auto max-w-[1400px] px-6 py-7">{children}</main>
+      <AppSidebar
+        items={links.filter((l) => l.show).map(({ show: _show, ...item }) => item)}
+        userName={user.displayName}
+        userRole={ROLE_LABELS[user.role]}
+        note={
+          env.AI_PROVIDER === 'mock'
+            ? 'AIは未接続です。自動生成される文章は仮のものです。'
+            : null
+        }
+      />
+      <div className="app-main">
+        <main className="page">{children}</main>
+      </div>
     </div>
   );
 }
