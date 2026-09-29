@@ -31,12 +31,12 @@ export const dynamic = 'force-dynamic';
 export default async function TemplatePreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; embed?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   if (!can(user, 'definition.manage')) notFound();
-  const { section } = await searchParams;
+  const { section, embed } = await searchParams;
 
   const model = await loadTemplateModel({ sectionCode: section });
   if (section && model.sections.length === 0) notFound();
@@ -49,15 +49,19 @@ export default async function TemplatePreviewPage({
           {section ? `セクションのプレビュー: ${model.sections[0]?.nameJa ?? section}` : 'テンプレートのプレビュー'}
         </h1>
         <span className="text-xs text-ink-500">
-          実際のデータではなく、項目名を仮の値として表示している。表示・非表示の設定は現在の項目定義のとおりに反映される。
+          実際のデータではなく、項目名を仮の値として表示しています。
         </span>
       </div>
 
       <PreviewStage
         toolbar={
-          <Link href="/admin/fields" className="btn btn-secondary">
-            項目定義に戻る
-          </Link>
+          // Inside the pop-up (embed=1) this link would load the whole app
+          // inside the pop-up; closing the pop-up is the way back there.
+          embed ? null : (
+            <Link href="/admin/fields" className="btn btn-secondary">
+              項目定義に戻る
+            </Link>
+          )
         }
       >
         <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />

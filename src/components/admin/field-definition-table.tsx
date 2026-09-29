@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
+import { TemplatePreviewOverlay } from './template-preview-overlay';
 import {
   ArrowDown,
   ArrowUp,
@@ -9,10 +10,8 @@ import {
   GripVertical,
   Plus,
   Trash2,
-  X,
 } from 'lucide-react';
 import { Select } from '@/components/ui/select';
-import { withBasePath } from '@/lib/base-path';
 import type {
   Editing,
   GlossaryCategory,
@@ -648,63 +647,12 @@ function SectionItem({
       ) : null}
 
       {previewOpen ? (
-        <SectionPreviewOverlay
+        <TemplatePreviewOverlay
           sectionCode={section.code}
-          sectionName={section.nameJa}
+          title={`セクションのプレビュー: ${section.nameJa}`}
           onClose={() => setPreviewOpen(false)}
         />
       ) : null}
-    </div>
-  );
-}
-
-/**
- * The per-section preview, opened on the same page rather than a new tab
- * (Sano-san's review, 2026-09-28): a panel over the current screen, closed by
- * the × button, the backdrop, or Esc — clicking the eye icon again also
- * closes it (SectionItem toggles `previewOpen`).
- */
-function SectionPreviewOverlay({
-  sectionCode,
-  sectionName,
-  onClose,
-}: {
-  sectionCode: string;
-  sectionName: string;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
-  return (
-    <div className="def-preview-overlay" onClick={onClose}>
-      <div className="def-preview-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="def-preview-modal-bar">
-          <span className="text-sm font-semibold text-ink-900">
-            セクションのプレビュー: {sectionName}
-          </span>
-          <span className="flex-1" />
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onClose}
-            aria-label="プレビューを閉じる"
-            title="閉じる（Escキーでも閉じる）"
-          >
-            <X size={18} aria-hidden />
-          </button>
-        </div>
-        <iframe
-          src={withBasePath(`/admin/fields/preview?section=${encodeURIComponent(sectionCode)}`)}
-          title={`「${sectionName}」のプレビュー`}
-          className="def-preview-frame"
-        />
-      </div>
     </div>
   );
 }
