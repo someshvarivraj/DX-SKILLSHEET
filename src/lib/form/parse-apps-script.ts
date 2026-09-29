@@ -71,6 +71,25 @@ export function splitTitle(title: string): { ja: string; en: string | null } {
   };
 }
 
+/**
+ * The .gs script's own section (page-break) headings, e.g. "A. 基本情報／Basic
+ * Information" or "B-1. 最終学歴の詳細／Details of Your Highest Degree", strip
+ * the leading letter code and split the language halves — used by the Google
+ * Form import to name the sections it creates for newly-arrived questions.
+ * Some headings carry no letter prefix at all (e.g. "学士の方／For Bachelor's
+ * Students", a sub-heading inside education); that is fine here, only the
+ * prefix is optional to strip.
+ */
+export function cleanSectionLabel(label: string): { ja: string; en: string | null } {
+  const withoutPrefix = label.replace(/^[A-Z](?:-\d+)?[.．]\s*/, '').trim();
+  const idx = withoutPrefix.indexOf('／');
+  if (idx === -1) return { ja: withoutPrefix, en: null };
+  return {
+    ja: withoutPrefix.slice(0, idx).trim(),
+    en: withoutPrefix.slice(idx + 1).trim() || null,
+  };
+}
+
 type Recorded = {
   type: ParsedQuestion['type'];
   title: string;

@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
 import { FormScriptImport } from '@/components/admin/form-script-import';
+import { expandSourceCodes } from '@/lib/sheet/question-coverage';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,14 +56,7 @@ export default async function FieldDefinitionPage() {
   );
 
   // "E-x-6" covers E-1-6 and E-2-6: expand the placeholders before comparing.
-  const expanded = new Set(usedCodes);
-  for (const code of usedCodes) {
-    if (!code.includes('-x-')) continue;
-    const [head, tail] = code.split('-x-');
-    for (const index of [1, 2, 3, 4, 5]) {
-      expanded.add(`${head}-${index}-${tail}`);
-    }
-  }
+  const expanded = expandSourceCodes(usedCodes);
 
   const unassigned = questions.filter((q) => !expanded.has(q.code));
 
