@@ -2,7 +2,8 @@
  * Sessions and access control.  Specification chapter 12.
  *
  * - One-time email link for named users; no password is stored for them.
- * - Only addresses on the allowed domains may sign in.
+ * - Only addresses on the allowed domains may sign in — or any domain, if
+ *   AUTH_ALLOWED_EMAIL_DOMAINS is `*` (see isEmailDomainAllowed).
  * - A single shared, read-only demo account exists for the trial period.
  * - Every sign-in, view, edit, finalise and export is written to the audit log.
  */
@@ -141,5 +142,12 @@ export function isEmailDomainAllowed(email: string): boolean {
   const domains = getEnv().AUTH_ALLOWED_EMAIL_DOMAINS;
   const domain = email.split('@')[1]?.toLowerCase();
   if (!domain) return false;
+  // `*` (or the env var left blank) means "no domain restriction" — e.g. for
+  // skill-sheet-2, where ENGINEER accounts are recruits' own personal
+  // addresses, not @morabu.com ones, so a fixed allow-list does not fit.
+  // Account creation is still admin-only (only an admin can add a user in the
+  // first place, from 利用者); this only decides which domains an admin may
+  // use when doing so.
+  if (domains.length === 0 || domains.includes('*')) return true;
   return domains.includes(domain);
 }
