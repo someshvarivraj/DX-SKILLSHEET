@@ -159,16 +159,16 @@ body {
 .app-main {
   min-width: 0;
 }
-/* On a wide screen the menu is docked beside the page and pushes it over;
-   the top bar's ☰ hides it (html[data-sidebar='closed'], remembered per
-   browser) so a long form can use the whole width. */
+/* On a wide screen the menu is docked beside the page. Its « button folds it
+   down to a strip of icons (html[data-sidebar='closed'], remembered per
+   browser) so a long form gets nearly the whole width. */
 @media (min-width: 1024px) {
   .app-main {
     margin-left: var(--sidebar-w);
     transition: margin-left 0.18s ease;
   }
-  html[data-sidebar='closed'] .app-main {
-    margin-left: 0;
+  html[data-sidebar='closed'] {
+    --sidebar-w: 4.25rem;
   }
 }
 
@@ -192,9 +192,6 @@ body {
   .sidebar {
     transform: none;
     box-shadow: none;
-  }
-  html[data-sidebar='closed'] .sidebar {
-    transform: translateX(-100%);
   }
   .sidebar-scrim {
     display: none;
@@ -229,6 +226,68 @@ body {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding-right: 0.6rem;
+}
+.sidebar-collapse {
+  display: none;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-ink-400);
+  cursor: pointer;
+}
+.sidebar-collapse:hover {
+  background: var(--color-sand-100);
+  color: var(--color-ink-900);
+}
+.sidebar-collapse:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 1px;
+}
+/* .sidebar prefix: .icon-btn (defined later) would otherwise show it. */
+.sidebar .sidebar-logout-icon {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .sidebar {
+    transition: width 0.18s ease;
+  }
+  .sidebar-collapse {
+    display: grid;
+  }
+  /* Folded: icons only, each with its name as a tooltip. */
+  html[data-sidebar='closed'] .sidebar :is(.nav-label, .wordmark, .sidebar-foot-full) {
+    display: none;
+  }
+  html[data-sidebar='closed'] .sidebar-head {
+    justify-content: center;
+    padding: 1.1rem 0 1rem;
+  }
+  html[data-sidebar='closed'] .sidebar-nav {
+    padding: 0.5rem 0.55rem;
+  }
+  html[data-sidebar='closed'] .nav-link {
+    justify-content: center;
+    padding: 0.6rem 0;
+  }
+  html[data-sidebar='closed'] .sidebar-foot {
+    padding: 0.75rem 0.55rem;
+  }
+  html[data-sidebar='closed'] .sidebar .sidebar-logout-icon {
+    display: grid;
+    width: 100%;
+  }
 }
 
 .sidebar-nav {
@@ -309,10 +368,9 @@ body {
 .app-header .wordmark {
   padding: 0;
 }
-/* The wordmark in the top bar is only needed when the menu (which has its
-   own) is out of sight. */
+/* The top bar is for phones only; on a wide screen the menu is always there. */
 @media (min-width: 1024px) {
-  html:not([data-sidebar='closed']) .app-header .wordmark {
+  .app-header {
     display: none;
   }
 }

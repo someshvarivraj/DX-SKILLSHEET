@@ -3,20 +3,21 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 import { NavLink } from './nav-link';
 
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
 
 const STORAGE_KEY = 'skillsheet.sidebar';
-const WIDE = '(min-width: 1024px)';
 
 /**
- * The page frame: the left menu, and the top bar whose ☰ shows and hides it.
+ * The page frame: the left menu, plus a ☰ top bar on phones.
  *
- * - Wide screen: the menu is docked beside the page. ☰ hides it so the page
- *   (a long sheet, the field list) gets the full width; the choice is
- *   remembered in this browser (Sano-san's review, 2026-09-29).
+ * - Wide screen: the menu is docked beside the page. The « button in its
+ *   header folds it to a strip of icons, so a long sheet or the field list
+ *   gets nearly the whole width while every screen is still one click away;
+ *   the choice is remembered in this browser (Sano-san's review, 2026-09-29).
  * - Phone: the menu is hidden and ☰ slides it in over the page as a drawer.
  */
 export function AppShell({
@@ -59,16 +60,12 @@ export function AppShell({
     };
   }, [docked]);
 
-  const toggle = () => {
-    if (window.matchMedia(WIDE).matches) {
-      const next = !docked;
-      setDocked(next);
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? 'open' : 'closed');
-      } catch {}
-    } else {
-      setDrawerOpen((v) => !v);
-    }
+  const toggleDocked = () => {
+    const next = !docked;
+    setDocked(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next ? 'open' : 'closed');
+    } catch {}
   };
 
   return (
@@ -78,33 +75,56 @@ export function AppShell({
       ) : null}
 
       <aside id="app-menu" className={`sidebar ${drawerOpen ? 'sidebar-open' : ''}`} aria-label="メニュー">
-        <Link href="/" className="wordmark">
-          <span className="mark" aria-hidden>
-            SS
-          </span>
-          スキルシート
-          <br />
-          管理システム
-        </Link>
+        <div className="sidebar-head">
+          <Link href="/" className="wordmark">
+            <span className="mark" aria-hidden>
+              SS
+            </span>
+            <span>
+              スキルシート
+              <br />
+              管理システム
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={toggleDocked}
+            aria-label={docked ? 'メニューをたたむ' : 'メニューを広げる'}
+            title={docked ? 'メニューをたたむ' : 'メニューを広げる'}
+          >
+            {docked ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
+          </button>
+        </div>
 
         <nav className="sidebar-nav" aria-label="主要メニュー">
           {items.map((item) => (
-            <NavLink key={item.href} href={item.href}>
+            <NavLink key={item.href} href={item.href} title={item.label}>
               {ICONS[item.icon]}
-              {item.label}
+              <span className="nav-label">{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="sidebar-foot">
-          {note ? <p className="sidebar-note">{note}</p> : null}
-          <p className="sidebar-user-name">{userName}</p>
-          <p className="sidebar-user-role">{userRole}</p>
           {/* A plain form action, not next/link's href — Next does not
               rewrite this for the base path on its own. */}
-          <form action={withBasePath('/auth/logout')} method="post" className="mt-2.5">
-            <button type="submit" className="btn btn-secondary w-full">
-              ログアウト
+          <form action={withBasePath('/auth/logout')} method="post">
+            <div className="sidebar-foot-full">
+              {note ? <p className="sidebar-note">{note}</p> : null}
+              <p className="sidebar-user-name">{userName}</p>
+              <p className="sidebar-user-role">{userRole}</p>
+              <button type="submit" className="btn btn-secondary mt-2.5 w-full">
+                ログアウト
+              </button>
+            </div>
+            <button
+              type="submit"
+              className="icon-btn sidebar-logout-icon"
+              aria-label="ログアウト"
+              title={`${userName}（${userRole}）— ログアウト`}
+            >
+              <LogOut size={18} aria-hidden />
             </button>
           </form>
         </div>
@@ -115,10 +135,10 @@ export function AppShell({
           <button
             type="button"
             className="icon-btn"
-            aria-label="メニューの表示・非表示"
+            aria-label="メニューを開く"
             aria-controls="app-menu"
-            title="メニューの表示・非表示"
-            onClick={toggle}
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
               <path d="M4 6h16M4 12h16M4 18h16" />
