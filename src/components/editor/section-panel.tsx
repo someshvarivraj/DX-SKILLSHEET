@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition, useState } from 'react';
 import type { RecordKind } from '@prisma/client';
 import type { SectionView } from '@/lib/sheet/model';
-import { SECTION_COLOURS } from '@/components/sheet-document';
-import { FieldEditor } from './field-editor';
+import { FieldEditor, FieldMenu } from './field-editor';
 import {
   addRecordAction,
   deleteRecordAction,
@@ -15,10 +14,8 @@ import {
 /**
  * Repeating sections an operator may add a row to.
  *
- * 日本での業務経験 is the one an engineer fills in themselves after joining —
- * the server side was wired for it all along, but the button was never shown,
- * so the section could never receive a record and, being hideWhenEmpty, never
- * printed. 学歴 is not here: it comes from the form and is not hand-extended.
+ * 日本での業務経験 is the one an engineer fills in themselves after joining.
+ * 学歴 is not here: it comes from the form and is not hand-extended.
  */
 const ADDABLE_RECORD_KINDS: string[] = ['INTERNSHIP', 'PROJECT', 'WORK_EXPERIENCE'];
 
@@ -40,12 +37,10 @@ export function SectionPanel({
   canSelectRecords?: boolean;
   /**
    * Content shown in place of a field, keyed by field code — the photo
-   * uploader takes the place of the プロフィール写真 definition, so the photo
-   * appears wherever that field is placed on the field-definition screen.
+   * uploader takes the place of the プロフィール写真 definition.
    */
   replacements?: Record<string, React.ReactNode>;
 }) {
-  const [open, setOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
@@ -72,9 +67,7 @@ export function SectionPanel({
   const toggleDisplayed = (recordId: string, next: boolean) => {
     if (!presetId) return;
     const current = section.records.filter((r) => r.isDisplayed).map((r) => r.id);
-    const ids = next
-      ? [...current, recordId]
-      : current.filter((id) => id !== recordId);
+    const ids = next ? [...current, recordId] : current.filter((id) => id !== recordId);
     run(async () =>
       setDisplayedRecordsAction(personId, {
         presetId,
@@ -84,209 +77,150 @@ export function SectionPanel({
     );
   };
 
-  // The same accent this section is printed in, so the editor and the PDF are
-  // recognisably the same section rather than two unrelated lists.
-  const colour = SECTION_COLOURS[section.code] ?? { accent: '#0879B6', tint: '#EAF6FC' };
+  const canAdd =
+    !sectionReadOnly &&
+    section.kind === 'REPEATING' &&
+    ADDABLE_RECORD_KINDS.includes(section.recordKind ?? '');
 
   return (
     <section className="card overflow-hidden" id={`section-${section.code}`}>
-      <header
-        className="panel-head"
-        style={
-          {
-            '--accent': colour.accent,
-            '--accent-tint': colour.tint,
-          } as React.CSSProperties
-        }
-      >
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="panel-title inline-flex items-center gap-1.5"
-          aria-expanded={open}
-        >
-          <span aria-hidden className="text-xs opacity-70">
-            {open ? '▾' : '▸'}
-          </span>
-          {section.nameJa}
-        </button>
-        {section.nameEn ? (
-          <span className="panel-title-en">{section.nameEn}</span>
-        ) : null}
-        {section.document === 'SUPPLEMENT' ? (
-          // Without this an operator could reasonably assume everything on this
-          // screen reaches the skill sheet. These sections never do.
-          <span className="badge badge-warn" title="この区分はスキルシートには出力されず、補足資料にのみ出力される。">
-            補足資料のみ
-          </span>
-        ) : null}
-        {!section.isVisible ? (
-          <span className="badge badge-draft">非表示設定</span>
-        ) : null}
-        {section.hideWhenEmpty && section.isEmpty ? (
-          <span className="badge badge-draft">データなしのため出力されない</span>
-        ) : null}
-        {section.kind === 'REPEATING' ? (
-          <span className="panel-head-meta text-xs">
-            {section.records.length}件登録／表示{displayedCount}件（上限{section.maxDisplayed}件）
-          </span>
-        ) : null}
+      <header className="panel-head">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="panel-title">{section.nameJa}</h2>
+            {section.document === 'SUPPLEMENT' ? (
+              // Without this an operator could reasonably assume everything on
+              // this screen reaches the skill sheet. These sections never do.
+              <span className="tag" title="スキルシートには載らず、社内用の補足資料にだけ載ります。">
+                社内用（シートに載りません）
+              </span>
+            ) : null}
+            {!section.isVisible ? <span className="tag">非表示</span> : null}
+          </div>
+          {section.kind === 'REPEATING' ? (
+            <p className="panel-head-meta">
+              {section.records.length}件のうち{displayedCount}件をシートに掲載（最大{section.maxDisplayed}件）
+            </p>
+          ) : section.description ? (
+            <p className="panel-head-meta">{section.description}</p>
+          ) : null}
+        </div>
 
         <span className="flex-1" />
 
+        {canAdd ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={pending}
+            onClick={() => run(async () => addRecordAction(personId, section.recordKind as RecordKind))}
+          >
+            ＋ 追加
+          </button>
+        ) : null}
         {!sectionReadOnly ? (
-          <>
-            {section.kind === 'REPEATING' &&
-            ADDABLE_RECORD_KINDS.includes(section.recordKind ?? '') ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={pending}
-                onClick={() =>
-                  run(async () => addRecordAction(personId, section.recordKind as RecordKind))
-                }
-              >
-                ＋ 追加
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={pending}
-              onClick={() =>
-                run(async () =>
-                  generateSectionAction(personId, {
-                    sectionId: section.id,
-                    sectionCode: section.code,
-                  }),
-                )
-              }
-              title="ロック済みの項目は上書きしない"
-            >
-              {pending ? '生成中…' : 'セクション一括生成'}
-            </button>
-          </>
+          <FieldMenu
+            label="このセクションの操作"
+            items={[
+              {
+                label: pending ? '作成中…' : 'このセクションをAIでまとめて作成',
+                disabled: pending,
+                onClick: () =>
+                  run(async () =>
+                    generateSectionAction(personId, {
+                      sectionId: section.id,
+                      sectionCode: section.code,
+                    }),
+                  ),
+              },
+            ]}
+          />
         ) : null}
       </header>
 
-      {section.description ? (
-        <p className="border-t border-ink-100 bg-sand-50/60 px-4 py-1.5 text-xs text-ink-500">
-          {section.description}
-        </p>
-      ) : null}
-
       {notice ? (
-        <p className="border-t border-ink-100 bg-final-bg px-4 py-1.5 text-xs text-final-ink">
-          {notice}
-        </p>
+        <p className="border-b border-ink-100 bg-final-bg px-5 py-2 text-sm text-final-ink">{notice}</p>
       ) : null}
       {warnings.map((w, i) => (
-        <p
-          key={i}
-          className="border-t border-ink-100 bg-draft-bg px-4 py-1.5 text-xs text-draft-ink"
-        >
+        <p key={i} className="border-b border-ink-100 bg-warn-bg px-5 py-2 text-sm text-warn-ink">
           ⚠ {w}
         </p>
       ))}
 
-      {open ? (
-        section.kind === 'REPEATING' ? (
-          <div>
-            {section.records.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ink-400">
-                レコードがありません。
-              </p>
-            ) : (
-              section.records.map((record, index) => (
-                <div key={record.id} className="border-t border-ink-100">
-                  <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2">
-                    <span className="text-xs font-semibold text-ink-700">
-                      {section.nameJa}
-                      {index + 1}
-                    </span>
-                    <span className="text-xs text-ink-500">{record.label}</span>
-                    {record.origin === 'MANUAL' ? (
-                      <span className="badge badge-review">画面から追加</span>
-                    ) : (
-                      <span className="text-xs text-ink-400">
-                        {record.sourcePrefix}
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    {/* Offered only to someone the server will actually let
-                        do it. An engineer could tick this and watch it snap
-                        back with 「権限がない」, with nothing telling them who
-                        to ask. */}
-                    {presetId && !sectionReadOnly && canSelectRecords ? (
-                      <label className="flex items-center gap-1 text-xs text-ink-700">
-                        <input
-                          type="checkbox"
-                          checked={record.isDisplayed}
-                          disabled={pending}
-                          onChange={(e) => toggleDisplayed(record.id, e.target.checked)}
-                        />
-                        スキルシートに表示
-                      </label>
-                    ) : presetId && !sectionReadOnly ? (
-                      <span
-                        className="text-xs text-ink-400"
-                        title="スキルシートに載せる項目は営業・管理者が選びます。"
-                      >
-                        {record.isDisplayed ? 'シートに掲載' : '未掲載'}
-                      </span>
-                    ) : null}
-                    {!sectionReadOnly ? (
-                      <button
-                        type="button"
-                        className="btn btn-danger"
-                        disabled={pending}
-                        onClick={() =>
-                          run(async () =>
-                            deleteRecordAction(personId, {
-                              recordId: record.id,
-                              sectionCode: section.code,
-                            }),
-                          )
-                        }
-                      >
-                        削除
-                      </button>
-                    ) : null}
-                  </div>
-                  {record.fields.map((field) => (
-                    <FieldEditor
-                      key={field.id}
-                      personId={personId}
-                      sectionCode={section.code}
-                      field={field}
-                      recordId={record.id}
-                      readOnly={sectionReadOnly}
-                    />
-                  ))}
-                </div>
-              ))
-            )}
-          </div>
+      {section.kind === 'REPEATING' ? (
+        section.records.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-400">
+            まだ登録がありません。{canAdd ? '「＋ 追加」から登録できます。' : ''}
+          </p>
         ) : (
-          <div>
-            {section.fields.map((field) =>
-              field.code in replacements ? (
-                <div key={field.id} className="border-t border-ink-100">
-                  {replacements[field.code]}
-                </div>
-              ) : (
+          section.records.map((record, index) => (
+            <div key={record.id} className="border-b border-ink-100 last:border-0">
+              <div className="flex flex-wrap items-center gap-3 bg-sand-50 px-5 py-2.5">
+                <span className="text-sm font-bold text-ink-900">
+                  {index + 1}. {record.label || section.nameJa}
+                </span>
+                <span className="flex-1" />
+                {/* Offered only to someone the server will actually let do
+                    it; an engineer sees the state instead. */}
+                {presetId && !sectionReadOnly && canSelectRecords ? (
+                  <label className="review-check">
+                    <input
+                      type="checkbox"
+                      checked={record.isDisplayed}
+                      disabled={pending}
+                      onChange={(e) => toggleDisplayed(record.id, e.target.checked)}
+                    />
+                    シートに載せる
+                  </label>
+                ) : presetId ? (
+                  <span className="tag">{record.isDisplayed ? 'シートに掲載' : '未掲載'}</span>
+                ) : null}
+                {!sectionReadOnly ? (
+                  <button
+                    type="button"
+                    className="btn btn-quiet !text-[#b03a22]"
+                    disabled={pending}
+                    onClick={() => {
+                      if (!window.confirm(`「${record.label || `${section.nameJa}${index + 1}`}」を削除します。よろしいですか？`)) return;
+                      run(async () =>
+                        deleteRecordAction(personId, { recordId: record.id, sectionCode: section.code }),
+                      );
+                    }}
+                  >
+                    削除
+                  </button>
+                ) : null}
+              </div>
+              {record.fields.map((field) => (
                 <FieldEditor
                   key={field.id}
                   personId={personId}
                   sectionCode={section.code}
                   field={field}
+                  recordId={record.id}
                   readOnly={sectionReadOnly}
                 />
-              ),
-            )}
-          </div>
+              ))}
+            </div>
+          ))
         )
-      ) : null}
+      ) : (
+        section.fields.map((field) =>
+          field.code in replacements ? (
+            <div key={field.id} className="field-block">
+              {replacements[field.code]}
+            </div>
+          ) : (
+            <FieldEditor
+              key={field.id}
+              personId={personId}
+              sectionCode={section.code}
+              field={field}
+              readOnly={sectionReadOnly}
+            />
+          ),
+        )
+      )}
     </section>
   );
 }
