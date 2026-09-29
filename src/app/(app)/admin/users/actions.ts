@@ -29,7 +29,8 @@ export async function saveUserAction(input: {
   if (!isEmailDomainAllowed(email)) {
     return {
       ok: false,
-      message: '許可されたドメインのメールアドレスのみ登録できる',
+      message:
+        'このドメインのメールアドレスは登録できません。社外のアドレス（Gmailなど）を登録するには、サーバーの設定で AUTH_ALLOWED_EMAIL_DOMAINS=* にしてください。',
     };
   }
   if (input.role === 'ENGINEER' && !input.personId) {

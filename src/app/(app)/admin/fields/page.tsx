@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
@@ -7,6 +6,7 @@ import { FieldDefinitionTable } from '@/components/admin/field-definition-table'
 import { FormScriptImport } from '@/components/admin/form-script-import';
 import { expandSourceCodes } from '@/lib/sheet/question-coverage';
 import { PageHeader } from '@/components/page-header';
+import { TemplatePreviewButton } from '@/components/admin/template-preview-overlay';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,9 +105,7 @@ export default async function FieldDefinitionPage() {
         title="項目定義"
         lead="スキルシートに載せる項目と、その並び順を決めます。行を押すと詳しい設定を開きます。"
         actions={
-          <Link href="/admin/fields/preview" className="btn btn-secondary">
-            シートの見本を見る
-          </Link>
+<TemplatePreviewButton />
         }
       />
 

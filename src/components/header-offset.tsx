@@ -6,8 +6,7 @@ import { useEffect } from 'react';
 /**
  * Publishes the real heights of the pinned bars as CSS variables:
  *
- * - `--app-header-h`: the phone-width top bar (0 on a wide screen, where it is
- *   hidden and the menu is a sidebar instead);
+ * - `--app-header-h`: the top bar holding the ☰ menu button;
  * - `--toolbar-h`: the editing screen's pinned toolbar, so the section list
  *   beside the form can stick just below it.
  *

@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { ROLE_LABELS } from '@/lib/auth/permissions';
 import { getEnv } from '@/lib/env';
-import { AppSidebar, type NavItem } from '@/components/app-sidebar';
+import { AppShell, type NavItem } from '@/components/app-sidebar';
 import { HeaderOffset } from '@/components/header-offset';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -21,9 +21,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="app-shell">
+    <>
       <HeaderOffset />
-      <AppSidebar
+      <AppShell
         items={links.filter((l) => l.show).map(({ show: _show, ...item }) => item)}
         userName={user.displayName}
         userRole={ROLE_LABELS[user.role]}
@@ -32,10 +32,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             ? 'AIは未接続です。自動生成される文章は仮のものです。'
             : null
         }
-      />
-      <div className="app-main">
-        <main className="page">{children}</main>
-      </div>
-    </div>
+      >
+        {children}
+      </AppShell>
+    </>
   );
 }
