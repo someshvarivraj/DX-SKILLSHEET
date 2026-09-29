@@ -39,7 +39,7 @@ export function UserManager({
   people: PersonOption[];
 }) {
   const [editing, setEditing] = useState<Partial<UserRow> | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -57,7 +57,17 @@ export function UserManager({
       </div>
 
       {notice ? (
-        <p className="rounded-md bg-final-bg px-3 py-1.5 text-xs text-final-ink">{notice}</p>
+        // A failed save must not look like a successful one.
+        <p
+          role={notice.ok ? 'status' : 'alert'}
+          className={`rounded-lg border px-4 py-2.5 text-sm ${
+            notice.ok
+              ? 'border-final-line bg-final-bg text-final-ink'
+              : 'border-accent-500/40 bg-accent-50 text-[#b03a22]'
+          }`}
+        >
+          {notice.message}
+        </p>
       ) : null}
 
       {editing ? (
@@ -143,7 +153,7 @@ export function UserManager({
                     personId: editing.personId ?? null,
                     isActive: editing.isActive ?? true,
                   });
-                  setNotice(result.message);
+                  setNotice(result);
                   if (result.ok) setEditing(null);
                 })
               }
