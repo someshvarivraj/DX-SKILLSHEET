@@ -8,53 +8,76 @@ import { NavLink } from './nav-link';
 
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
 
+const STORAGE_KEY = 'skillsheet.sidebar';
+const WIDE = '(min-width: 1024px)';
+
 /**
- * The left menu. Always visible on a wide screen; on a phone it is hidden
- * behind the top bar's menu button and slides in as a drawer.
+ * The page frame: the left menu, and the top bar whose ☰ shows and hides it.
+ *
+ * - Wide screen: the menu is docked beside the page. ☰ hides it so the page
+ *   (a long sheet, the field list) gets the full width; the choice is
+ *   remembered in this browser (Sano-san's review, 2026-09-29).
+ * - Phone: the menu is hidden and ☰ slides it in over the page as a drawer.
  */
-export function AppSidebar({
+export function AppShell({
   items,
   userName,
   userRole,
   note,
+  children,
 }: {
   items: NavItem[];
   userName: string;
   userRole: string;
   /** A short notice shown above the user's name (e.g. AI not connected). */
   note?: string | null;
+  children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [docked, setDocked] = useState(true);
   const pathname = usePathname();
 
-  // Choosing a screen from the drawer closes it.
-  useEffect(() => setOpen(false), [pathname]);
+  // Choosing a screen from the phone drawer closes it.
+  useEffect(() => setDrawerOpen(false), [pathname]);
+
+  // Restore the wide-screen choice. Storage can be unavailable (private
+  // window, blocked site data); the menu then simply starts open.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === 'closed') setDocked(false);
+    } catch {}
+  }, []);
+
+  // The stylesheet reads this attribute on <html>; it is removed on the way
+  // out so screens outside this frame (login, preview) are unaffected.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (docked) delete root.dataset.sidebar;
+    else root.dataset.sidebar = 'closed';
+    return () => {
+      delete root.dataset.sidebar;
+    };
+  }, [docked]);
+
+  const toggle = () => {
+    if (window.matchMedia(WIDE).matches) {
+      const next = !docked;
+      setDocked(next);
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? 'open' : 'closed');
+      } catch {}
+    } else {
+      setDrawerOpen((v) => !v);
+    }
+  };
 
   return (
-    <>
-      <header className="app-header">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="メニューを開く"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <Link href="/" className="wordmark">
-          <span className="mark" aria-hidden>
-            SS
-          </span>
-          スキルシート管理
-        </Link>
-      </header>
+    <div className="app-shell">
+      {drawerOpen ? (
+        <div className="sidebar-scrim" onClick={() => setDrawerOpen(false)} aria-hidden />
+      ) : null}
 
-      {open ? <div className="sidebar-scrim" onClick={() => setOpen(false)} aria-hidden /> : null}
-
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="メニュー">
+      <aside id="app-menu" className={`sidebar ${drawerOpen ? 'sidebar-open' : ''}`} aria-label="メニュー">
         <Link href="/" className="wordmark">
           <span className="mark" aria-hidden>
             SS
@@ -86,7 +109,31 @@ export function AppSidebar({
           </form>
         </div>
       </aside>
-    </>
+
+      <div className="app-main">
+        <header className="app-header">
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="メニューの表示・非表示"
+            aria-controls="app-menu"
+            title="メニューの表示・非表示"
+            onClick={toggle}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <Link href="/" className="wordmark">
+            <span className="mark" aria-hidden>
+              SS
+            </span>
+            スキルシート管理システム
+          </Link>
+        </header>
+        <main className="page">{children}</main>
+      </div>
+    </div>
   );
 }
 

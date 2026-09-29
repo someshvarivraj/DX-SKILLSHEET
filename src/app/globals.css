@@ -95,9 +95,8 @@
 }
 
 :root {
-  /* Height of the top bar, measured at runtime by <HeaderOffset>. On a wide
-     screen the menu is a left sidebar and the top bar is hidden, so this is
-     0; on a phone it is the compact bar with the menu button. */
+  /* Height of the top bar (the one holding ☰), measured at runtime by
+     <HeaderOffset>. */
   --app-header-h: 0px;
   --sidebar-w: 13.5rem;
 }
@@ -160,9 +159,16 @@ body {
 .app-main {
   min-width: 0;
 }
+/* On a wide screen the menu is docked beside the page and pushes it over;
+   the top bar's ☰ hides it (html[data-sidebar='closed'], remembered per
+   browser) so a long form can use the whole width. */
 @media (min-width: 1024px) {
   .app-main {
     margin-left: var(--sidebar-w);
+    transition: margin-left 0.18s ease;
+  }
+  html[data-sidebar='closed'] .app-main {
+    margin-left: 0;
   }
 }
 
@@ -186,6 +192,9 @@ body {
   .sidebar {
     transform: none;
     box-shadow: none;
+  }
+  html[data-sidebar='closed'] .sidebar {
+    transform: translateX(-100%);
   }
   .sidebar-scrim {
     display: none;
@@ -300,8 +309,10 @@ body {
 .app-header .wordmark {
   padding: 0;
 }
+/* The wordmark in the top bar is only needed when the menu (which has its
+   own) is out of sight. */
 @media (min-width: 1024px) {
-  .app-header {
+  html:not([data-sidebar='closed']) .app-header .wordmark {
     display: none;
   }
 }
