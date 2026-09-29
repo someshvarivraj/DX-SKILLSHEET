@@ -68,10 +68,16 @@ automatically by parsing the actual Google Apps Script that builds the form:
 npm run form:parse -- ./create_iit_form_2026.gs 2026
 ```
 
-This runs `scripts/parse-form-script.ts`, which executes the `.gs` file
-against a stub of the `FormApp` API (so no Google account or network call is
-needed) and, for every question, pulls the code straight out of its title
-with a regex (`extractCode()` in that file):
+or, without the command line, upload the `.gs` file directly from
+**項目定義 → Googleフォームのスクリプトを取り込む** in the app (2026-09-29 —
+this is now the normal path; the command above still works for anyone who
+prefers a local file).
+
+Either way runs the same parser, `src/lib/form/parse-apps-script.ts`
+(the CLI, `scripts/parse-form-script.ts`, is a thin wrapper around it), which
+executes the `.gs` file against a stub of the `FormApp` API (so no Google
+account or network call is needed) and, for every question, pulls the code
+straight out of its title with a regex (`extractCode()`):
 
 ```
 "A-1-6. 出身地（州・都市）／Hometown (State and City)"  →  code: "A-1-6"
@@ -98,7 +104,7 @@ question set changes.
 
 ```
 1. Google Form question               "A-1-6. 出身地（州・都市）／Hometown..."
-       │  (npm run form:parse)
+       │  (項目定義画面から.gsを取り込む、または npm run form:parse)
        ▼
 2. FormQuestion row (DB)               code: "A-1-6", titleJa, titleEn, type, …
        │

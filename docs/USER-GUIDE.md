@@ -275,6 +275,10 @@ they show up here instead of being silently dropped.
    ```bash
    npm run form:parse -- data/create_iit_form_2027.gs 2027
    ```
+   or, without the command line, upload the same file from
+   **項目定義 → Googleフォームのスクリプトを取り込む** in the app — same parser
+   (`src/lib/form/parse-apps-script.ts`), writing straight to the database instead of
+   `prisma/seed/form-questions-2027.json`.
 4. It reports the question count — now 114 instead of 113.
 
 The parser reads the script by running it, so it picks up whatever the form actually
