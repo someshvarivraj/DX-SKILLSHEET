@@ -57,11 +57,13 @@ Japanese so import, editing, review, versioning and PDF output can all be exerci
 
 This is the core requirement, so it is worth stating plainly.
 
-1. **The form definition script is the input specification.** `scripts/parse-form-script.ts`
+1. **The form definition script is the input specification.** `src/lib/form/parse-apps-script.ts`
    executes `create_iit_form_YYYY.gs` against a stub of the Google `FormApp` API and
    records every question it creates — code, type, options, grid rows and columns. The
-   2026 script yields all 113 questions. Next year: drop in the new `.gs`, run
-   `npm run form:parse`, and the catalogue updates. No code change.
+   2026 script yields all 113 questions. Next year: drop in the new `.gs` and upload it
+   from **項目定義 → Googleフォームのスクリプトを取り込む** in the app — no command line,
+   no code change. `npm run form:parse` (`scripts/parse-form-script.ts`, a thin CLI wrapper
+   around the same function) still works for anyone who prefers it.
 
 2. **The mapping lives in the database.** `SheetSection` and `SheetField` say what
    appears on the sheet, in what order, how it is processed, and which questions feed it

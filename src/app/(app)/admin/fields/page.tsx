@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
+import { FormScriptImport } from '@/components/admin/form-script-import';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,6 +123,8 @@ export default async function FieldDefinitionPage() {
           テンプレートを確認する
         </Link>
       </div>
+
+      <FormScriptImport />
 
       {unassigned.length > 0 ? (
         <div className="card border-draft-line bg-draft-bg p-4">

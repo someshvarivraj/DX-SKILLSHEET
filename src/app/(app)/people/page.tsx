@@ -56,13 +56,9 @@ export default async function PeoplePage({
     review: people.filter(
       (p) => p.skillSheet?.currentVersion?.status === 'AWAITING_REVIEW',
     ).length,
-    unreviewed: people.reduce((n, p) => {
-      const v = p.skillSheet?.currentVersion;
-      return n + (v ? (unreviewedByVersion.get(v.id) ?? 0) : 0);
-    }, 0),
   };
 
-  // Filtered after the totals above, so the four figures always describe
+  // Filtered after the totals above, so the three figures always describe
   // everyone, not just the current search.
   const shown = query ? people.filter((p) => matchesPersonQuery(p, query)) : people;
 
@@ -75,16 +71,16 @@ export default async function PeoplePage({
         </Link>
       </div>
 
-      {/* The four numbers an operator opens this screen to find out. */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {/* The three numbers an operator opens this screen to find out.
+          Sano-san's review (2026-09-29): a fourth card totalling unreviewed
+          items across every person read as an odd, hard-to-act-on number —
+          removed here. The same count still shows per person in the table
+          below and drives the toolbar's guidance on each person's own
+          screen, where it is something one can actually act on. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="登録人数" value={`${totals.all}名`} tone="plain" />
         <Stat label="確認待ち" value={`${totals.review}件`} tone="review" />
         <Stat label="確定済み" value={`${totals.final}名`} tone="final" />
-        <Stat
-          label="未確認の項目"
-          value={`${totals.unreviewed}項目`}
-          tone={totals.unreviewed > 0 ? 'warn' : 'final'}
-        />
       </div>
 
       {people.length === 0 ? (
