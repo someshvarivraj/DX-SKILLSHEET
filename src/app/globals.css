@@ -927,6 +927,27 @@ body {
   font-size: 0.8125rem;
   color: rgba(255, 255, 255, 0.9);
 }
+/* Compact "add" button inside the blue header bar — replaces the two
+   full-width dashed buttons above/below the list (Sano-san's review,
+   2026-09-29): one small button, always visible without scrolling. */
+.def-bar-add {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  align-self: center;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.def-bar-add:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
 
 /* One grid for the heading row and every item row, so the columns line up:
    grip | ↑↓ | name | details | 表示 | 削除 | 詳細 */

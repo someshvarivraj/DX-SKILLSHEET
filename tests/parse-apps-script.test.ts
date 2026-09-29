@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { extractCode, splitTitle, toCatalogue } from '../src/lib/form/parse-apps-script';
+import { cleanSectionLabel, extractCode, splitTitle, toCatalogue } from '../src/lib/form/parse-apps-script';
 
 /**
  * `toCatalogue` is what both `npm run form:parse` and the in-app "Googleフォーム
@@ -32,6 +32,36 @@ describe('splitTitle', () => {
 
   it('leaves the English side null when there is no solidus', () => {
     expect(splitTitle('A-1-1. 氏名のみ')).toEqual({ ja: '氏名のみ', en: null });
+  });
+});
+
+describe('cleanSectionLabel', () => {
+  // Real page-break headings from data/create_iit_form_2026.gs (the Google
+  // Form import groups newly-arrived questions under sections named from
+  // these, per src/app/(app)/admin/fields/form-import-actions.ts).
+  it('strips a plain letter-dot prefix', () => {
+    expect(cleanSectionLabel('A. 基本情報／Basic Information')).toEqual({
+      ja: '基本情報',
+      en: 'Basic Information',
+    });
+  });
+
+  it('strips a letter-number-dot prefix', () => {
+    expect(cleanSectionLabel('B-1. 最終学歴の詳細／Details of Your Highest Degree')).toEqual({
+      ja: '最終学歴の詳細',
+      en: 'Details of Your Highest Degree',
+    });
+  });
+
+  it('leaves a heading with no letter prefix untouched aside from the split', () => {
+    expect(cleanSectionLabel('学士の方／For Bachelor’s Students')).toEqual({
+      ja: '学士の方',
+      en: 'For Bachelor’s Students',
+    });
+  });
+
+  it('handles a heading with no English half', () => {
+    expect(cleanSectionLabel('J. その他')).toEqual({ ja: 'その他', en: null });
   });
 });
 

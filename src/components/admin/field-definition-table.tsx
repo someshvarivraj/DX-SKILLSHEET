@@ -458,38 +458,36 @@ export function FieldDefinitionTable({
 }) {
   const [notice, setNotice] = useState<Notice>(null);
   const reorder = useReorder(sections, reorderSectionsAction, setNotice);
-  // Which add button is open. There is one above the list and one below it:
-  // with many sections the bottom one is off screen, and a new section goes
-  // where the button that was pressed is.
-  const [adding, setAdding] = useState<'first' | 'last' | null>(null);
-
-  const addControl = (position: 'first' | 'last') =>
-    adding === position ? (
-      <AddSectionForm
-        position={position}
-        onDone={(result) => {
-          setNotice({ ok: result.ok, text: result.message });
-          if (result.ok) setAdding(null);
-        }}
-        onCancel={() => setAdding(null)}
-      />
-    ) : (
-      <button type="button" className="def-add" onClick={() => setAdding(position)}>
-        <Plus size={16} aria-hidden />
-        {position === 'first' ? '先頭にセクションを追加する' : '末尾にセクションを追加する'}
-      </button>
-    );
+  // Sano-san's review (2026-09-29): two full-width dashed buttons (one above
+  // the list, one below) read as confusing, and the bottom one required
+  // scrolling past every section to reach anyway. One compact button in the
+  // header bar replaces both — new sections always go to the top, where they
+  // are immediately visible, and can be moved anywhere with drag/↑↓.
+  const [adding, setAdding] = useState(false);
 
   return (
     <div className="def-table">
       <div className="def-bar">
         <h2 className="def-bar-title">セクション一覧</h2>
         <span className="def-bar-meta">{sections.length}件</span>
+        <span className="flex-1" />
+        <button type="button" className="def-bar-add" onClick={() => setAdding((v) => !v)}>
+          <Plus size={14} aria-hidden /> セクションを追加
+        </button>
       </div>
 
       <NoticeLine notice={notice} />
 
-      {addControl('first')}
+      {adding ? (
+        <AddSectionForm
+          position="first"
+          onDone={(result) => {
+            setNotice({ ok: result.ok, text: result.message });
+            if (result.ok) setAdding(false);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : null}
 
       <div className="def-row def-head" aria-hidden>
         <span>並び替え</span>
@@ -512,8 +510,6 @@ export function FieldDefinitionTable({
           onNotice={setNotice}
         />
       ))}
-
-      {addControl('last')}
     </div>
   );
 }
