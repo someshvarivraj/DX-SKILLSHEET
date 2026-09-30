@@ -116,7 +116,19 @@ export async function cloneVersion(
 }
 
 /** Mark the working version as final. Spec §11.1: only this can be exported. */
-export async function finaliseVersion(versionId: string, userId: string) {
+export async function finaliseVersion(
+  versionId: string,
+  userId: string,
+  options: {
+    /**
+     * The operator saw the list of unchecked fields and chose to finalise
+     * anyway (2026-09-30: a confirmation rather than a hard stop). Those
+     * fields are marked checked — it is their confirmation — and the audit
+     * log records how many were confirmed this way.
+     */
+    confirmUnreviewed?: boolean;
+  } = {},
+) {
   const version = await prisma.sheetVersion.findUniqueOrThrow({
     where: { id: versionId },
     include: {
@@ -133,7 +145,8 @@ export async function finaliseVersion(versionId: string, userId: string) {
     },
   });
 
-  // §11.1 — refuse when fields are still unreviewed, and say which ones.
+  // §11.1 — unreviewed fields stop finalising unless the operator confirms
+  // them, and the list says which ones.
   //
   // Only values the editor can actually show count. A value left behind by a
   // deleted record or a deactivated field is unreachable on screen, so counting
@@ -146,7 +159,7 @@ export async function finaliseVersion(versionId: string, userId: string) {
       v.field.isActive &&
       (v.record === null || v.record.deletedAt === null),
   );
-  if (unreviewed.length > 0) {
+  if (unreviewed.length > 0 && !options.confirmUnreviewed) {
     return {
       ok: false as const,
       unreviewed: unreviewed.map((v) => ({
@@ -159,10 +172,16 @@ export async function finaliseVersion(versionId: string, userId: string) {
     };
   }
 
-  const updated = await prisma.sheetVersion.update({
-    where: { id: versionId },
-    data: { status: 'FINAL', finalisedAt: new Date(), finalisedById: userId },
-  });
+  const [, updated] = await prisma.$transaction([
+    prisma.fieldValue.updateMany({
+      where: { id: { in: unreviewed.map((v) => v.id) } },
+      data: { isReviewed: true },
+    }),
+    prisma.sheetVersion.update({
+      where: { id: versionId },
+      data: { status: 'FINAL', finalisedAt: new Date(), finalisedById: userId },
+    }),
+  ]);
 
   await recordAudit({
     userId,
@@ -170,7 +189,11 @@ export async function finaliseVersion(versionId: string, userId: string) {
     entityType: 'SheetVersion',
     entityId: versionId,
     personId: version.skillSheet.personId,
-    summary: `第${version.versionNo}版を確定した`,
+    summary:
+      unreviewed.length > 0
+        ? `第${version.versionNo}版を確定した（未確認の${unreviewed.length}項目をまとめて確認済みにした）`
+        : `第${version.versionNo}版を確定した`,
+    meta: unreviewed.length > 0 ? { confirmedUnreviewed: unreviewed.length } : undefined,
   });
 
   return { ok: true as const, version: updated };
