@@ -1,5 +1,7 @@
 'use client';
 
+import { useLang, useT } from '@/lib/i18n/client';
+import { pickName } from '@/lib/i18n';
 import { useRef, useState, useTransition } from 'react';
 import { TemplatePreviewOverlay } from './template-preview-overlay';
 import {
@@ -229,6 +231,7 @@ function MoveButtons({
   onMove: (to: number) => void;
   label: string;
 }) {
+  const t = useT();
   return (
     <div className="def-move">
       <button
@@ -236,8 +239,8 @@ function MoveButtons({
         className="icon-btn"
         disabled={disabled || index === 0}
         onClick={() => onMove(index - 1)}
-        aria-label={`${label}を1つ上へ`}
-        title="1つ上へ"
+        aria-label={t('{name}を1つ上へ', { name: label })}
+        title={t('1つ上へ')}
       >
         <ArrowUp size={16} aria-hidden />
       </button>
@@ -246,8 +249,8 @@ function MoveButtons({
         className="icon-btn"
         disabled={disabled || index === count - 1}
         onClick={() => onMove(index + 1)}
-        aria-label={`${label}を1つ下へ`}
-        title="1つ下へ"
+        aria-label={t('{name}を1つ下へ', { name: label })}
+        title={t('1つ下へ')}
       >
         <ArrowDown size={16} aria-hidden />
       </button>
@@ -270,13 +273,14 @@ function Switch({
   disabled?: boolean;
   label: string;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      title={checked ? '表示中（押すと非表示）' : '非表示（押すと表示）'}
+      title={checked ? t('表示中（押すと非表示）') : t('非表示（押すと表示）')}
       className="switch"
       disabled={disabled}
       onClick={() => onChange(!checked)}
@@ -298,6 +302,7 @@ function SavingCheckbox({
   label: string;
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(initial);
   const [source, setSource] = useState(initial);
   if (source !== initial) {
@@ -312,7 +317,7 @@ function SavingCheckbox({
       checked={value}
       disabled={pending}
       aria-label={label}
-      title={value ? '必須（押すと任意に）' : '任意（押すと必須に）'}
+      title={value ? t('必須（押すと任意に）') : t('任意（押すと必須に）')}
       onChange={(e) => {
         const next = e.target.checked;
         setValue(next);
@@ -339,6 +344,7 @@ function SectionRequiredCheckbox({
   section: SectionRow;
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const activeFields = section.fields.filter((f) => f.isActive);
@@ -355,13 +361,13 @@ function SectionRequiredCheckbox({
       className="def-required-checkbox"
       checked={allRequired}
       disabled={pending || activeFields.length === 0}
-      aria-label={`${section.nameJa}の項目をすべて必須にする`}
+      aria-label={t('{name}の項目をすべて必須にする', { name: section.nameJa })}
       title={
         activeFields.length === 0
-          ? '項目がありません'
+          ? t('項目がありません')
           : allRequired
-            ? 'すべて必須（押すとすべて任意に）'
-            : '押すとこのセクションの項目をすべて必須にする'
+            ? t('すべて必須（押すとすべて任意に）')
+            : t('押すとこのセクションの項目をすべて必須にする')
       }
       onChange={(e) => {
         const next = e.target.checked;
@@ -386,6 +392,7 @@ function SavingSwitch({
   label: string;
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(initial);
   const [source, setSource] = useState(initial);
   if (source !== initial) {
@@ -421,25 +428,27 @@ function DeleteConfirm({
   onCancel: () => void;
   pending: boolean;
 }) {
+  const t = useT();
   return (
     <div className="def-confirm" role="alertdialog" aria-live="assertive">
       <Trash2 size={16} aria-hidden className="flex-none text-[#b03a22]" />
       <p className="flex-1">{message}</p>
       <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-        キャンセル
+        {t('キャンセル')}
       </button>
       <button type="button" className="btn btn-delete" onClick={onConfirm} disabled={pending}>
-        {pending ? '削除中…' : '削除する'}
+        {pending ? t('削除中…') : t('削除する')}
       </button>
     </div>
   );
 }
 
 function NoticeLine({ notice }: { notice: Notice }) {
+  const t = useT();
   if (!notice) return null;
   return (
     <p className={`def-notice ${notice.ok ? 'def-notice-ok' : 'def-notice-error'}`} role="status">
-      {notice.text}
+      {t(notice.text)}
     </p>
   );
 }
@@ -455,6 +464,7 @@ export function FieldDefinitionTable({
   sections: SectionRow[];
   questionCodes: string[];
 }) {
+  const t = useT();
   const [notice, setNotice] = useState<Notice>(null);
   const reorder = useReorder(sections, reorderSectionsAction, setNotice);
   // Sano-san's review (2026-09-29): two full-width dashed buttons (one above
@@ -467,11 +477,11 @@ export function FieldDefinitionTable({
   return (
     <div className="def-table">
       <div className="def-bar">
-        <h2 className="def-bar-title">セクション一覧</h2>
-        <span className="def-bar-meta">{sections.length}件</span>
+        <h2 className="def-bar-title">{t('セクション一覧')}</h2>
+        <span className="def-bar-meta">{t('{n}件', { n: sections.length })}</span>
         <span className="flex-1" />
         <button type="button" className="def-bar-add" onClick={() => setAdding((v) => !v)}>
-          <Plus size={14} aria-hidden /> セクションを追加
+          <Plus size={14} aria-hidden /> {t('セクションを追加')}
         </button>
       </div>
 
@@ -489,13 +499,13 @@ export function FieldDefinitionTable({
       ) : null}
 
       <div className="def-row def-head" aria-hidden>
-        <span>並び替え</span>
-        <span>セクション名</span>
-        <span className="def-col-meta">内容</span>
-        <span className="text-center">表示</span>
-        <span className="text-center">必須</span>
-        <span className="text-center">削除</span>
-        <span className="text-center">詳細</span>
+        <span>{t('並び替え')}</span>
+        <span>{t('セクション名')}</span>
+        <span className="def-col-meta">{t('内容')}</span>
+        <span className="text-center">{t('表示')}</span>
+        <span className="text-center">{t('必須')}</span>
+        <span className="text-center">{t('削除')}</span>
+        <span className="text-center">{t('詳細')}</span>
       </div>
 
       {reorder.ordered.map((section, index) => (
@@ -528,6 +538,8 @@ function SectionItem({
   questionCodes: string[];
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const rowRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -547,7 +559,7 @@ function SectionItem({
         <span
           className="def-grip"
           {...reorder.handleProps(section.id, rowRef)}
-          title="ドラッグして並べ替え"
+          title={t('ドラッグして並べ替え')}
           aria-hidden
         >
           <GripVertical size={18} />
@@ -561,31 +573,33 @@ function SectionItem({
         />
         <div className="def-name-cell">
           <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
-            <span className="def-name-ja">{section.nameJa}</span>
-            <span className="def-name-sub">{section.nameEn ?? section.code}</span>
+            <span className="def-name-ja">{pickName(lang, section.nameJa, section.nameEn)}</span>
+            <span className="def-name-sub">
+              {lang === 'en' ? section.nameJa : (section.nameEn ?? section.code)}
+            </span>
           </button>
           <button
             type="button"
             className={`icon-btn flex-none ${previewOpen ? 'icon-btn-active' : ''}`}
             onClick={() => setPreviewOpen((v) => !v)}
             aria-expanded={previewOpen}
-            aria-label={`「${section.nameJa}」だけをプレビューする`}
-            title={previewOpen ? 'プレビューを閉じる' : 'このセクションだけをプレビュー'}
+            aria-label={t('「{name}」だけをプレビューする', { name: section.nameJa })}
+            title={previewOpen ? t('プレビューを閉じる') : t('このセクションだけをプレビュー')}
           >
             <Eye size={16} aria-hidden />
           </button>
         </div>
         <span className="def-col-meta def-meta">
           {section.kind === 'REPEATING'
-            ? `繰り返し・最大${section.maxDisplayed}件`
-            : '単一'}
-          ・項目{section.fields.length}件
-          {section.hideWhenEmpty ? <span className="def-tag">データなしで非表示</span> : null}
+            ? t('繰り返し・最大{n}件', { n: section.maxDisplayed })
+            : t('単一')}
+          {t('・項目{n}件', { n: section.fields.length })}
+          {section.hideWhenEmpty ? <span className="def-tag">{t('データなしで非表示')}</span> : null}
         </span>
         <span className="grid place-items-center">
           <SavingSwitch
             initial={section.isVisible}
-            label={`${section.nameJa}をシートに表示する`}
+            label={t('{name}をシートに表示する', { name: section.nameJa })}
             save={(next) => setSectionVisibleAction(section.id, next)}
             onNotice={onNotice}
           />
@@ -598,8 +612,8 @@ function SectionItem({
             type="button"
             className="icon-btn icon-btn-danger"
             onClick={() => setConfirming(true)}
-            aria-label={`${section.nameJa}を削除`}
-            title="削除"
+            aria-label={t('{name}を削除', { name: section.nameJa })}
+            title={t('削除')}
           >
             <Trash2 size={18} aria-hidden />
           </button>
@@ -610,8 +624,8 @@ function SectionItem({
             className="icon-btn"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={`${section.nameJa}の項目と設定を${open ? '閉じる' : '開く'}`}
-            title={open ? '閉じる' : '項目と設定を開く'}
+            aria-label={t(open ? '{name}の項目と設定を閉じる' : '{name}の項目と設定を開く', { name: section.nameJa })}
+            title={open ? t('閉じる') : t('項目と設定を開く')}
           >
             <ChevronRight size={20} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
           </button>
@@ -623,8 +637,11 @@ function SectionItem({
           pending={pending}
           message={
             section.fields.length > 0
-              ? `「${section.nameJa}」には項目が${section.fields.length}件あります。セクションを削除するには、先に中の項目を削除してください。一時的に出さないだけなら「表示」のスイッチを切ってください。`
-              : `「${section.nameJa}」を削除します。元には戻せません。`
+              ? t(
+                  '「{name}」には項目が{n}件あります。セクションを削除するには、先に中の項目を削除してください。一時的に出さないだけなら「表示」のスイッチを切ってください。',
+                  { name: section.nameJa, n: section.fields.length },
+                )
+              : t('「{name}」を削除します。元には戻せません。', { name: section.nameJa })
           }
           onCancel={() => setConfirming(false)}
           onConfirm={() =>
@@ -649,7 +666,7 @@ function SectionItem({
       {previewOpen ? (
         <TemplatePreviewOverlay
           sectionCode={section.code}
-          title={`セクションのプレビュー: ${section.nameJa}`}
+          title={t('セクションのプレビュー: {name}', { name: pickName(lang, section.nameJa, section.nameEn) })}
           onClose={() => setPreviewOpen(false)}
         />
       ) : null}
@@ -664,6 +681,7 @@ function SectionSettings({
   section: SectionRow;
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(section);
   const [pending, startTransition] = useTransition();
@@ -677,7 +695,7 @@ function SectionSettings({
         aria-expanded={open}
       >
         <ChevronRight size={16} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
-        セクションの設定（名前・表示件数など）
+        {t('セクションの設定（名前・表示件数など）')}
       </button>
       {open ? (
         <div className="grid gap-3 pt-3 md:grid-cols-4">
@@ -712,7 +730,7 @@ function SectionSettings({
               checked={draft.hideWhenEmpty}
               onChange={(e) => setDraft({ ...draft, hideWhenEmpty: e.target.checked })}
             />
-            データが1件もない場合はシートに出さない
+            {t('データが1件もない場合はシートに出さない')}
           </label>
           <div className="md:col-span-4">
             <Labeled label="説明（担当者向けのメモ）">
@@ -744,7 +762,7 @@ function SectionSettings({
                 })
               }
             >
-              設定を保存
+              {t('設定を保存')}
             </button>
           </div>
         </div>
@@ -762,6 +780,7 @@ function AddSectionForm({
   onDone: (result: SaveResult) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [nameJa, setNameJa] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [pending, startTransition] = useTransition();
@@ -775,7 +794,7 @@ function AddSectionForm({
       </Labeled>
       <div className="flex items-end gap-2">
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-          キャンセル
+          {t('キャンセル')}
         </button>
         <button
           type="button"
@@ -787,7 +806,7 @@ function AddSectionForm({
             })
           }
         >
-          追加する
+          {t('追加する')}
         </button>
       </div>
     </div>
@@ -807,6 +826,8 @@ function FieldList({
   questionCodes: string[];
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const [notice, setNotice] = useState<Notice>(null);
   const reorder = useReorder(
     section.fields,
@@ -825,16 +846,16 @@ function FieldList({
     <div className="def-fields">
       <NoticeLine notice={notice} />
       <div className="def-row def-head def-head-sub" aria-hidden>
-        <span>並び替え</span>
-        <span>項目名</span>
-        <span className="def-col-meta">処理・取得元</span>
-        <span className="text-center">表示</span>
-        <span className="text-center">必須</span>
-        <span className="text-center">削除</span>
-        <span className="text-center">詳細</span>
+        <span>{t('並び替え')}</span>
+        <span>{t('項目名')}</span>
+        <span className="def-col-meta">{t('処理・取得元')}</span>
+        <span className="text-center">{t('表示')}</span>
+        <span className="text-center">{t('必須')}</span>
+        <span className="text-center">{t('削除')}</span>
+        <span className="text-center">{t('詳細')}</span>
       </div>
       {reorder.ordered.length === 0 ? (
-        <p className="px-4 py-4 text-center text-xs text-ink-500">項目はまだありません。</p>
+        <p className="px-4 py-4 text-center text-xs text-ink-500">{t('項目はまだありません。')}</p>
       ) : (
         reorder.ordered.map((field, index) => (
           <FieldItem
@@ -859,7 +880,8 @@ function FieldList({
         />
       ) : (
         <button type="button" className="def-add" onClick={() => setAdding(true)}>
-          <Plus size={16} aria-hidden /> 「{section.nameJa}」に項目を追加する
+          <Plus size={16} aria-hidden />{' '}
+          {t('「{name}」に項目を追加する', { name: pickName(lang, section.nameJa, section.nameEn) })}
         </button>
       )}
     </div>
@@ -881,12 +903,15 @@ function FieldItem({
   questionCodes: string[];
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const rowRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const processing = PROCESSING_OPTIONS.find((o) => o.value === field.processing)?.label;
+  const processingLabel = PROCESSING_OPTIONS.find((o) => o.value === field.processing)?.label;
+  const processing = processingLabel ? t(processingLabel) : undefined;
 
   return (
     <div className={`def-item ${open ? 'def-item-open' : ''}`}>
@@ -900,7 +925,7 @@ function FieldItem({
         <span
           className="def-grip"
           {...reorder.handleProps(field.id, rowRef)}
-          title="ドラッグして並べ替え"
+          title={t('ドラッグして並べ替え')}
           aria-hidden
         >
           <GripVertical size={18} />
@@ -914,20 +939,20 @@ function FieldItem({
         />
         <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
           <span className="def-name-ja">
-            {field.nameJa}
-            {field.isRequired ? <span className="def-required">必須</span> : null}
-            {!field.isActive ? <span className="def-tag">無効</span> : null}
+            {pickName(lang, field.nameJa, field.nameEn)}
+            {field.isRequired ? <span className="def-required">{t('必須')}</span> : null}
+            {!field.isActive ? <span className="def-tag">{t('無効')}</span> : null}
           </span>
           <span className="def-name-sub">{field.code}</span>
         </button>
         <span className="def-col-meta def-meta">
           <span className="def-tag def-tag-blue">{processing}</span>
-          {field.sourceCodes.length > 0 ? field.sourceCodes.join(' + ') : '取得元なし'}
+          {field.sourceCodes.length > 0 ? field.sourceCodes.join(' + ') : t('取得元なし')}
         </span>
         <span className="grid place-items-center">
           <SavingSwitch
             initial={field.includeInPdf}
-            label={`${field.nameJa}をシートに表示する`}
+            label={t('{name}をシートに表示する', { name: field.nameJa })}
             save={(next) => setFieldPrintedAction(field.id, next)}
             onNotice={onNotice}
           />
@@ -935,7 +960,7 @@ function FieldItem({
         <span className="grid place-items-center">
           <SavingCheckbox
             initial={field.isRequired}
-            label={`${field.nameJa}を必須にする`}
+            label={t('{name}を必須にする', { name: field.nameJa })}
             save={(next) => setFieldRequiredAction(field.id, next)}
             onNotice={onNotice}
           />
@@ -945,8 +970,8 @@ function FieldItem({
             type="button"
             className="icon-btn icon-btn-danger"
             onClick={() => setConfirming(true)}
-            aria-label={`${field.nameJa}を削除`}
-            title="削除"
+            aria-label={t('{name}を削除', { name: field.nameJa })}
+            title={t('削除')}
           >
             <Trash2 size={18} aria-hidden />
           </button>
@@ -957,8 +982,8 @@ function FieldItem({
             className="icon-btn"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={`${field.nameJa}の詳しい設定を${open ? '閉じる' : '開く'}`}
-            title={open ? '閉じる' : '詳しい設定を開く'}
+            aria-label={t(open ? '{name}の詳しい設定を閉じる' : '{name}の詳しい設定を開く', { name: field.nameJa })}
+            title={open ? t('閉じる') : t('詳しい設定を開く')}
           >
             <ChevronRight size={20} aria-hidden className={`def-chevron ${open ? 'rotate-90' : ''}`} />
           </button>
@@ -970,8 +995,11 @@ function FieldItem({
           pending={pending}
           message={
             field.filledCount > 0
-              ? `「${field.nameJa}」を削除すると、${field.filledCount}人分の入力内容も一緒に削除され、元に戻せません。一時的に出さないだけなら「表示」のスイッチを切ってください。`
-              : `「${field.nameJa}」を削除します。元には戻せません。`
+              ? t(
+                  '「{name}」を削除すると、{n}人分の入力内容も一緒に削除され、元に戻せません。一時的に出さないだけなら「表示」のスイッチを切ってください。',
+                  { name: field.nameJa, n: field.filledCount },
+                )
+              : t('「{name}」を削除します。元には戻せません。', { name: field.nameJa })
           }
           onCancel={() => setConfirming(false)}
           onConfirm={() =>
@@ -990,9 +1018,10 @@ function FieldItem({
 }
 
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useT();
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-ink-700">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-ink-700">{t(label)}</label>
       {children}
     </div>
   );
@@ -1007,6 +1036,7 @@ function AddFieldForm({
   onDone: (result: SaveResult) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [nameJa, setNameJa] = useState('');
   const [processing, setProcessing] = useState<Processing>('COPY');
   const [sources, setSources] = useState('');
@@ -1019,7 +1049,7 @@ function AddFieldForm({
       </Labeled>
       <Labeled label="処理区分">
         <Select
-          ariaLabel="処理区分"
+          ariaLabel={t('処理区分')}
           value={processing}
           onChange={(v) => setProcessing(v as Processing)}
           options={PROCESSING_OPTIONS.map((o) => ({
@@ -1039,7 +1069,7 @@ function AddFieldForm({
       </Labeled>
       <div className="flex items-end gap-2">
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
-          キャンセル
+          {t('キャンセル')}
         </button>
         <button
           type="button"
@@ -1061,7 +1091,7 @@ function AddFieldForm({
             })
           }
         >
-          追加する
+          {t('追加する')}
         </button>
       </div>
     </div>
@@ -1077,6 +1107,7 @@ function FieldDetail({
   questionCodes: string[];
   onNotice: (n: Notice) => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState(field);
   const [sources, setSources] = useState(field.sourceCodes.join(', '));
   const [pending, startTransition] = useTransition();
@@ -1098,7 +1129,7 @@ function FieldDetail({
       </Labeled>
       <Labeled label="処理区分">
         <Select
-          ariaLabel="処理方法"
+          ariaLabel={t('処理方法')}
           value={draft.processing}
           onChange={(v) => setDraft({ ...draft, processing: v as Processing })}
           options={PROCESSING_OPTIONS.map((o) => ({
@@ -1108,23 +1139,23 @@ function FieldDetail({
           }))}
         />
         <p className="mt-1 text-xs text-ink-500">
-          {PROCESSING_OPTIONS.find((o) => o.value === draft.processing)?.hint}
+          {t(PROCESSING_OPTIONS.find((o) => o.value === draft.processing)?.hint ?? '')}
         </p>
       </Labeled>
       <Labeled label="編集方法">
         <Select
-          ariaLabel="編集方法"
+          ariaLabel={t('編集方法')}
           value={draft.editing}
           onChange={(v) => setDraft({ ...draft, editing: v as Editing })}
-          options={EDITING_OPTIONS}
+          options={EDITING_OPTIONS.map((o) => ({ ...o, label: t(o.label), hint: t(o.hint) }))}
         />
       </Labeled>
       <Labeled label="値の型">
         <Select
-          ariaLabel="値の種類"
+          ariaLabel={t('値の種類')}
           value={draft.valueType}
           onChange={(v) => setDraft({ ...draft, valueType: v as ValueType })}
-          options={VALUE_TYPE_OPTIONS}
+          options={VALUE_TYPE_OPTIONS.map((o) => ({ ...o, label: t(o.label), hint: o.hint ? t(o.hint) : undefined }))}
         />
       </Labeled>
 
@@ -1134,27 +1165,27 @@ function FieldDetail({
         </Labeled>
         {unknownSources.length > 0 ? (
           <p className="mt-1 text-xs text-draft-ink">
-            ⚠ 現在のフォームに存在しない設問ID: {unknownSources.join('、')}
+            ⚠ {t('現在のフォームに存在しない設問ID')}: {unknownSources.join('、')}
           </p>
         ) : null}
       </div>
 
       <Labeled label="辞書の分類">
         <Select
-          ariaLabel="辞書の分類"
+          ariaLabel={t('辞書の分類')}
           value={draft.glossaryCategory ?? ''}
           onChange={(v) =>
             setDraft({ ...draft, glossaryCategory: (v || null) as GlossaryCategory | null })
           }
-          options={GLOSSARY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={GLOSSARY_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
         />
       </Labeled>
       <Labeled label="規則キー">
         <Select
-          ariaLabel="規則キー"
+          ariaLabel={t('規則キー')}
           value={draft.ruleKey ?? ''}
           onChange={(v) => setDraft({ ...draft, ruleKey: v || null })}
-          options={RULE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={RULE_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
         />
       </Labeled>
       <div className="grid grid-cols-2 gap-2 md:col-span-2">
@@ -1215,7 +1246,7 @@ function FieldDetail({
             checked={draft.displayToggle}
             onChange={(e) => setDraft({ ...draft, displayToggle: e.target.checked })}
           />
-          提出先ごとに表示・非表示を切り替えられるようにする
+          {t('提出先ごとに表示・非表示を切り替えられるようにする')}
         </label>
         <label className="flex items-center gap-2 text-xs text-ink-700">
           <input
@@ -1223,7 +1254,7 @@ function FieldDetail({
             checked={draft.isRequired}
             onChange={(e) => setDraft({ ...draft, isRequired: e.target.checked })}
           />
-          必須
+          {t('必須')}
         </label>
         <label className="flex items-center gap-2 text-xs text-ink-700">
           <input
@@ -1231,7 +1262,7 @@ function FieldDetail({
             checked={draft.isActive}
             onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
           />
-          有効（外すと編集画面にも出なくなります）
+          {t('有効（外すと編集画面にも出なくなります）')}
         </label>
       </div>
 
@@ -1260,7 +1291,7 @@ function FieldDetail({
             })
           }
         >
-          設定を保存
+          {t('設定を保存')}
         </button>
       </div>
     </div>

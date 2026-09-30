@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/lib/i18n/client';
+
 import { useState, useTransition } from 'react';
 import type { Role } from '@prisma/client';
 import { saveUserAction } from '@/app/(app)/admin/users/actions';
@@ -38,6 +40,7 @@ export function UserManager({
   users: UserRow[];
   people: PersonOption[];
 }) {
+  const t = useT();
   const [editing, setEditing] = useState<Partial<UserRow> | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -52,7 +55,7 @@ export function UserManager({
             setEditing({ email: '', displayName: '', role: 'SALES' as Role, isActive: true })
           }
         >
-          ＋ 利用者を追加
+          {t('＋ 利用者を追加')}
         </button>
       </div>
 
@@ -66,7 +69,7 @@ export function UserManager({
               : 'border-accent-500/40 bg-accent-50 text-[#b03a22]'
           }`}
         >
-          {notice.message}
+          {t(notice.message)}
         </p>
       ) : null}
 
@@ -74,7 +77,7 @@ export function UserManager({
         <div className="card grid gap-3 p-4 md:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-700">
-              メールアドレス
+              {t('メールアドレス')}
             </label>
             <input
               className="input"
@@ -83,7 +86,7 @@ export function UserManager({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-700">表示名</label>
+            <label className="mb-1 block text-xs font-medium text-ink-700">{t('表示名')}</label>
             <input
               className="input"
               value={editing.displayName ?? ''}
@@ -91,26 +94,26 @@ export function UserManager({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-700">権限</label>
+            <label className="mb-1 block text-xs font-medium text-ink-700">{t('権限')}</label>
             <Select
-              ariaLabel="役割"
+              ariaLabel={t('役割')}
               value={editing.role ?? 'SALES'}
               onChange={(v) => setEditing({ ...editing, role: v as Role })}
-              options={ROLES.map((r) => ({ value: r.value, label: r.label, hint: r.hint }))}
+              options={ROLES.map((r) => ({ value: r.value, label: t(r.label), hint: t(r.hint) }))}
             />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-ink-700">
-              紐付ける対象者（技術者のみ）
+              {t('紐付ける対象者（技術者のみ）')}
             </label>
             <Select
-              ariaLabel="紐付ける対象者"
-              placeholder="（なし）"
+              ariaLabel={t('紐付ける対象者')}
+              placeholder={t('（なし）')}
               value={editing.personId ?? ''}
               onChange={(v) => setEditing({ ...editing, personId: v || null })}
               disabled={editing.role !== 'ENGINEER'}
               options={[
-                { value: '', label: '（なし）' },
+                { value: '', label: t('（なし）') },
                 ...people.map((p) => {
                   // One person can be linked to one account, so an already
                   // linked person is shown as taken rather than silently
@@ -122,7 +125,7 @@ export function UserManager({
                     value: p.id,
                     label: p.fullNameKatakana ?? p.fullNameEnglish,
                     hint: takenBy
-                      ? `${p.fullNameEnglish}・${takenBy.email} に紐付け済み`
+                      ? t('{name}・{email} に紐付け済み', { name: p.fullNameEnglish, email: takenBy.email })
                       : p.fullNameEnglish,
                     disabled: Boolean(takenBy),
                   };
@@ -137,7 +140,7 @@ export function UserManager({
                 checked={editing.isActive ?? true}
                 onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
               />
-              有効
+              {t('有効')}
             </label>
             <button
               type="button"
@@ -158,10 +161,10 @@ export function UserManager({
                 })
               }
             >
-              保存
+              {t('保存')}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)}>
-              閉じる
+              {t('閉じる')}
             </button>
           </div>
         </div>
@@ -171,12 +174,12 @@ export function UserManager({
         <table className="w-full text-sm">
           <thead className="bg-sand-50 text-xs text-ink-500">
             <tr>
-              <th className="px-4 py-2 text-left font-medium">メールアドレス</th>
-              <th className="px-4 py-2 text-left font-medium">表示名</th>
-              <th className="px-4 py-2 text-left font-medium">権限</th>
-              <th className="px-4 py-2 text-left font-medium">紐付け</th>
-              <th className="px-4 py-2 text-left font-medium">最終ログイン</th>
-              <th className="px-4 py-2 text-right font-medium">操作</th>
+              <th className="px-4 py-2 text-left font-medium">{t('メールアドレス')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('表示名')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('権限')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('紐付け')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('最終ログイン')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('操作')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-100">
@@ -184,10 +187,10 @@ export function UserManager({
               <tr key={u.id} className={u.isActive ? '' : 'opacity-50'}>
                 <td className="px-4 py-1.5">{u.email}</td>
                 <td className="px-4 py-1.5">{u.displayName}</td>
-                <td className="px-4 py-1.5">{u.roleLabel}</td>
+                <td className="px-4 py-1.5">{t(u.roleLabel)}</td>
                 <td className="px-4 py-1.5 text-ink-700">{u.personName ?? '—'}</td>
                 <td className="px-4 py-1.5 text-xs text-ink-500">
-                  {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('ja-JP') : '未ログイン'}
+                  {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString(t('ja-JP')) : t('未ログイン')}
                 </td>
                 <td className="px-4 py-1.5 text-right">
                   <button
@@ -195,7 +198,7 @@ export function UserManager({
                     className="btn btn-secondary"
                     onClick={() => setEditing(u)}
                   >
-                    編集
+                    {t('編集')}
                   </button>
                 </td>
               </tr>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * The template preview, opened on the same page rather than navigating away
@@ -23,6 +24,7 @@ export function TemplatePreviewOverlay({
   title: string;
   onClose: () => void;
 }) {
+  const t = useT();
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -44,8 +46,8 @@ export function TemplatePreviewOverlay({
             type="button"
             className="icon-btn"
             onClick={onClose}
-            aria-label="プレビューを閉じる"
-            title="閉じる（Escキーでも閉じる）"
+            aria-label={t('プレビューを閉じる')}
+            title={t('閉じる（Escキーでも閉じる）')}
           >
             <X size={18} aria-hidden />
           </button>
@@ -63,14 +65,15 @@ export function TemplatePreviewOverlay({
 
 /** The 「シートの見本を見る」 button on the field-definition screen. */
 export function TemplatePreviewButton() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>
-        シートの見本を見る
+        {t('シートの見本を見る')}
       </button>
       {open ? (
-        <TemplatePreviewOverlay title="シートの見本" onClose={() => setOpen(false)} />
+        <TemplatePreviewOverlay title={t('シートの見本')} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );

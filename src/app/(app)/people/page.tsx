@@ -7,6 +7,7 @@ import { STATUS_LABELS } from '@/lib/sheet/version';
 import { matchesPersonQuery } from '@/lib/people-search';
 import { PageHeader } from '@/components/page-header';
 import { MoraBot } from '@/components/morabot';
+import { getLang, getT } from '@/lib/i18n/server';
 import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const FILTERS = [
-  { key: 'all', label: 'すべて' },
+  { key: 'all', label: 'すべて' as string },
   { key: 'DRAFT', label: '下書き' },
   { key: 'AWAITING_REVIEW', label: '確認待ち' },
   { key: 'FINAL', label: '確定' },
@@ -37,6 +38,8 @@ export default async function PeoplePage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const user = await requireUser();
+  const t = await getT();
+  const lang = await getLang();
   const params = await searchParams;
   const query = (params.q ?? '').trim();
   const status: FilterKey = FILTERS.some((f) => f.key === params.status)
@@ -92,12 +95,12 @@ export default async function PeoplePage({
   return (
     <div className="rise">
       <PageHeader
-        title="対象者一覧"
-        lead="名前を押すと、その人のスキルシートを開きます。"
+        title={t('対象者一覧')}
+        lead={t('名前を押すと、その人のスキルシートを開きます。')}
         actions={
           can(user, 'import.run') ? (
             <Link href="/admin/import" className="btn btn-primary">
-              ＋ 回答を取り込む
+              ＋ {t('回答を取り込む')}
             </Link>
           ) : null
         }
@@ -108,18 +111,18 @@ export default async function PeoplePage({
       {people.length === 0 ? (
         <div className="card flex flex-col items-center p-12 text-center">
           <MoraBot mood="explain" size={110} title="" />
-          <p className="mt-4 font-bold text-ink-900">まだ対象者がいません。</p>
+          <p className="mt-4 font-bold text-ink-900">{t('まだ対象者がいません。')}</p>
           <p className="mt-1 text-sm text-ink-500">
-            Googleフォームの回答ファイルを取り込むと、ここに一覧で表示されます。
+            {t('Googleフォームの回答ファイルを取り込むと、ここに一覧で表示されます。')}
           </p>
           <Link href="/admin/import" className="btn btn-primary mt-5">
-            ＋ 回答を取り込む
+            ＋ {t('回答を取り込む')}
           </Link>
         </div>
       ) : (
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-3">
-            <nav className="filter-tabs border-0" aria-label="状態で絞り込む">
+            <nav className="filter-tabs border-0" aria-label={t('状態で絞り込む')}>
               {FILTERS.map((f) => (
                 <Link
                   key={f.key}
@@ -127,7 +130,7 @@ export default async function PeoplePage({
                   className="filter-tab"
                   aria-current={status === f.key ? 'true' : undefined}
                 >
-                  {f.label}
+                  {t(f.label)}
                   <span className="filter-tab-count tabular">{counts[f.key]}</span>
                 </Link>
               ))}
@@ -140,16 +143,16 @@ export default async function PeoplePage({
                 type="search"
                 name="q"
                 defaultValue={query}
-                placeholder="名前・社員番号・メールで検索"
-                aria-label="対象者を検索"
+                placeholder={t('名前・社員番号・メールで検索')}
+                aria-label={t('対象者を検索')}
                 className="input w-64"
               />
               <button type="submit" className="btn btn-secondary">
-                検索
+                {t('検索')}
               </button>
               {query ? (
                 <Link href={href({ q: '' })} className="btn btn-quiet">
-                  クリア
+                  {t('クリア')}
                 </Link>
               ) : null}
             </form>
@@ -159,10 +162,10 @@ export default async function PeoplePage({
             <div className="flex flex-col items-center border-t border-ink-100 p-12 text-center">
               <MoraBot mood="think" size={90} title="" />
               <p className="mt-3 text-ink-700">
-                {query ? `「${query}」に一致する対象者はいません。` : '該当する対象者はいません。'}
+                {query ? t('「{query}」に一致する対象者はいません。', { query }) : t('該当する対象者はいません。')}
               </p>
               <Link href="/people" className="btn btn-secondary mt-4">
-                すべて表示
+                {t('すべて表示')}
               </Link>
             </div>
           ) : (
@@ -170,12 +173,12 @@ export default async function PeoplePage({
               <table className="data-table !min-w-[44rem]">
                 <thead>
                   <tr>
-                    <th>氏名</th>
-                    <th>期</th>
-                    <th>日本語</th>
-                    <th>状態</th>
-                    <th>未確認</th>
-                    <th className="!text-right">最終更新</th>
+                    <th>{t('氏名')}</th>
+                    <th>{t('期')}</th>
+                    <th>{t('日本語')}</th>
+                    <th>{t('状態')}</th>
+                    <th>{t('未確認')}</th>
+                    <th className="!text-right">{t('最終更新')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -192,31 +195,33 @@ export default async function PeoplePage({
                             href={`/people/${person.id}`}
                             className="font-bold text-ink-900 after:absolute after:inset-0 hover:text-brand-500"
                           >
-                            {person.fullNameKatakana ?? person.fullNameEnglish}
+                            {lang === 'en' ? person.fullNameEnglish : (person.fullNameKatakana ?? person.fullNameEnglish)}
                           </Link>
                           <GenerationRowBadge personId={person.id} />
-                          <div className="text-xs text-ink-500">{person.fullNameEnglish}</div>
+                          <div className="text-xs text-ink-500">
+                            {lang === 'en' ? person.fullNameKatakana : person.fullNameEnglish}
+                          </div>
                         </td>
                         <td className="tabular text-ink-700">{person.cohort ?? '—'}</td>
                         <td className="text-ink-700">{jlpt ? jlpt.level : '—'}</td>
                         <td>
                           {version ? (
                             <span className={`badge ${STATUS_CLASS[version.status]}`}>
-                              {STATUS_LABELS[version.status]}
+                              {t(STATUS_LABELS[version.status])}
                             </span>
                           ) : (
-                            <span className="badge badge-draft">未作成</span>
+                            <span className="badge badge-draft">{t('未作成')}</span>
                           )}
                         </td>
                         <td>
                           {unreviewed > 0 ? (
-                            <span className="badge badge-warn badge-plain">{unreviewed}項目</span>
+                            <span className="badge badge-warn badge-plain">{t('{n}項目', { n: unreviewed })}</span>
                           ) : (
                             <span className="text-sm text-ink-400">—</span>
                           )}
                         </td>
                         <td className="tabular text-right text-sm text-ink-500">
-                          {version ? new Date(version.updatedAt).toLocaleDateString('ja-JP') : '—'}
+                          {version ? new Date(version.updatedAt).toLocaleDateString(t('ja-JP')) : '—'}
                         </td>
                       </tr>
                     );

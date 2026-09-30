@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/lib/i18n/client';
 import { useState, useTransition } from 'react';
 import { addMemoAction } from '@/app/(app)/people/[personId]/actions';
 
@@ -28,6 +29,7 @@ export function MemoPanel({
 }) {
   const [body, setBody] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
   const [pending, startTransition] = useTransition();
 
   const submit = () => {
@@ -42,18 +44,18 @@ export function MemoPanel({
   return (
     <div className="card px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-ink-900">営業メモ</h2>
-        <span className="badge badge-warn" title="スキルシートには出力されない。">
-          補足資料のみ
+        <h2 className="text-sm font-semibold text-ink-900">{t('営業メモ')}</h2>
+        <span className="badge badge-warn" title={t('スキルシートには出力されない。')}>
+          {t('補足資料のみ')}
         </span>
         <span className="text-xs text-ink-500">
-          日付は追加した時点で自動的に記録される。入力後の編集はできないため、訂正は新しいメモとして追加すること。
+          {t('日付は追加した時点で自動的に記録される。入力後の編集はできないため、訂正は新しいメモとして追加すること。')}
         </span>
       </div>
 
       <div className="mt-3">
         <label className="field-label" htmlFor="memo-body">
-          メモを追加
+          {t('メモを追加')}
         </label>
         <textarea
           id="memo-body"
@@ -61,7 +63,7 @@ export function MemoPanel({
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="面談での様子、配属に関する検討事項など。スキルシートには出力されない。"
+          placeholder={t('面談での様子、配属に関する検討事項など。スキルシートには出力されない。')}
         />
         <div className="mt-2 flex items-center gap-3">
           <button
@@ -69,11 +71,11 @@ export function MemoPanel({
             className="btn btn-primary"
             disabled={pending || !body.trim()}
             onClick={submit}
-            title="メモを追加する。追加した日付が自動的に記録される。"
+            title={t('メモを追加する。追加した日付が自動的に記録される。')}
           >
-            メモを追加
+            {t('メモを追加')}
           </button>
-          {notice ? <span className="text-xs text-ink-700">{notice}</span> : null}
+          {notice ? <span className="text-xs text-ink-700">{t(notice)}</span> : null}
         </div>
       </div>
 
@@ -82,7 +84,7 @@ export function MemoPanel({
           {memos.map((memo) => (
             <li key={memo.id} className="flex gap-3">
               <span className="tabular w-32 shrink-0 text-xs text-ink-500">
-                {new Date(memo.createdAt).toLocaleDateString('ja-JP')}
+                {new Date(memo.createdAt).toLocaleDateString(t('ja-JP'))}
                 {memo.authorName ? (
                   <span className="block text-ink-400">{memo.authorName}</span>
                 ) : null}
@@ -93,7 +95,7 @@ export function MemoPanel({
         </ul>
       ) : (
         <p className="mt-3 border-t border-ink-100 pt-3 text-xs text-ink-500">
-          メモはまだ登録されていない。
+          {t('メモはまだ登録されていない。')}
         </p>
       )}
     </div>

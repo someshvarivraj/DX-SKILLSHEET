@@ -6,6 +6,7 @@ import { FieldDefinitionTable } from '@/components/admin/field-definition-table'
 import { FormScriptImport } from '@/components/admin/form-script-import';
 import { expandSourceCodes } from '@/lib/sheet/question-coverage';
 import { PageHeader } from '@/components/page-header';
+import { getT } from '@/lib/i18n/server';
 import { TemplatePreviewButton } from '@/components/admin/template-preview-overlay';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function FieldDefinitionPage() {
   const user = await requireUser();
+  const t = await getT();
   if (!can(user, 'definition.manage')) notFound();
 
   const [sections, revision] = await Promise.all([
@@ -102,8 +104,8 @@ export default async function FieldDefinitionPage() {
           is decided by the rows on this screen, not by code — a new year's
           form needs rows added here, never a redeploy. */}
       <PageHeader
-        title="項目定義"
-        lead="スキルシートに載せる項目と、その並び順を決めます。行を押すと詳しい設定を開きます。"
+        title={t('項目定義')}
+        lead={t('スキルシートに載せる項目と、その並び順を決めます。行を押すと詳しい設定を開きます。')}
         actions={
 <TemplatePreviewButton />
         }
@@ -116,7 +118,7 @@ export default async function FieldDefinitionPage() {
         // form change, when a new question has no field to land in yet.
         <details className="card px-4 py-3 text-sm">
           <summary className="cursor-pointer text-ink-700">
-            シートに使われていない設問が{unassigned.length}件あります
+            {t('シートに使われていない設問が{n}件あります', { n: unassigned.length })}
           </summary>
           <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-0.5 text-ink-500 md:grid-cols-2">
             {unassigned.map((q) => (

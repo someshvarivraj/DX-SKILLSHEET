@@ -50,7 +50,12 @@ export type ActionResult = {
   ok: boolean;
   message?: string;
   warnings?: string[];
-  unreviewed?: Array<{ fieldName: string; sectionName: string }>;
+  unreviewed?: Array<{
+    fieldName: string;
+    sectionName: string;
+    fieldNameEn?: string | null;
+    sectionNameEn?: string | null;
+  }>;
 };
 
 /**
@@ -332,6 +337,8 @@ export async function finaliseAction(personId: string): Promise<ActionResult> {
       unreviewed: result.unreviewed.map((u) => ({
         fieldName: u.fieldName,
         sectionName: u.sectionName,
+        fieldNameEn: u.fieldNameEn,
+        sectionNameEn: u.sectionNameEn,
       })),
     };
   }

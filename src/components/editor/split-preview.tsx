@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Maximize2, Minimize2, RefreshCw, SplitSquareHorizontal, X } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
+import { useT } from '@/lib/i18n/client';
 
 type Mode = 'hidden' | 'split' | 'max';
 
@@ -34,6 +35,7 @@ export function SplitPreview({
   refreshKey?: string;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>('hidden');
   const [reloadKey, setReloadKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -103,10 +105,10 @@ export function SplitPreview({
           type="button"
           className="split-preview-fab"
           onClick={() => setMode('split')}
-          title="プレビューを並べて表示する"
+          title={t('プレビューを並べて表示する')}
         >
           <SplitSquareHorizontal size={16} aria-hidden />
-          プレビューを並べて表示
+          {t('プレビューを並べて表示')}
         </button>
       </>
     );
@@ -119,14 +121,14 @@ export function SplitPreview({
       <div className={mode === 'max' ? 'hidden' : 'split-preview-editor'}>{children}</div>
       <div className="split-preview-panel">
         <div className="split-preview-panel-bar">
-          <span className="text-xs font-semibold text-ink-700">プレビュー</span>
+          <span className="text-xs font-semibold text-ink-700">{t('プレビュー')}</span>
           <span className="flex-1" />
           <button
             type="button"
             className="icon-btn"
             onClick={reload}
-            title="編集内容を反映して更新する"
-            aria-label="プレビューを更新する"
+            title={t('編集内容を反映して更新する')}
+            aria-label={t('プレビューを更新する')}
           >
             <RefreshCw size={16} aria-hidden />
           </button>
@@ -134,8 +136,8 @@ export function SplitPreview({
             type="button"
             className="icon-btn"
             onClick={() => setMode(mode === 'max' ? 'split' : 'max')}
-            title={mode === 'max' ? '並べて表示に戻す' : '最大化する'}
-            aria-label={mode === 'max' ? '並べて表示に戻す' : 'プレビューを最大化する'}
+            title={mode === 'max' ? t('並べて表示に戻す') : t('最大化する')}
+            aria-label={mode === 'max' ? t('並べて表示に戻す') : t('プレビューを最大化する')}
           >
             {mode === 'max' ? <Minimize2 size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
           </button>
@@ -143,8 +145,8 @@ export function SplitPreview({
             type="button"
             className="icon-btn"
             onClick={() => setMode('hidden')}
-            title="プレビューを閉じる"
-            aria-label="プレビューを閉じる"
+            title={t('プレビューを閉じる')}
+            aria-label={t('プレビューを閉じる')}
           >
             <X size={16} aria-hidden />
           </button>
@@ -153,7 +155,7 @@ export function SplitPreview({
           key={reloadKey}
           ref={iframeRef}
           src={previewSrc}
-          title="スキルシートのプレビュー"
+          title={t('スキルシートのプレビュー')}
           className="split-preview-frame"
           onLoad={restoreScroll}
           allow="fullscreen"

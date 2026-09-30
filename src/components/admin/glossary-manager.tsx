@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/lib/i18n/client';
+
 import { useMemo, useState, useTransition } from 'react';
 import type { GlossaryCategory } from '@prisma/client';
 import {
@@ -30,6 +32,7 @@ const CATEGORIES: Array<{ value: GlossaryCategory; label: string }> = [
 ];
 
 export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
+  const t = useT();
   const [category, setCategory] = useState<GlossaryCategory>(
     'UNIVERSITY' as GlossaryCategory,
   );
@@ -67,31 +70,31 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
       <div className="card flex flex-wrap items-center gap-3 p-3">
         <div className="w-56">
           <Select
-            ariaLabel="分類で絞り込む"
+            ariaLabel={t('分類で絞り込む')}
             value={category}
             onChange={(v) => setCategory(v as GlossaryCategory)}
-            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            options={CATEGORIES.map((c) => ({ value: c.value, label: t(c.label) }))}
           />
         </div>
         <input
           className="input w-64"
-          placeholder="検索（英語・日本語・別表記）"
+          placeholder={t('検索（英語・日本語・別表記）')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <span className="text-xs text-ink-500">{filtered.length}件</span>
+        <span className="text-xs text-ink-500">{t('{n}件', { n: filtered.length })}</span>
         <span className="flex-1" />
         <button
           type="button"
           className="btn btn-primary"
           onClick={() => setEditing({ ...blank })}
         >
-          ＋ 用語を追加
+          {t('＋ 用語を追加')}
         </button>
       </div>
 
       {notice ? (
-        <p className="rounded-md bg-final-bg px-3 py-1.5 text-xs text-final-ink">{notice}</p>
+        <p className="rounded-md bg-final-bg px-3 py-1.5 text-xs text-final-ink">{t(notice)}</p>
       ) : null}
 
       {editing ? (
@@ -113,12 +116,12 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
             </Field>
             <Field label="分類">
               <Select
-                ariaLabel="分類"
+                ariaLabel={t('分類')}
                 value={editing.category}
                 onChange={(v) =>
                   setEditing({ ...editing, category: v as GlossaryCategory })
                 }
-                options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+                options={CATEGORIES.map((c) => ({ value: c.value, label: t(c.label) }))}
               />
             </Field>
             <Field label="別表記（; 区切り）">
@@ -167,10 +170,10 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
                 })
               }
             >
-              保存
+              {t('保存')}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)}>
-              閉じる
+              {t('閉じる')}
             </button>
           </div>
         </div>
@@ -180,11 +183,11 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
         <table className="w-full text-sm">
           <thead className="bg-sand-50 text-xs text-ink-500">
             <tr>
-              <th className="px-4 py-2 text-left font-medium">英語表記</th>
-              <th className="px-4 py-2 text-left font-medium">別表記</th>
-              <th className="px-4 py-2 text-left font-medium">日本語表記</th>
-              <th className="px-4 py-2 text-left font-medium">補足／地域</th>
-              <th className="px-4 py-2 text-right font-medium">操作</th>
+              <th className="px-4 py-2 text-left font-medium">{t('英語表記')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('別表記')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('日本語表記')}</th>
+              <th className="px-4 py-2 text-left font-medium">{t('補足／地域')}</th>
+              <th className="px-4 py-2 text-right font-medium">{t('操作')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-100">
@@ -205,7 +208,7 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
                       className="btn btn-secondary"
                       onClick={() => setEditing(entry)}
                     >
-                      編集
+                      {t('編集')}
                     </button>
                     <button
                       type="button"
@@ -218,7 +221,7 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
                         })
                       }
                     >
-                      無効化
+                      {t('無効化')}
                     </button>
                   </div>
                 </td>
@@ -232,9 +235,10 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useT();
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-ink-700">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-ink-700">{t(label)}</label>
       {children}
     </div>
   );

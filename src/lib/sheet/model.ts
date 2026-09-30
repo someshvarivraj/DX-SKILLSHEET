@@ -103,7 +103,13 @@ export type SheetModel = {
   preset: { id: string; name: string; hiddenFieldCodes: string[] } | null;
   sections: SectionView[];
   /** Fields with no content, for the "list of empty fields" check (§7.5). */
-  emptyFields: Array<{ sectionName: string; fieldName: string; required: boolean }>;
+  emptyFields: Array<{
+    sectionName: string;
+    fieldName: string;
+    sectionNameEn?: string | null;
+    fieldNameEn?: string | null;
+    required: boolean;
+  }>;
   unreviewedCount: number;
 };
 
@@ -260,6 +266,8 @@ export async function loadSheetModel(
             emptyFields.push({
               sectionName: section.nameJa,
               fieldName: f.nameJa,
+              sectionNameEn: section.nameEn,
+              fieldNameEn: f.nameEn,
               required: f.isRequired,
             });
           }

@@ -4,11 +4,13 @@ import { requireUser } from '@/lib/auth/session';
 import { can, ROLE_LABELS } from '@/lib/auth/permissions';
 import { UserManager } from '@/components/admin/user-manager';
 import { PageHeader } from '@/components/page-header';
+import { getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
   const user = await requireUser();
+  const t = await getT();
   if (!can(user, 'user.manage')) notFound();
 
   const [users, people] = await Promise.all([
@@ -26,8 +28,8 @@ export default async function UsersPage() {
   return (
     <div>
       <PageHeader
-        title="利用者"
-        lead="ログインできる人を登録します。登録したメールアドレスにログイン用のリンクが届きます（パスワードは不要）。"
+        title={t('利用者')}
+        lead={t('ログインできる人を登録します。登録したメールアドレスにログイン用のリンクが届きます（パスワードは不要）。')}
       />
 
       <UserManager

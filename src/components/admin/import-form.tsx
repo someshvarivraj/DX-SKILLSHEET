@@ -12,6 +12,7 @@ import {
 import { buildImportFormData } from '@/lib/import/form-data';
 import { refreshGenerationStatus } from '@/components/generation-progress';
 import { MoraBot, MoraBotProgress } from '@/components/morabot';
+import { useT } from '@/lib/i18n/client';
 
 const initial: ImportActionState = { step: 'idle' };
 
@@ -25,6 +26,7 @@ const initial: ImportActionState = { step: 'idle' };
  * once and survives the check.
  */
 export function ImportForm() {
+  const t = useT();
   const [previewState, previewAction, previewPending] = useActionState(
     previewImportAction,
     initial,
@@ -44,7 +46,7 @@ export function ImportForm() {
 
   const chooseFile = (f: File | null) => {
     if (f && !isAcceptedFile(f)) {
-      setDropError('CSVまたはXLSXファイルを選択してください。');
+      setDropError(t('CSVまたはXLSXファイルを選択してください。'));
       return;
     }
     setDropError(null);
@@ -84,7 +86,7 @@ export function ImportForm() {
       <div className="card p-4">
         <div>
           <label className="field-label" htmlFor="file">
-            回答ファイル（CSV / XLSX）
+            {t('回答ファイル（CSV / XLSX）')}
           </label>
           <div
             className={`dropzone ${dragActive ? 'dropzone-active' : ''}`}
@@ -127,7 +129,7 @@ export function ImportForm() {
                 <button
                   type="button"
                   className="text-ink-400 hover:text-ink-700"
-                  aria-label="選択を解除する"
+                  aria-label={t('選択を解除する')}
                   onClick={(e) => {
                     e.stopPropagation();
                     chooseFile(null);
@@ -140,8 +142,8 @@ export function ImportForm() {
             ) : (
               <>
                 <UploadCloud size={28} aria-hidden className="dropzone-icon" />
-                <p className="dropzone-title">ファイルをここにドラッグ、またはクリックして選択</p>
-                <p className="dropzone-hint">CSV または XLSX</p>
+                <p className="dropzone-title">{t('ファイルをここにドラッグ、またはクリックして選択')}</p>
+                <p className="dropzone-hint">{t('CSV または XLSX')}</p>
               </>
             )}
           </div>
@@ -149,7 +151,7 @@ export function ImportForm() {
             <p className="field-hint text-[#b03a22]">{dropError}</p>
           ) : (
             <p id="file-hint" className="field-hint">
-              {file ? null : 'ファイルを選択すると、確認と取り込みができるようになる。'}
+              {file ? null : t('ファイルを選択すると、確認と取り込みができるようになる。')}
             </p>
           )}
         </div>
@@ -160,33 +162,33 @@ export function ImportForm() {
               checked={generate}
               onChange={(e) => setGenerate(e.target.checked)}
             />
-            新規の対象者は取り込み後にすべての項目を生成する
+            {t('新規の対象者は取り込み後にすべての項目を生成する')}
           </label>
           <button
             type="button"
             className="btn btn-secondary"
             disabled={busy || !file}
-            title="ファイルの内容を読み取って、取り込まれる対象者と列の対応を表示する。この操作では何も保存されない。"
+            title={t('ファイルの内容を読み取って、取り込まれる対象者と列の対応を表示する。この操作では何も保存されない。')}
             onClick={() => submit(previewAction)}
           >
-            {previewPending ? '確認中…' : '内容を確認する'}
+            {previewPending ? t('確認中…') : t('内容を確認する')}
           </button>
           <button
             type="button"
             className="btn btn-primary"
             disabled={busy || !file}
-            title="ファイルの内容を取り込んで保存する。"
+            title={t('ファイルの内容を取り込んで保存する。')}
             onClick={() => submit(importAction)}
           >
-            {importPending ? '取り込み中…' : '取り込む'}
+            {importPending ? t('取り込み中…') : t('取り込む')}
           </button>
         </div>
 
         {previewPending || importPending ? (
           <div className="mt-4">
             <MoraBotProgress
-              label={previewPending ? 'ファイルを読み込んでいます…' : '取り込んでいます…'}
-              detail="モラボットが作業中です"
+              label={previewPending ? t('ファイルを読み込んでいます…') : t('取り込んでいます…')}
+              detail={t('モラボットが作業中です')}
             />
           </div>
         ) : null}
@@ -198,24 +200,25 @@ export function ImportForm() {
             role="alert"
           >
             <MoraBot mood="trouble" size={44} title="" />
-            <p>{error}</p>
+            <p>{t(error as string)}</p>
           </div>
         ))}
         {importState.message ? (
           <div className="mt-3 flex gap-3 rounded-lg border border-final-line bg-final-bg px-3 py-2.5 text-sm text-final-ink">
             <MoraBot mood="happy" size={52} title="" />
             <div className="min-w-0">
-              <p className="font-semibold">{importState.message}</p>
+              <p className="font-semibold">{t(importState.message)}</p>
               {importState.generationQueued ? (
                 <p className="mt-1">
-                  新規の{importState.generationQueued}
-                  名について、AIによる文章の作成を開始しました（1名あたり数分）。
-                  進捗は下と対象者一覧に表示されます。この画面を閉じても作成は続きます。
+                  {t(
+                    '新規の{n}名について、AIによる文章の作成を開始しました（1名あたり数分）。進捗は下と対象者一覧に表示されます。この画面を閉じても作成は続きます。',
+                    { n: importState.generationQueued },
+                  )}
                 </p>
               ) : null}
               {importState.needsReview && importState.needsReview.length > 0 ? (
                 <div className="mt-2">
-                  <p className="font-medium">すでに内容がある対象者です。差分を確認してください:</p>
+                  <p className="font-medium">{t('すでに内容がある対象者です。差分を確認してください:')}</p>
                   <ul className="mt-1 list-inside list-disc">
                     {importState.needsReview.map((p) => (
                       <li key={p.personId}>
@@ -228,7 +231,7 @@ export function ImportForm() {
                 </div>
               ) : null}
               <Link href="/people" className="btn btn-secondary mt-2.5">
-                対象者一覧を開く
+                {t('対象者一覧を開く')}
               </Link>
             </div>
           </div>
@@ -239,20 +242,21 @@ export function ImportForm() {
         <div className="space-y-3">
           <div className="card p-4">
             <h2 className="text-sm font-semibold text-ink-900">
-              確認結果: {preview.fileName}（{preview.totalRows}行）
+              {t('確認結果: {file}（{n}行）', { file: preview.fileName, n: preview.totalRows })}
             </h2>
             <p className="field-hint">
-              この確認では何も保存されていない。内容に問題がなければ、下の「この内容で取り込む」を実行すること。
+              {t('この確認では何も保存されていない。内容に問題がなければ、下の「この内容で取り込む」を実行すること。')}
             </p>
 
             {preview.unmapped.length > 0 ? (
               <div className="mt-3 rounded-lg border border-draft-line bg-draft-bg p-3">
                 <p className="text-xs font-medium text-draft-ink">
-                  未割当の列（{preview.unmapped.length}件）
+                  {t('未割当の列（{n}件）', { n: preview.unmapped.length })}
                 </p>
                 <p className="mt-1 text-xs text-draft-ink">
-                  ファイルには存在するが、項目定義のどこにも割り当てられていない列です。
-                  必要であれば「項目定義」画面で取得元に設定してください。
+                  {t(
+                    'ファイルには存在するが、項目定義のどこにも割り当てられていない列です。必要であれば「項目定義」画面で取得元に設定してください。',
+                  )}
                 </p>
                 <ul className="mt-1.5 space-y-0.5 text-xs text-draft-ink">
                   {preview.unmapped.slice(0, 20).map((h, i) => (
@@ -262,13 +266,13 @@ export function ImportForm() {
               </div>
             ) : (
               <p className="mt-3 rounded-lg border border-final-line bg-final-bg p-3 text-xs text-final-ink">
-                すべての列が設問と対応しました。
+                {t('すべての列が設問と対応しました。')}
               </p>
             )}
 
             {preview.missingQuestions.length > 0 ? (
               <p className="mt-3 text-xs text-ink-500">
-                ファイルに含まれていない設問: {preview.missingQuestions.length}件（
+                {t('ファイルに含まれていない設問: {n}件', { n: preview.missingQuestions.length })}（
                 {preview.missingQuestions.slice(0, 12).join('、')}
                 {preview.missingQuestions.length > 12 ? ' …' : ''}）
               </p>
@@ -280,11 +284,11 @@ export function ImportForm() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>行</th>
-                    <th>氏名</th>
-                    <th>メールアドレス</th>
-                    <th>回答項目数</th>
-                    <th>扱い</th>
+                    <th>{t('行')}</th>
+                    <th>{t('氏名')}</th>
+                    <th>{t('メールアドレス')}</th>
+                    <th>{t('回答項目数')}</th>
+                    <th>{t('扱い')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -301,9 +305,9 @@ export function ImportForm() {
                       <td className="tabular text-ink-700">{row.answerCount}</td>
                       <td>
                         {row.isNewPerson ? (
-                          <span className="badge badge-final">新規</span>
+                          <span className="badge badge-final">{t('新規')}</span>
                         ) : (
-                          <span className="badge badge-review">既存・差分確認</span>
+                          <span className="badge badge-review">{t('既存・差分確認')}</span>
                         )}
                       </td>
                     </tr>
@@ -318,13 +322,17 @@ export function ImportForm() {
           <div className="card flex flex-wrap items-center gap-3 p-4">
             {previewIsStale ? (
               <p className="text-xs text-[#b03a22]">
-                選択中のファイル（{file?.name}）は、上の確認結果（{preview.fileName}
-                ）とは別のファイルである。もう一度「内容を確認する」を実行すること。
+                {t(
+                  '選択中のファイル（{a}）は、上の確認結果（{b}）とは別のファイルである。もう一度「内容を確認する」を実行すること。',
+                  { a: file?.name ?? '', b: preview.fileName },
+                )}
               </p>
             ) : (
               <p className="text-xs text-ink-700">
-                上の{preview.totalRows}
-                行を取り込む。既存の対象者の内容は自動では上書きされず、差分の確認対象になる。
+                {t(
+                  '上の{n}行を取り込む。既存の対象者の内容は自動では上書きされず、差分の確認対象になる。',
+                  { n: preview.totalRows },
+                )}
               </p>
             )}
             <span className="flex-1" />
@@ -334,7 +342,7 @@ export function ImportForm() {
               disabled={busy || !file || previewIsStale}
               onClick={() => submit(importAction)}
             >
-              {importPending ? '取り込み中…' : 'この内容で取り込む'}
+              {importPending ? t('取り込み中…') : t('この内容で取り込む')}
             </button>
           </div>
         </div>

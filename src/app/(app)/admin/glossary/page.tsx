@@ -4,11 +4,13 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { GlossaryManager } from '@/components/admin/glossary-manager';
 import { PageHeader } from '@/components/page-header';
+import { getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
 export default async function GlossaryPage() {
   const user = await requireUser();
+  const t = await getT();
   if (!can(user, 'glossary.manage')) notFound();
 
   const entries = await prisma.glossaryEntry.findMany({
@@ -23,8 +25,8 @@ export default async function GlossaryPage() {
           come out spelled differently; this table replaces them mechanically
           so the same word is always the same Japanese. */}
       <PageHeader
-        title="対訳辞書"
-        lead="専攻名・地名・ツール名などの決まった日本語訳を登録します。登録した訳が常に使われます。"
+        title={t('対訳辞書')}
+        lead={t('専攻名・地名・ツール名などの決まった日本語訳を登録します。登録した訳が常に使われます。')}
       />
       <GlossaryManager entries={entries} />
     </div>
