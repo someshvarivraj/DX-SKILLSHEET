@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Maximize2, Minimize2, RefreshCw, SplitSquareHorizontal, X } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 
@@ -35,7 +35,21 @@ export function SplitPreview({
   const [reloadKey, setReloadKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const query = new URLSearchParams();
+  // While the preview is open beside the editor, the editor's own toolbar
+  // shrinks to one row (html[data-split], see globals.css) — the point of
+  // this mode is the form and the sheet side by side, not the controls.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (mode === 'hidden') delete root.dataset.split;
+    else root.dataset.split = mode;
+    return () => {
+      delete root.dataset.split;
+    };
+  }, [mode]);
+
+  // embed=1: the preview page drops its heading and extra buttons and shows
+  // only the sheet with a small zoom bar.
+  const query = new URLSearchParams({ embed: '1' });
   if (preset) query.set('preset', preset);
   if (tab) query.set('tab', tab);
   // A raw iframe src — Next's basePath rewriting only applies to next/link
