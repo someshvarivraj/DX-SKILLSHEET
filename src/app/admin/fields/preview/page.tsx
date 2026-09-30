@@ -6,6 +6,7 @@ import { loadTemplateModel } from '@/lib/sheet/template';
 import { toPrintableModel } from '@/lib/sheet/model';
 import { SHEET_STYLES, SkillSheetDocument } from '@/components/sheet-document';
 import { PreviewStage } from '@/components/editor/preview-stage';
+import { getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function TemplatePreviewPage({
   if (!user) redirect('/login');
   if (!can(user, 'definition.manage')) notFound();
   const { section, embed } = await searchParams;
+  const t = await getT();
 
   const model = await loadTemplateModel({ sectionCode: section });
   if (section && model.sections.length === 0) notFound();
@@ -59,17 +61,19 @@ export default async function TemplatePreviewPage({
     <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="page-title text-base">
-          {section ? `セクションのプレビュー: ${model.sections[0]?.nameJa ?? section}` : 'テンプレートのプレビュー'}
+          {section
+            ? t('セクションのプレビュー: {name}', { name: model.sections[0]?.nameJa ?? section })
+            : t('テンプレートのプレビュー')}
         </h1>
         <span className="text-xs text-ink-500">
-          実際のデータではなく、項目名を仮の値として表示しています。
+          {t('実際のデータではなく、項目名を仮の値として表示しています。')}
         </span>
       </div>
 
       <PreviewStage
         toolbar={
           <Link href="/admin/fields" className="btn btn-secondary">
-            項目定義に戻る
+            {t('項目定義に戻る')}
           </Link>
         }
       >

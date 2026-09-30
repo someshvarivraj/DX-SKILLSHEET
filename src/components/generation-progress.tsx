@@ -6,6 +6,8 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { withBasePath } from '@/lib/base-path';
 import type { GenerationJob } from '@/lib/sheet/generation-jobs';
 import { MoraBot, MoraBotProgress } from '@/components/morabot';
+import { useT } from '@/lib/i18n/client';
+import type { T } from '@/lib/i18n';
 
 /*
  * Progress of the background AI generation that follows an import
@@ -97,15 +99,17 @@ function Bar({ job }: { job: GenerationJob }) {
   );
 }
 
-function jobLabel(job: GenerationJob) {
-  if (job.status === 'queued') return '順番待ち';
-  if (job.status === 'running') return job.total ? `${job.done} / ${job.total}項目` : '準備中…';
-  if (job.status === 'error') return 'エラーで停止';
-  return job.failed > 0 ? `完了（${job.failed}項目は失敗）` : '完了';
+function jobLabel(job: GenerationJob, t: T) {
+  if (job.status === 'queued') return t('順番待ち');
+  if (job.status === 'running')
+    return job.total ? t('{done} / {total}項目', { done: job.done, total: job.total }) : t('準備中…');
+  if (job.status === 'error') return t('エラーで停止');
+  return job.failed > 0 ? t('完了（{n}項目は失敗）', { n: job.failed }) : t('完了');
 }
 
 /** Summary card for the people list and the import screen. */
 export function GenerationBanner() {
+  const t = useT();
   const list = useJobs();
   useRefreshOnProgress(list);
   if (list.length === 0) return null;
@@ -124,13 +128,13 @@ export function GenerationBanner() {
       {active.length > 0 ? (
         <MoraBotProgress
           percent={percent}
-          label={`モラボットが文章を作成中です（残り${active.length}名）`}
-          detail={`${percent}% ・ 1名あたり数分かかります。この画面を閉じても作成は続きます。`}
+          label={t('モラボットが文章を作成中です（残り{n}名）', { n: active.length })}
+          detail={`${percent}% ・ ${t('1名あたり数分かかります。この画面を閉じても作成は続きます。')}`}
         />
       ) : (
         <div className="flex items-center gap-3">
           <MoraBot mood="happy" size={48} title="" />
-          <p className="font-bold text-ink-900">AIによる文章の作成が完了しました</p>
+          <p className="font-bold text-ink-900">{t('AIによる文章の作成が完了しました')}</p>
         </div>
       )}
       <ul className="mt-3 space-y-1.5">
@@ -153,7 +157,7 @@ export function GenerationBanner() {
               }`}
             >
               {job.status === 'done' && job.failed === 0 ? '✓ ' : ''}
-              {jobLabel(job)}
+              {jobLabel(job, t)}
             </span>
           </li>
         ))}
@@ -164,18 +168,20 @@ export function GenerationBanner() {
 
 /** Small badge for a person's row in the list. */
 export function GenerationRowBadge({ personId }: { personId: string }) {
+  const t = useT();
   const job = useJobs().find((j) => j.personId === personId);
   if (!job || !isActive(job)) return null;
   return (
     <span className="badge badge-review badge-plain ml-2 align-middle">
       <span className="ai-spinner ai-spinner-sm" aria-hidden />
-      {job.status === 'queued' ? 'AI 順番待ち' : `AI作成中 ${job.done}/${job.total || '…'}`}
+      {job.status === 'queued' ? t('AI 順番待ち') : t('AI作成中 {done}/{total}', { done: job.done, total: job.total || '…' })}
     </span>
   );
 }
 
 /** Notice on a person's editing screen while their text is being written. */
 export function GenerationNotice({ personId }: { personId: string }) {
+  const t = useT();
   const list = useJobs();
   useRefreshOnProgress(list, personId);
   const job = list.find((j) => j.personId === personId);
@@ -186,13 +192,13 @@ export function GenerationNotice({ personId }: { personId: string }) {
         percent={job.status === 'running' && job.total ? (job.done / job.total) * 100 : undefined}
         label={
           job.status === 'queued'
-            ? 'モラボットの順番待ちです'
-            : 'モラボットがこの人の文章を作成中です'
+            ? t('モラボットの順番待ちです')
+            : t('モラボットがこの人の文章を作成中です')
         }
-        detail={job.status === 'running' ? jobLabel(job) : undefined}
+        detail={job.status === 'running' ? jobLabel(job, t) : undefined}
       />
       <p className="mt-2 text-sm text-ink-500">
-        完了した項目から順に表示されます。作成中の項目は上書きされるため、完了するまで編集はお待ちください。
+        {t('完了した項目から順に表示されます。作成中の項目は上書きされるため、完了するまで編集はお待ちください。')}
       </p>
     </div>
   );

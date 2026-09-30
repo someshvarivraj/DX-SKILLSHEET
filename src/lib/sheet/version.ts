@@ -153,6 +153,8 @@ export async function finaliseVersion(versionId: string, userId: string) {
         fieldCode: v.field.code,
         fieldName: v.field.nameJa,
         sectionName: v.field.section.nameJa,
+        fieldNameEn: v.field.nameEn,
+        sectionNameEn: v.field.section.nameEn,
       })),
     };
   }

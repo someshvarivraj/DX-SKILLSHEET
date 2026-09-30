@@ -256,7 +256,8 @@ body {
   outline-offset: 1px;
 }
 /* .sidebar prefix: .icon-btn (defined later) would otherwise show it. */
-.sidebar .sidebar-logout-icon {
+.sidebar .sidebar-logout-icon,
+.sidebar-lang-compact {
   display: none;
 }
 @media (min-width: 1024px) {
@@ -283,6 +284,10 @@ body {
   }
   html[data-sidebar='closed'] .sidebar-foot {
     padding: 0.75rem 0.55rem;
+  }
+  html[data-sidebar='closed'] .sidebar-lang-compact {
+    display: flex;
+    justify-content: center;
   }
   html[data-sidebar='closed'] .sidebar .sidebar-logout-icon {
     display: grid;
@@ -751,6 +756,45 @@ html[data-split] .sheet-toolbar .btn {
   min-height: 1.9rem;
   padding: 0.2rem 0.7rem;
   font-size: 0.8125rem;
+}
+
+/* 🇯🇵 日本語 / 🇬🇧 English (language-switcher.tsx). */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-700);
+  cursor: pointer;
+}
+.lang-switch:hover {
+  border-color: var(--color-brand-300);
+}
+.lang-switch-compact {
+  padding: 0.35rem;
+}
+.lang-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: auto;
+  min-width: 9rem;
+  margin: 0;
+  list-style: none;
+}
+.lang-menu-down {
+  top: calc(100% + 4px);
+  bottom: auto;
+  right: 0;
+  left: auto;
+}
+.flag {
+  flex: none;
 }
 
 /* The sheet's progress, in the toolbar. */

@@ -7,6 +7,7 @@ import { SHEET_STYLES, SkillSheetDocument } from '@/components/sheet-document';
 import { PreviewStage } from '@/components/editor/preview-stage';
 import { STATUS_LABELS } from '@/lib/sheet/version';
 import { withBasePath } from '@/lib/base-path';
+import { getLang, getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,8 @@ export default async function PreviewPage({
   const { personId } = await params;
   const { preset, tab, embed } = await searchParams;
   const user = await getCurrentUser();
+  const t = await getT();
+  const lang = await getLang();
   if (!user) redirect('/login');
   if (!canAccessPerson(user, personId)) notFound();
 
@@ -77,16 +80,16 @@ export default async function PreviewPage({
                 href={withBasePath(`/api/people/${personId}/pdf`)}
                 className="btn btn-sm btn-primary"
               >
-                PDFをダウンロード
+                {t('PDFをダウンロード')}
               </a>
             ) : (
               <button
                 type="button"
                 className="btn btn-sm btn-secondary"
                 disabled
-                title="PDFは確定版のみ出力できます。先に「確定する」を押してください。"
+                title={t('PDFは確定版のみ出力できます。先に「確定する」を押してください。')}
               >
-                PDFをダウンロード
+                {t('PDFをダウンロード')}
               </button>
             )
           ) : null
@@ -104,33 +107,36 @@ export default async function PreviewPage({
     <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="page-title text-base">
-          プレビュー: {model.person.fullNameKatakana ?? model.person.fullNameEnglish}
+          {t('プレビュー')}:{' '}
+          {lang === 'en'
+            ? model.person.fullNameEnglish
+            : (model.person.fullNameKatakana ?? model.person.fullNameEnglish)}
         </h1>
         <span className="badge badge-draft">
-          {STATUS_LABELS[model.version.status]} 第{model.version.versionNo}版
+          {t(STATUS_LABELS[model.version.status]!)} {t('第{n}版', { n: model.version.versionNo })}
         </span>
-        <span className="text-xs text-ink-500">PDFと同じ見た目で表示しています。</span>
+        <span className="text-xs text-ink-500">{t('PDFと同じ見た目で表示しています。')}</span>
       </div>
 
       <PreviewStage
         toolbar={
           <>
             <Link href={backHref} scroll={false} className="btn btn-secondary">
-              編集に戻る
+              {t('編集に戻る')}
             </Link>
             {can(user, 'sheet.export') ? (
               isFinal ? (
                 <a href={withBasePath(`/api/people/${personId}/pdf`)} className="btn btn-primary">
-                  PDFをダウンロード
+                  {t('PDFをダウンロード')}
                 </a>
               ) : (
                 <button
                   type="button"
                   className="btn btn-secondary"
                   disabled
-                  title="PDFは確定版のみ出力できる。編集画面で「確定する」を実行すること。"
+                  title={t('PDFは確定版のみ出力できます。先に「確定する」を押してください。')}
                 >
-                  PDFをダウンロード
+                  {t('PDFをダウンロード')}
                 </button>
               )
             ) : null}

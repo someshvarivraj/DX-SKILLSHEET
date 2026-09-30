@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { SectionView } from '@/lib/sheet/model';
 import { SectionPanel } from './section-panel';
 import { pinnedHeight } from './scroll-restore';
+import { useLang, useT } from '@/lib/i18n/client';
+import { pickName } from '@/lib/i18n';
 
 /**
  * The editing screen's section switcher: a plain list of sections down the
@@ -39,6 +41,8 @@ export function SectionTabs({
   /** Content shown in place of a field, keyed by field code. */
   fieldReplacements?: Record<string, React.ReactNode>;
 }) {
+  const t = useT();
+  const lang = useLang();
   const [activeCode, setActiveCode] = useState(
     sections.some((s) => s.code === initialCode) ? initialCode! : (sections[0]?.code ?? null),
   );
@@ -69,7 +73,7 @@ export function SectionTabs({
         <div
           className="section-nav"
           role="tablist"
-          aria-label="スキルシートの区分"
+          aria-label={t('スキルシートの区分')}
           aria-orientation="vertical"
         >
           {sections.map((section) => {
@@ -86,16 +90,16 @@ export function SectionTabs({
                 className="section-nav-item"
                 onClick={() => select(section.code)}
               >
-                <span className="section-nav-label">{section.nameJa}</span>
+                <span className="section-nav-label">{pickName(lang, section.nameJa, section.nameEn)}</span>
                 {todo > 0 ? (
-                  <span className="section-nav-count" title={`未確認 ${todo}項目`}>
+                  <span className="section-nav-count" title={t('未確認 {n}項目', { n: todo })}>
                     {todo}
                   </span>
                 ) : hasValues ? (
                   <span
                     className="section-nav-done"
-                    title="すべて確認済み"
-                    aria-label="すべて確認済み"
+                    title={t('すべて確認済み')}
+                    aria-label={t('すべて確認済み')}
                   >
                     ✓
                   </span>

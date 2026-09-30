@@ -8,6 +8,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { isLang, LANG_COOKIE, makeT } from '@/lib/i18n';
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -42,10 +43,15 @@ export function sendDownloadProblem(
     return;
   }
 
+  // The screen language, from the same cookie the pages use.
+  const cookieLang = req.cookies[LANG_COOKIE];
+  const lang = isLang(cookieLang) ? cookieLang : 'ja';
+  const t = makeT(lang);
+
   const items = problem.items ?? [];
   const list =
     items.length > 0
-      ? `<p class="lead">確認が済んでいない項目（${items.length}件）</p>
+      ? `<p class="lead">${escape(t('確認が済んでいない項目（{n}件）', { n: items.length }))}</p>
          <ul>${items
            .map(
              (i) =>
@@ -55,16 +61,16 @@ export function sendDownloadProblem(
       : '';
 
   const back = problem.backHref
-    ? `<a class="btn" href="${escape(problem.backHref)}">${escape(problem.backLabel ?? '戻る')}</a>`
+    ? `<a class="btn" href="${escape(problem.backHref)}">${escape(t(problem.backLabel ?? '戻る'))}</a>`
     : '';
 
   res.status(problem.status);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.send(`<!doctype html>
-<html lang="ja"><head><meta charset="utf-8" />
+<html lang="${lang}"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>出力できません</title>
+<title>${escape(t('出力できません'))}</title>
 <style>
   :root { color-scheme: light; }
   body {
@@ -96,8 +102,8 @@ export function sendDownloadProblem(
   }
 </style></head>
 <body><div class="card">
-  <h1>${escape(problem.title)}</h1>
-  ${problem.detail ? `<p class="detail">${escape(problem.detail)}</p>` : ''}
+  <h1>${escape(t(problem.title))}</h1>
+  ${problem.detail ? `<p class="detail">${escape(t(problem.detail))}</p>` : ''}
   ${list}
   ${back}
 </div></body></html>`);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/lib/i18n/client';
 import { FileCode2, UploadCloud, X } from 'lucide-react';
 import { startTransition, useRef, useState } from 'react';
 import { useActionState } from 'react';
@@ -24,6 +25,7 @@ const initial: FormImportState = { step: 'idle' };
  * 「未割当の設問」panel, exactly as they do today.
  */
 export function FormScriptImport() {
+  const t = useT();
   const [previewState, previewAction, previewPending] = useActionState(
     previewFormScriptAction,
     initial,
@@ -66,7 +68,7 @@ export function FormScriptImport() {
   if (!open) {
     return (
       <button type="button" className="def-add" onClick={() => setOpen(true)}>
-        <FileCode2 size={16} aria-hidden /> Googleフォームのスクリプトを取り込む
+        <FileCode2 size={16} aria-hidden /> {t('Googleフォームのスクリプトを取り込む')}
       </button>
     );
   }
@@ -76,25 +78,21 @@ export function FormScriptImport() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-ink-900">
-            Googleフォームのスクリプトを取り込む
+            {t('Googleフォームのスクリプトを取り込む')}
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-500">
-            来年フォームが変わったときの、開発者を介さない取り込み方。
-            <code className="mx-1">create_iit_form_2027.gs</code>
-            のような、そのフォームを組み立てるApps Scriptファイルを選択する
-            （回答をエクスポートしたファイルではない）。まだどの項目にも
-            割り当てられていない設問は、セクション・項目として自動的に作成される。
-            既に項目がある設問はそのまま変更されないので、翌年分の差分だけを
-            取り込むときも安心して実行できる。作成後の名前・並び順・処理方法の
-            調整はこの画面から行う。
+            {t(
+              '来年フォームが変わったときの、開発者を介さない取り込み方。{example} のような、そのフォームを組み立てるApps Scriptファイルを選択する（回答をエクスポートしたファイルではない）。まだどの項目にも割り当てられていない設問は、セクション・項目として自動的に作成される。既に項目がある設問はそのまま変更されないので、翌年分の差分だけを取り込むときも安心して実行できる。作成後の名前・並び順・処理方法の調整はこの画面から行う。',
+              { example: 'create_iit_form_2027.gs' },
+            )}
           </p>
         </div>
         <button
           type="button"
           className="icon-btn"
           onClick={() => setOpen(false)}
-          aria-label="閉じる"
-          title="閉じる"
+          aria-label={t('閉じる')}
+          title={t('閉じる')}
         >
           <X size={18} aria-hidden />
         </button>
@@ -103,7 +101,7 @@ export function FormScriptImport() {
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div className="min-w-[260px] flex-1">
           <label className="field-label" htmlFor="gs-file">
-            フォームのスクリプト（.gs）
+            {t('フォームのスクリプト（.gs）')}
           </label>
           <div
             className={`dropzone ${dragActive ? 'dropzone-active' : ''}`}
@@ -143,7 +141,7 @@ export function FormScriptImport() {
                 <button
                   type="button"
                   className="text-ink-400 hover:text-ink-700"
-                  aria-label="選択を解除する"
+                  aria-label={t('選択を解除する')}
                   onClick={(e) => {
                     e.stopPropagation();
                     chooseFile(null);
@@ -156,24 +154,24 @@ export function FormScriptImport() {
             ) : (
               <>
                 <UploadCloud size={24} aria-hidden className="dropzone-icon" />
-                <p className="dropzone-title">ドラッグ、またはクリックして選択</p>
-                <p className="dropzone-hint">.gs ファイル</p>
+                <p className="dropzone-title">{t('ドラッグ、またはクリックして選択')}</p>
+                <p className="dropzone-hint">{t('.gs ファイル')}</p>
               </>
             )}
           </div>
         </div>
         <div className="w-32">
           <label className="field-label" htmlFor="revision-code">
-            年度（任意）
+            {t('年度（任意）')}
           </label>
           <input
             id="revision-code"
             className="input"
-            placeholder="例：2027"
+            placeholder={t('例：2027')}
             value={revisionCode}
             onChange={(e) => setRevisionCode(e.target.value)}
           />
-          <p className="field-hint">空欄ならファイル名から自動判定する。</p>
+          <p className="field-hint">{t('空欄ならファイル名から自動判定する。')}</p>
         </div>
         <button
           type="button"
@@ -181,46 +179,46 @@ export function FormScriptImport() {
           disabled={busy || !file}
           onClick={() => submit('preview', previewAction)}
         >
-          {previewPending ? '確認中…' : '内容を確認する'}
+          {previewPending ? t('確認中…') : t('内容を確認する')}
         </button>
       </div>
 
       {error ? (
         <p className="mt-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
-          {error}
+          {t(error)}
         </p>
       ) : null}
 
       {importState.step === 'done' && importState.message ? (
         <p className="mt-3 rounded-lg border border-final-line bg-final-bg px-3 py-2 text-xs text-final-ink">
-          {importState.message}
+          {t(importState.message)}
         </p>
       ) : null}
 
       {preview?.catalogue ? (
         <div className="mt-3 rounded-lg border border-draft-line bg-draft-bg p-3">
           <p className="text-xs font-medium text-draft-ink">
-            確認結果: {preview.catalogue.title ?? preview.catalogue.sourceFile}
-            （設問{preview.catalogue.questions.length}件）
+            {t('確認結果: {name}（設問{n}件）', {
+              name: preview.catalogue.title ?? preview.catalogue.sourceFile,
+              n: preview.catalogue.questions.length,
+            })}
           </p>
           <p className="mt-1 text-xs text-draft-ink">
-            この確認では何も保存されていない。新規{preview.newCodes?.length ?? 0}件、
-            既存の更新{preview.knownCodeCount ?? 0}件。
-            {(preview.toCreateCount ?? 0) > 0 ? (
-              <>
-                {' '}
-                まだどの項目にも割り当てられていない設問{preview.toCreateCount}件は、
-                取り込みと同時に新しいセクション・項目として自動的に作成される
-                （既に項目がある設問は変更されない）。
-              </>
-            ) : (
-              ' 新しく作成される項目はない（すべて既存の項目で扱われている）。'
-            )}
-            内容に問題がなければ、下の「この内容で取り込む」を実行すること。
+            {t('この確認では何も保存されていない。新規{a}件、既存の更新{b}件。', {
+              a: preview.newCodes?.length ?? 0,
+              b: preview.knownCodeCount ?? 0,
+            })}{' '}
+            {(preview.toCreateCount ?? 0) > 0
+              ? t(
+                  'まだどの項目にも割り当てられていない設問{n}件は、取り込みと同時に新しいセクション・項目として自動的に作成される（既に項目がある設問は変更されない）。',
+                  { n: preview.toCreateCount ?? 0 },
+                )
+              : t('新しく作成される項目はない（すべて既存の項目で扱われている）。')}{' '}
+            {t('内容に問題がなければ、下の「この内容で取り込む」を実行すること。')}
           </p>
           {previewIsStale ? (
             <p className="mt-2 text-xs text-[#b03a22]">
-              選択中のファイルは、上の確認結果とは別のファイルである。もう一度「内容を確認する」を実行すること。
+              {t('選択中のファイルは、上の確認結果とは別のファイルである。もう一度「内容を確認する」を実行すること。')}
             </p>
           ) : (
             <button
@@ -229,7 +227,7 @@ export function FormScriptImport() {
               disabled={busy || previewIsStale}
               onClick={() => submit('import', importAction)}
             >
-              {importPending ? '取り込み中…' : 'この内容で取り込む'}
+              {importPending ? t('取り込み中…') : t('この内容で取り込む')}
             </button>
           )}
         </div>

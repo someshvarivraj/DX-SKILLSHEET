@@ -6,6 +6,7 @@ import { loadSheetModel } from '@/lib/sheet/model';
 import { getOrCreateSkillSheet } from '@/lib/sheet/version';
 import { SectionPanel } from '@/components/editor/section-panel';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
+import { getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +20,11 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MySheetPage() {
   const user = await requireUser();
+  const t = await getT();
   if (!user.personId) {
     return (
       <div className="card p-10 text-center text-sm text-ink-500">
-        このアカウントには対象者が紐付いていません。管理者に連絡してください。
+        {t('このアカウントには対象者が紐付いていません。管理者に連絡してください。')}
       </div>
     );
   }
@@ -35,11 +37,11 @@ export default async function MySheetPage() {
   return (
     <div className="space-y-4">
       <div className="card bg-brand-50 px-4 py-3 text-sm text-ink-700">
-        <p className="font-medium">自分の経験を追加・修正できます。</p>
+        <p className="font-medium">{t('自分の経験を追加・修正できます。')}</p>
         <p className="mt-1 text-xs leading-relaxed text-ink-700">
-          編集できるのは「インターンシップ」と「プロジェクト」です。新しい現場での経験は
-          「＋ 追加」から登録し、内容を入力したあと「確認を依頼する」を押してください。
-          管理者が確認して確定します。氏名や学歴など他の項目の修正が必要な場合は管理者に連絡してください。
+          {t(
+            '編集できるのは「インターンシップ」と「プロジェクト」です。新しい現場での経験は「＋ 追加」から登録し、内容を入力したあと「確認を依頼する」を押してください。管理者が確認して確定します。氏名や学歴など他の項目の修正が必要な場合は管理者に連絡してください。',
+          )}
         </p>
       </div>
 
@@ -65,7 +67,7 @@ export default async function MySheetPage() {
 
       <div className="card px-4 py-3 text-xs text-ink-500">
         <Link href={`/people/${user.personId}/preview`} className="text-brand-500 underline">
-          自分のスキルシート全体をプレビューで確認する
+          {t('自分のスキルシート全体をプレビューで確認する')}
         </Link>
       </div>
     </div>

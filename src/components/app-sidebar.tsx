@@ -7,6 +7,8 @@ import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 import { NavLink } from './nav-link';
 import { MoraBot } from './morabot';
+import { useT } from '@/lib/i18n/client';
+import { LanguageSwitcher } from './language-switcher';
 
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
 
@@ -37,6 +39,7 @@ export function AppShell({
   note?: string | null;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [savedDocked, setSavedDocked] = useState(true);
   // On a person's sheet the menu starts folded, so the form (and the preview
@@ -91,30 +94,26 @@ export function AppShell({
         <div className="sidebar-scrim" onClick={() => setDrawerOpen(false)} aria-hidden />
       ) : null}
 
-      <aside id="app-menu" className={`sidebar ${drawerOpen ? 'sidebar-open' : ''}`} aria-label="メニュー">
+      <aside id="app-menu" className={`sidebar ${drawerOpen ? 'sidebar-open' : ''}`} aria-label={t('メニュー')}>
         <div className="sidebar-head">
           <Link href="/" className="wordmark">
             <span className="mark mark-bot" aria-hidden>
               <MoraBot headOnly size={26} title="" />
             </span>
-            <span>
-              スキルシート
-              <br />
-              管理システム
-            </span>
+            <span>{t('スキルシート管理システム')}</span>
           </Link>
           <button
             type="button"
             className="sidebar-collapse"
             onClick={toggleDocked}
-            aria-label={docked ? 'メニューをたたむ' : 'メニューを広げる'}
-            title={docked ? 'メニューをたたむ' : 'メニューを広げる'}
+            aria-label={docked ? t('メニューをたたむ') : t('メニューを広げる')}
+            title={docked ? t('メニューをたたむ') : t('メニューを広げる')}
           >
             {docked ? <PanelLeftClose size={18} aria-hidden /> : <PanelLeftOpen size={18} aria-hidden />}
           </button>
         </div>
 
-        <nav className="sidebar-nav" aria-label="主要メニュー">
+        <nav className="sidebar-nav" aria-label={t('主要メニュー')}>
           {items.map((item) => (
             <NavLink key={item.href} href={item.href} title={item.label}>
               {ICONS[item.icon]}
@@ -124,6 +123,12 @@ export function AppShell({
         </nav>
 
         <div className="sidebar-foot">
+          <div className="sidebar-foot-full mb-3">
+            <LanguageSwitcher />
+          </div>
+          <div className="sidebar-lang-compact mb-2">
+            <LanguageSwitcher compact />
+          </div>
           {/* A plain form action, not next/link's href — Next does not
               rewrite this for the base path on its own. */}
           <form action={withBasePath('/auth/logout')} method="post">
@@ -132,14 +137,14 @@ export function AppShell({
               <p className="sidebar-user-name">{userName}</p>
               <p className="sidebar-user-role">{userRole}</p>
               <button type="submit" className="btn btn-secondary mt-2.5 w-full">
-                ログアウト
+                {t('ログアウト')}
               </button>
             </div>
             <button
               type="submit"
               className="icon-btn sidebar-logout-icon"
-              aria-label="ログアウト"
-              title={`${userName}（${userRole}）— ログアウト`}
+              aria-label={t('ログアウト')}
+              title={`${userName}（${userRole}）— ${t('ログアウト')}`}
             >
               <LogOut size={18} aria-hidden />
             </button>
@@ -152,7 +157,7 @@ export function AppShell({
           <button
             type="button"
             className="icon-btn"
-            aria-label="メニューを開く"
+            aria-label={t('メニューを開く')}
             aria-controls="app-menu"
             aria-expanded={drawerOpen}
             onClick={() => setDrawerOpen(true)}
@@ -165,8 +170,10 @@ export function AppShell({
             <span className="mark mark-bot" aria-hidden>
               <MoraBot headOnly size={26} title="" />
             </span>
-            スキルシート管理システム
+            {t('スキルシート管理システム')}
           </Link>
+          <span className="flex-1" />
+          <LanguageSwitcher compact direction="down" />
         </header>
         <main className="page">{children}</main>
       </div>

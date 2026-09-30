@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
 import { MoraBot } from '@/components/morabot';
+import { useLang, useT } from '@/lib/i18n/client';
+import { pickName } from '@/lib/i18n';
 import {
   generateFieldAction,
   loadHistoryAction,
@@ -53,6 +55,8 @@ export function FieldEditor({
   recordId?: string | null;
   readOnly?: boolean;
 }) {
+  const t = useT();
+  const lang = useLang();
   const [value, setValue] = useState(field.valueJa);
   // What the server last told us this field holds. When a server action changes
   // it — a regeneration, a revert, or the save-time Japanese normalisation —
@@ -167,7 +171,7 @@ export function FieldEditor({
   const menuItems: MenuEntry[] = [];
   if (!readOnly && actions.regenerate) {
     menuItems.push({
-      label: 'AIで作り直す',
+      label: t('AIで作り直す'),
       disabled,
       onClick: () =>
         runAi(() => generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode })),
@@ -175,27 +179,27 @@ export function FieldEditor({
   }
   if (!readOnly && actions.regenerateWithInstructions) {
     menuItems.push({
-      label: '指示してAIで作り直す',
+      label: t('指示してAIで作り直す'),
       disabled,
       onClick: () => togglePanel('prompt'),
     });
   }
   if (actions.showOriginal && field.sourceText) {
     menuItems.push({
-      label: panel === 'source' ? '回答の原文を隠す' : '回答の原文を見る',
+      label: panel === 'source' ? t('回答の原文を隠す') : t('回答の原文を見る'),
       onClick: () => togglePanel('source'),
     });
   }
   if (field.valueId) {
     menuItems.push({
-      label: `変更履歴${field.historyCount > 0 ? `（${field.historyCount}）` : ''}`,
+      label: t('変更履歴') + (field.historyCount > 0 ? `（${field.historyCount}）` : ''),
       onClick: openHistory,
     });
   }
   if (field.valueId && !readOnly) {
     menuItems.push({ separator: true });
     menuItems.push({
-      label: field.isLocked ? 'ロックを解除する' : 'ロックする（AIで上書きさせない）',
+      label: field.isLocked ? t('ロックを解除する') : t('ロックする（AIで上書きさせない）'),
       disabled: pending,
       onClick: () =>
         run(async () =>
@@ -208,7 +212,7 @@ export function FieldEditor({
     });
     if (field.displayToggle) {
       menuItems.push({
-        label: field.isDisplayed ? 'PDFに載せない' : 'PDFに載せる',
+        label: field.isDisplayed ? t('PDFに載せない') : t('PDFに載せる'),
         disabled: pending,
         onClick: () =>
           run(async () =>
@@ -232,20 +236,20 @@ export function FieldEditor({
     >
       <div className="field-label-row">
         <label className="field-name" htmlFor={`input-${field.id}${recordId ?? ''}`}>
-          {field.nameJa}
+          {pickName(lang, field.nameJa, field.nameEn)}
         </label>
         <button
           type="button"
           className="field-help-btn"
-          aria-label="この項目について"
+          aria-label={t('この項目について')}
           aria-expanded={panel === 'help'}
           onClick={() => togglePanel('help')}
         >
           ?
         </button>
-        {field.isLocked ? <span className="tag">ロック中</span> : null}
+        {field.isLocked ? <span className="tag">{t('ロック中')}</span> : null}
         {field.displayToggle && !field.isDisplayed ? (
-          <span className="tag">PDFに載せない</span>
+          <span className="tag">{t('PDFに載せない')}</span>
         ) : null}
 
         <span className="flex-1" />
@@ -253,7 +257,8 @@ export function FieldEditor({
         <SaveIndicator state={saveState} />
         {hasTarget ? (
           <span className={`field-count ${overLimit ? 'field-count-over' : ''}`}>
-            {length}字{field.targetLengthMax ? ` / 目安${field.targetLengthMax}字` : ''}
+            {t('{n}字', { n: length })}
+            {field.targetLengthMax ? t(' / 目安{n}字', { n: field.targetLengthMax }) : ''}
           </span>
         ) : null}
 
@@ -277,7 +282,7 @@ export function FieldEditor({
                 )
               }
             />
-            {field.isReviewed ? '確認済み' : '確認'}
+            {field.isReviewed ? t('確認済み') : t('確認')}
           </label>
         ) : null}
 
@@ -289,11 +294,11 @@ export function FieldEditor({
           {field.helpText ? <p>{field.helpText}</p> : null}
           <p className="text-xs text-ink-500">
             {field.includeInPdf
-              ? 'スキルシート（PDF）に載る項目です。'
-              : 'スキルシート（PDF）には載りません。'}
+              ? t('スキルシート（PDF）に載る項目です。')
+              : t('スキルシート（PDF）には載りません。')}
             {field.sourceCodes.length > 0
-              ? ` 元になる設問：${field.sourceCodes.join('、')}`
-              : ' 手で入力する項目です。'}
+              ? t(' 元になる設問：{codes}', { codes: field.sourceCodes.join('、') })
+              : t(' 手で入力する項目です。')}
           </p>
         </div>
       ) : null}
@@ -327,22 +332,22 @@ export function FieldEditor({
       {aiBusy ? (
         <p className="field-msg flex items-center gap-2 !text-brand-500">
           <MoraBot mood="think" size={28} animate title="" />
-          モラボットが文章を作成中です…
+          {t('モラボットが文章を作成中です…')}
         </p>
       ) : null}
       {[...field.styleIssues.map((i) => i.message), ...warnings].map((message, i) => (
         <p key={i} className="field-msg">
-          ⚠ {message}
+          ⚠ {t(message)}
         </p>
       ))}
-      {notice ? <p className="field-msg text-ink-700">{notice}</p> : null}
+      {notice ? <p className="field-msg text-ink-700">{t(notice)}</p> : null}
 
       {panel === 'prompt' ? (
         <div className="field-extra">
           <textarea
             className="textarea"
             rows={2}
-            placeholder="例：もう少し短くまとめてください／専門用語を減らしてください"
+            placeholder={t('例：もう少し短くまとめてください／専門用語を減らしてください')}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
@@ -365,10 +370,10 @@ export function FieldEditor({
                 })
               }
             >
-              この指示で作り直す
+              {t('この指示で作り直す')}
             </button>
             <button type="button" className="btn btn-quiet" onClick={() => setPanel(null)}>
-              やめる
+              {t('やめる')}
             </button>
           </div>
         </div>
@@ -383,17 +388,17 @@ export function FieldEditor({
       {panel === 'history' ? (
         <div className="field-extra space-y-2">
           {history === null ? (
-            <p className="text-xs text-ink-400">読み込み中…</p>
+            <p className="text-xs text-ink-400">{t('読み込み中…')}</p>
           ) : history.length === 0 ? (
-            <p className="text-xs text-ink-400">履歴はまだありません。</p>
+            <p className="text-xs text-ink-400">{t('履歴はまだありません。')}</p>
           ) : (
             history.map((entry) => (
               <div key={entry.id} className="border-b border-ink-100 pb-2 last:border-0 last:pb-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
                   <span className="font-semibold text-ink-700">
-                    {CHANGE_LABELS[entry.changeType] ?? entry.changeType}
+                    {t(CHANGE_LABELS[entry.changeType] ?? entry.changeType)}
                   </span>
-                  <span>{new Date(entry.createdAt).toLocaleString('ja-JP')}</span>
+                  <span>{new Date(entry.createdAt).toLocaleString(t('ja-JP'))}</span>
                   {entry.changedBy ? <span>{entry.changedBy}</span> : null}
                   <span className="flex-1" />
                   {!readOnly ? (
@@ -406,13 +411,13 @@ export function FieldEditor({
                         )
                       }
                     >
-                      この内容に戻す
+                      {t('この内容に戻す')}
                     </button>
                   ) : null}
                 </div>
-                {entry.prompt ? <p className="text-xs text-ink-500">指示: {entry.prompt}</p> : null}
+                {entry.prompt ? <p className="text-xs text-ink-500">{t('指示')}: {entry.prompt}</p> : null}
                 <p className="whitespace-pre-wrap text-sm text-ink-700">
-                  {entry.valueJa || '（空欄）'}
+                  {entry.valueJa || t('（空欄）')}
                 </p>
               </div>
             ))
@@ -424,10 +429,11 @@ export function FieldEditor({
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
-  if (state === 'saving') return <span className="save-state">保存中…</span>;
-  if (state === 'saved') return <span className="save-state save-state-ok">✓ 保存しました</span>;
+  const t = useT();
+  if (state === 'saving') return <span className="save-state">{t('保存中…')}</span>;
+  if (state === 'saved') return <span className="save-state save-state-ok">✓ {t('保存しました')}</span>;
   if (state === 'error')
-    return <span className="save-state save-state-error">保存できませんでした</span>;
+    return <span className="save-state save-state-error">{t('保存できませんでした')}</span>;
   return null;
 }
 
@@ -438,11 +444,12 @@ type MenuEntry =
 /** The ⋯ button and its drop-down of less common actions. */
 export function FieldMenu({
   items,
-  label = 'その他の操作',
+  label,
 }: {
   items: MenuEntry[];
   label?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -470,7 +477,7 @@ export function FieldMenu({
       <button
         type="button"
         className="icon-btn"
-        aria-label={label}
+        aria-label={label ?? t('その他の操作')}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}

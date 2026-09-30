@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useT } from '@/lib/i18n/client';
 
 /** A4 width in CSS pixels: 210mm at the CSS reference of 96dpi. */
 const A4_PX = (210 * 96) / 25.4;
@@ -45,6 +46,7 @@ export function PreviewStage({
    */
   compact?: boolean;
 }) {
+  const t = useT();
   const stageRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -127,8 +129,8 @@ export function PreviewStage({
             className="btn btn-sm btn-quiet"
             onClick={() => step(-1)}
             disabled={zoom <= STEPS[0]}
-            aria-label="縮小"
-            title="縮小"
+            aria-label={t('縮小')}
+            title={t('縮小')}
           >
             −
           </button>
@@ -140,8 +142,8 @@ export function PreviewStage({
             className="btn btn-sm btn-quiet"
             onClick={() => step(1)}
             disabled={zoom >= STEPS[STEPS.length - 1]}
-            aria-label="拡大"
-            title="拡大"
+            aria-label={t('拡大')}
+            title={t('拡大')}
           >
             ＋
           </button>
@@ -149,18 +151,18 @@ export function PreviewStage({
             type="button"
             className={`btn btn-sm ${fitting ? 'btn-secondary' : 'btn-quiet'}`}
             onClick={() => setFitting(true)}
-            title="用紙の幅を枠に合わせる"
+            title={t('用紙の幅を枠に合わせる')}
           >
-            幅に合わせる
+            {t('幅に合わせる')}
           </button>
           <span className="flex-1" />
           <button
             type="button"
             className="btn btn-sm btn-quiet"
             onClick={toggleFullscreen}
-            title="スキルシートだけを画面いっぱいに表示する（Escで戻る）"
+            title={t('スキルシートだけを画面いっぱいに表示する（Escで戻る）')}
           >
-            {isFullscreen ? '全画面を終了' : '全画面表示'}
+            {isFullscreen ? t('全画面を終了') : t('全画面表示')}
           </button>
           {toolbar}
         </div>
@@ -193,8 +195,8 @@ export function PreviewStage({
             className="btn btn-secondary"
             onClick={() => step(-1)}
             disabled={zoom <= STEPS[0]}
-            aria-label="縮小"
-            title="縮小"
+            aria-label={t('縮小')}
+            title={t('縮小')}
           >
             −
           </button>
@@ -206,8 +208,8 @@ export function PreviewStage({
             className="btn btn-secondary"
             onClick={() => step(1)}
             disabled={zoom >= STEPS[STEPS.length - 1]}
-            aria-label="拡大"
-            title="拡大"
+            aria-label={t('拡大')}
+            title={t('拡大')}
           >
             ＋
           </button>
@@ -217,9 +219,9 @@ export function PreviewStage({
           type="button"
           className={`btn ${fitting ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setFitting(true)}
-          title={`用紙の幅を画面に合わせる（最大${Math.round(MAX_FIT * 100)}%）`}
+          title={t('用紙の幅を画面に合わせる（最大{n}%）', { n: Math.round(MAX_FIT * 100) })}
         >
-          幅に合わせる
+          {t('幅に合わせる')}
         </button>
         <button
           type="button"
@@ -228,23 +230,23 @@ export function PreviewStage({
             setFitting(false);
             setZoom(1);
           }}
-          title="実寸（100%）で表示する"
+          title={t('実寸（100%）で表示する')}
         >
-          実寸
+          {t('実寸')}
         </button>
 
         <span className="flex-1" />
 
         {isFullscreen ? (
-          <span className="text-xs text-white/70">Escキーで全画面表示を終了する</span>
+          <span className="text-xs text-white/70">{t('Escキーで全画面表示を終了する')}</span>
         ) : null}
         <button
           type="button"
           className="btn btn-secondary"
           onClick={toggleFullscreen}
-          title="スキルシートだけを画面いっぱいに表示する"
+          title={t('スキルシートだけを画面いっぱいに表示する')}
         >
-          {isFullscreen ? '全画面表示を終了' : '全画面表示'}
+          {isFullscreen ? t('全画面表示を終了') : t('全画面表示')}
         </button>
         {isFullscreen ? null : toolbar}
       </div>

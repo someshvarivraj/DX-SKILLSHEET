@@ -5,6 +5,8 @@ import type { RecordKind } from '@prisma/client';
 import type { SectionView } from '@/lib/sheet/model';
 import { FieldEditor, FieldMenu } from './field-editor';
 import { MoraBot, MoraBotProgress } from '@/components/morabot';
+import { useLang, useT } from '@/lib/i18n/client';
+import { pickName } from '@/lib/i18n';
 import {
   addRecordAction,
   deleteRecordAction,
@@ -42,6 +44,9 @@ export function SectionPanel({
    */
   replacements?: Record<string, React.ReactNode>;
 }) {
+  const t = useT();
+  const lang = useLang();
+  const sectionName = pickName(lang, section.nameJa, section.nameEn);
   const [notice, setNotice] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
@@ -88,25 +93,28 @@ export function SectionPanel({
       <header className="panel-head">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="panel-title">{section.nameJa}</h2>
+            <h2 className="panel-title">{sectionName}</h2>
             {section.document === 'SUPPLEMENT' ? (
               // Without this an operator could reasonably assume everything on
               // this screen reaches the skill sheet. These sections never do.
               <span
                 className="tag"
-                title="スキルシートには載らず、社内用の補足資料にだけ載ります。"
+                title={t('スキルシートには載らず、社内用の補足資料にだけ載ります。')}
               >
-                社内用（シートに載りません）
+                {t('社内用（シートに載りません）')}
               </span>
             ) : null}
-            {!section.isVisible ? <span className="tag">非表示</span> : null}
+            {!section.isVisible ? <span className="tag">{t('非表示')}</span> : null}
           </div>
           {section.kind === 'REPEATING' ? (
             <p className="panel-head-meta">
-              {section.records.length}件のうち{displayedCount}件をシートに掲載（最大
-              {section.maxDisplayed}件）
+              {t('{n}件のうち{shown}件をシートに掲載（最大{max}件）', {
+                n: section.records.length,
+                shown: displayedCount,
+                max: section.maxDisplayed,
+              })}
             </p>
-          ) : section.description ? (
+          ) : section.description && lang === 'ja' ? (
             <p className="panel-head-meta">{section.description}</p>
           ) : null}
         </div>
@@ -122,15 +130,15 @@ export function SectionPanel({
               run(async () => addRecordAction(personId, section.recordKind as RecordKind))
             }
           >
-            ＋ 追加
+            ＋ {t('追加')}
           </button>
         ) : null}
         {!sectionReadOnly ? (
           <FieldMenu
-            label="このセクションの操作"
+            label={t('このセクションの操作')}
             items={[
               {
-                label: pending ? '作成中…' : 'このセクションをAIでまとめて作成',
+                label: pending ? t('作成中…') : t('このセクションをAIでまとめて作成'),
                 disabled: pending,
                 onClick: () => {
                   // Before the transition, so the progress shows at once.
@@ -155,19 +163,19 @@ export function SectionPanel({
       {generating ? (
         <div className="border-b border-ink-100 px-5 py-4">
           <MoraBotProgress
-            label="モラボットがこのセクションの文章を作成中です…"
-            detail="項目の数によって1〜2分かかります"
+            label={t('モラボットがこのセクションの文章を作成中です…')}
+            detail={t('項目の数によって1〜2分かかります')}
           />
         </div>
       ) : null}
       {notice ? (
         <p className="border-b border-ink-100 bg-final-bg px-5 py-2 text-sm text-final-ink">
-          {notice}
+          {t(notice)}
         </p>
       ) : null}
       {warnings.map((w, i) => (
         <p key={i} className="border-b border-ink-100 bg-warn-bg px-5 py-2 text-sm text-warn-ink">
-          ⚠ {w}
+          ⚠ {t(w)}
         </p>
       ))}
 
@@ -175,14 +183,15 @@ export function SectionPanel({
         section.records.length === 0 ? (
           <div className="flex items-center justify-center gap-3 px-5 py-10 text-sm text-ink-500">
             <MoraBot mood="explain" size={52} title="" />
-            まだ登録がありません。{canAdd ? '「＋ 追加」から登録できます。' : ''}
+            {t('まだ登録がありません。')}
+            {canAdd ? t('「＋ 追加」から登録できます。') : ''}
           </div>
         ) : (
           section.records.map((record, index) => (
             <div key={record.id} className="border-b border-ink-100 last:border-0">
               <div className="flex flex-wrap items-center gap-3 bg-sand-50 px-5 py-2.5">
                 <span className="text-sm font-bold text-ink-900">
-                  {index + 1}. {record.label || section.nameJa}
+                  {index + 1}. {record.label || sectionName}
                 </span>
                 <span className="flex-1" />
                 {/* Offered only to someone the server will actually let do
@@ -195,10 +204,10 @@ export function SectionPanel({
                       disabled={pending}
                       onChange={(e) => toggleDisplayed(record.id, e.target.checked)}
                     />
-                    シートに載せる
+                    {t('シートに載せる')}
                   </label>
                 ) : presetId ? (
-                  <span className="tag">{record.isDisplayed ? 'シートに掲載' : '未掲載'}</span>
+                  <span className="tag">{record.isDisplayed ? t('シートに掲載') : t('未掲載')}</span>
                 ) : null}
                 {!sectionReadOnly ? (
                   <button
@@ -208,7 +217,9 @@ export function SectionPanel({
                     onClick={() => {
                       if (
                         !window.confirm(
-                          `「${record.label || `${section.nameJa}${index + 1}`}」を削除します。よろしいですか？`,
+                          t('「{name}」を削除します。よろしいですか？', {
+                            name: record.label || `${sectionName}${index + 1}`,
+                          }),
                         )
                       )
                         return;
@@ -220,7 +231,7 @@ export function SectionPanel({
                       );
                     }}
                   >
-                    削除
+                    {t('削除')}
                   </button>
                 ) : null}
               </div>

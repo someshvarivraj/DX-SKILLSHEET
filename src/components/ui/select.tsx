@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/lib/i18n/client';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 export type SelectOption = {
@@ -30,7 +31,7 @@ export function Select({
   value,
   onChange,
   options,
-  placeholder = '選択してください',
+  placeholder,
   disabled = false,
   id,
   ariaLabel,
@@ -48,6 +49,7 @@ export function Select({
   searchFrom?: number;
   className?: string;
 }) {
+  const t = useT();
   const generatedId = useId();
   const listboxId = `${id ?? generatedId}-listbox`;
 
@@ -178,7 +180,7 @@ export function Select({
         onClick={() => setOpen((v) => !v)}
       >
         <span className={selected ? 'select-value' : 'select-placeholder'}>
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : (placeholder ?? t('選択してください'))}
           {selected?.hint ? <span className="select-hint">{selected.hint}</span> : null}
         </span>
         <span className="select-caret" aria-hidden>
@@ -204,8 +206,8 @@ export function Select({
                 className="input"
                 type="text"
                 value={query}
-                placeholder="絞り込む"
-                aria-label="選択肢を絞り込む"
+                placeholder={t('絞り込む')}
+                aria-label={t('選択肢を絞り込む')}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActiveIndex(0);
@@ -225,7 +227,7 @@ export function Select({
             className="select-list"
           >
             {visible.length === 0 ? (
-              <li className="select-empty">該当する選択肢がない</li>
+              <li className="select-empty">{t('該当する選択肢がない')}</li>
             ) : (
               visible.map((option, index) => {
                 const heading = option.group && option.group !== lastGroup ? option.group : null;
