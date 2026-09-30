@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { getDemoEnabled } from './demo-enabled';
 import { loginWithDemoAccount, requestLoginLink, type LoginState } from './actions';
+import { MoraBot } from '@/components/morabot';
 
 const initial: LoginState = {};
 
@@ -17,9 +18,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-sand-100 px-4 py-12">
       <div className="w-full max-w-md rise">
         <div className="mb-6 flex items-center justify-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500 text-sm font-bold text-white">
-            SS
-          </span>
+          <MoraBot mood={linkState.message ? 'happy' : linkState.error ? 'trouble' : 'default'} size={76} />
           <div>
             <p className="text-lg font-bold leading-tight text-ink-900">スキルシート管理システム</p>
             <p className="text-xs text-ink-500">モラブ阪神工業株式会社</p>

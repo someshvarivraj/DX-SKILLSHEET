@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 import { NavLink } from './nav-link';
+import { MoraBot } from './morabot';
 
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
 
@@ -93,8 +94,8 @@ export function AppShell({
       <aside id="app-menu" className={`sidebar ${drawerOpen ? 'sidebar-open' : ''}`} aria-label="メニュー">
         <div className="sidebar-head">
           <Link href="/" className="wordmark">
-            <span className="mark" aria-hidden>
-              SS
+            <span className="mark mark-bot" aria-hidden>
+              <MoraBot headOnly size={26} title="" />
             </span>
             <span>
               スキルシート
@@ -161,8 +162,8 @@ export function AppShell({
             </svg>
           </button>
           <Link href="/" className="wordmark">
-            <span className="mark" aria-hidden>
-              SS
+            <span className="mark mark-bot" aria-hidden>
+              <MoraBot headOnly size={26} title="" />
             </span>
             スキルシート管理システム
           </Link>

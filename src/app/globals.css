@@ -768,6 +768,136 @@ html[data-split] .sheet-toolbar .btn {
   background: var(--color-final-ink);
 }
 
+/* Shown while the AI is writing (generation-progress.tsx). */
+.ai-spinner {
+  display: inline-block;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-brand-100);
+  border-top-color: var(--color-brand-500);
+  animation: ai-spin 0.8s linear infinite;
+}
+.ai-spinner-sm {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-width: 1.5px;
+}
+@keyframes ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   モラボット (morabot.tsx)
+   --------------------------------------------------------------------------- */
+.morabot {
+  flex: none;
+  overflow: visible;
+}
+/* The logo mark: MoraBot's head instead of a coloured tile. */
+.wordmark .mark-bot {
+  background: transparent;
+  overflow: visible;
+}
+
+/* Busy: a gentle bob, and the antenna light pulses while thinking. */
+.morabot-busy {
+  animation: morabot-bob 0.9s ease-in-out infinite;
+}
+@keyframes morabot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8%);
+  }
+}
+.morabot-think .morabot-antenna {
+  animation: morabot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes morabot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.morabot-think .morabot-bubbles circle {
+  animation: morabot-pulse 1.5s ease-in-out infinite;
+}
+.morabot-think .morabot-bubbles circle:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.morabot-think .morabot-bubbles circle:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* The progress track MoraBot rides along. Room above it for MoraBot. */
+.morabot-progress {
+  width: 100%;
+}
+.morabot-track {
+  position: relative;
+  height: 8px;
+  margin-top: 44px;
+  margin-right: 20px;
+  margin-left: 20px;
+  border-radius: 999px;
+  background: var(--color-sand-200);
+}
+.morabot-bar {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.morabot-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-brand-400), var(--color-brand-500));
+  transition: width 0.6s ease;
+}
+.morabot-rider {
+  position: absolute;
+  bottom: 4px;
+  transform: translateX(-50%);
+  transition: left 0.6s ease;
+  line-height: 0;
+}
+/* Amount of work unknown: MoraBot walks to and fro, a short bar follows. */
+.morabot-fill-indeterminate {
+  position: absolute;
+  width: 30%;
+  animation: morabot-fill-walk 2.4s ease-in-out infinite alternate;
+}
+.morabot-rider-indeterminate {
+  animation: morabot-walk 2.4s ease-in-out infinite alternate;
+}
+@keyframes morabot-walk {
+  from {
+    left: 0%;
+  }
+  to {
+    left: 100%;
+  }
+}
+@keyframes morabot-fill-walk {
+  from {
+    left: 0%;
+    transform: translateX(-50%);
+  }
+  to {
+    left: 100%;
+    transform: translateX(-50%);
+  }
+}
+
 /* Status filter tabs on the people list. */
 .filter-tabs {
   display: flex;

@@ -6,6 +6,8 @@ import { can } from '@/lib/auth/permissions';
 import { STATUS_LABELS } from '@/lib/sheet/version';
 import { matchesPersonQuery } from '@/lib/people-search';
 import { PageHeader } from '@/components/page-header';
+import { MoraBot } from '@/components/morabot';
+import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,10 +103,13 @@ export default async function PeoplePage({
         }
       />
 
+      <GenerationBanner />
+
       {people.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-ink-500">まだ対象者がいません。</p>
-          <p className="mt-1 text-sm text-ink-400">
+        <div className="card flex flex-col items-center p-12 text-center">
+          <MoraBot mood="explain" size={110} title="" />
+          <p className="mt-4 font-bold text-ink-900">まだ対象者がいません。</p>
+          <p className="mt-1 text-sm text-ink-500">
             Googleフォームの回答ファイルを取り込むと、ここに一覧で表示されます。
           </p>
           <Link href="/admin/import" className="btn btn-primary mt-5">
@@ -151,8 +156,9 @@ export default async function PeoplePage({
           </div>
 
           {shown.length === 0 ? (
-            <div className="border-t border-ink-100 p-12 text-center">
-              <p className="text-ink-500">
+            <div className="flex flex-col items-center border-t border-ink-100 p-12 text-center">
+              <MoraBot mood="think" size={90} title="" />
+              <p className="mt-3 text-ink-700">
                 {query ? `「${query}」に一致する対象者はいません。` : '該当する対象者はいません。'}
               </p>
               <Link href="/people" className="btn btn-secondary mt-4">
@@ -188,6 +194,7 @@ export default async function PeoplePage({
                           >
                             {person.fullNameKatakana ?? person.fullNameEnglish}
                           </Link>
+                          <GenerationRowBadge personId={person.id} />
                           <div className="text-xs text-ink-500">{person.fullNameEnglish}</div>
                         </td>
                         <td className="tabular text-ink-700">{person.cohort ?? '—'}</td>

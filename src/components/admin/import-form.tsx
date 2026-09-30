@@ -10,6 +10,8 @@ import {
   type ImportActionState,
 } from '@/app/(app)/admin/import/actions';
 import { buildImportFormData } from '@/lib/import/form-data';
+import { refreshGenerationStatus } from '@/components/generation-progress';
+import { MoraBot, MoraBotProgress } from '@/components/morabot';
 
 const initial: ImportActionState = { step: 'idle' };
 
@@ -27,10 +29,7 @@ export function ImportForm() {
     previewImportAction,
     initial,
   );
-  const [importState, importAction, importPending] = useActionState(
-    runImportAction,
-    initial,
-  );
+  const [importState, importAction, importPending] = useActionState(runImportAction, initial);
 
   const [file, setFile] = useState<File | null>(null);
   const [generate, setGenerate] = useState(true);
@@ -64,6 +63,8 @@ export function ImportForm() {
     if (importState.step === 'done' && !importState.error) {
       chooseFile(null);
       if (inputRef.current) inputRef.current.value = '';
+      // Show the background AI work straight away rather than on the next tick.
+      if (importState.generationQueued) refreshGenerationStatus();
     }
   }, [importState]);
 
@@ -139,9 +140,7 @@ export function ImportForm() {
             ) : (
               <>
                 <UploadCloud size={28} aria-hidden className="dropzone-icon" />
-                <p className="dropzone-title">
-                  ファイルをここにドラッグ、またはクリックして選択
-                </p>
+                <p className="dropzone-title">ファイルをここにドラッグ、またはクリックして選択</p>
                 <p className="dropzone-hint">CSV または XLSX</p>
               </>
             )}
@@ -150,9 +149,7 @@ export function ImportForm() {
             <p className="field-hint text-[#b03a22]">{dropError}</p>
           ) : (
             <p id="file-hint" className="field-hint">
-              {file
-                ? null
-                : 'ファイルを選択すると、確認と取り込みができるようになる。'}
+              {file ? null : 'ファイルを選択すると、確認と取り込みができるようになる。'}
             </p>
           )}
         </div>
@@ -185,38 +182,55 @@ export function ImportForm() {
           </button>
         </div>
 
-        {previewState.error ? (
-          <p className="mt-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
-            {previewState.error}
-          </p>
+        {previewPending || importPending ? (
+          <div className="mt-4">
+            <MoraBotProgress
+              label={previewPending ? 'ファイルを読み込んでいます…' : '取り込んでいます…'}
+              detail="モラボットが作業中です"
+            />
+          </div>
         ) : null}
-        {importState.error ? (
-          <p className="mt-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
-            {importState.error}
-          </p>
-        ) : null}
+
+        {[previewState.error, importState.error].filter(Boolean).map((error, i) => (
+          <div
+            key={i}
+            className="mt-3 flex items-center gap-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]"
+            role="alert"
+          >
+            <MoraBot mood="trouble" size={44} title="" />
+            <p>{error}</p>
+          </div>
+        ))}
         {importState.message ? (
-          <div className="mt-3 rounded-lg border border-final-line bg-final-bg px-3 py-2 text-xs text-final-ink">
-            <p className="font-semibold">{importState.message}</p>
-            {importState.needsReview && importState.needsReview.length > 0 ? (
-              <div className="mt-2">
-                <p className="font-medium">
-                  すでに内容がある対象者です。差分を確認してください:
+          <div className="mt-3 flex gap-3 rounded-lg border border-final-line bg-final-bg px-3 py-2.5 text-sm text-final-ink">
+            <MoraBot mood="happy" size={52} title="" />
+            <div className="min-w-0">
+              <p className="font-semibold">{importState.message}</p>
+              {importState.generationQueued ? (
+                <p className="mt-1">
+                  新規の{importState.generationQueued}
+                  名について、AIによる文章の作成を開始しました（1名あたり数分）。
+                  進捗は下と対象者一覧に表示されます。この画面を閉じても作成は続きます。
                 </p>
-                <ul className="mt-1 list-inside list-disc">
-                  {importState.needsReview.map((p) => (
-                    <li key={p.personId}>
-                      <Link href={`/people/${p.personId}`} className="underline">
-                        {p.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            <Link href="/people" className="btn btn-secondary mt-2.5">
-              対象者一覧を開く
-            </Link>
+              ) : null}
+              {importState.needsReview && importState.needsReview.length > 0 ? (
+                <div className="mt-2">
+                  <p className="font-medium">すでに内容がある対象者です。差分を確認してください:</p>
+                  <ul className="mt-1 list-inside list-disc">
+                    {importState.needsReview.map((p) => (
+                      <li key={p.personId}>
+                        <Link href={`/people/${p.personId}`} className="underline">
+                          {p.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <Link href="/people" className="btn btn-secondary mt-2.5">
+                対象者一覧を開く
+              </Link>
+            </div>
           </div>
         ) : null}
       </div>
@@ -304,11 +318,13 @@ export function ImportForm() {
           <div className="card flex flex-wrap items-center gap-3 p-4">
             {previewIsStale ? (
               <p className="text-xs text-[#b03a22]">
-                選択中のファイル（{file?.name}）は、上の確認結果（{preview.fileName}）とは別のファイルである。もう一度「内容を確認する」を実行すること。
+                選択中のファイル（{file?.name}）は、上の確認結果（{preview.fileName}
+                ）とは別のファイルである。もう一度「内容を確認する」を実行すること。
               </p>
             ) : (
               <p className="text-xs text-ink-700">
-                上の{preview.totalRows}行を取り込む。既存の対象者の内容は自動では上書きされず、差分の確認対象になる。
+                上の{preview.totalRows}
+                行を取り込む。既存の対象者の内容は自動では上書きされず、差分の確認対象になる。
               </p>
             )}
             <span className="flex-1" />
