@@ -75,6 +75,12 @@ const schema = z.object({
   AI_MAX_TOKENS: z.coerce.number().int().positive().default(1500),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   /**
+   * How many fields a bulk generation (a section, or a new person on import)
+   * sends to the AI at once. A slow, capable model needs this: at ~20 s a
+   * field, one at a time would outlast the proxy timeout.
+   */
+  AI_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
+  /**
    * openai-compatible only, and only sent when set. Gemini 3.x "thinks"
    * before answering, and that hidden thinking is billed and counts against
    * AI_MAX_TOKENS; `low` measured at about half the tokens of the default with

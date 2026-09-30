@@ -14,7 +14,7 @@ import type { ImportSource, JlptLevel, RecordKind } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { UNNAMED_PERSON } from '@/lib/constants';
 import { recordAudit } from '@/lib/audit';
-import { generateSection } from '@/lib/sheet/fields';
+import { generateAllSections } from '@/lib/sheet/fields';
 import { getOrCreateSkillSheet, getEditableVersion } from '@/lib/sheet/version';
 import { createRecord } from '@/lib/sheet/records';
 import {
@@ -295,20 +295,14 @@ export async function runImport(params: {
       outcome.created++;
       if (params.generateOnFirstImport) {
         const version = await getEditableVersion(sheet.id, params.userId);
-        const sections = await prisma.sheetSection.findMany({
-          orderBy: { order: 'asc' },
+        await generateAllSections({
+          versionId: version.id,
+          personId: person.id,
+          userId: params.userId,
+          // An import derives the sheet from the form, so a field that comes
+          // back empty starts unticked and the operator ticks it by hand.
+          displayFromValue: true,
         });
-        for (const section of sections) {
-          await generateSection({
-            versionId: version.id,
-            sectionId: section.id,
-            personId: person.id,
-            userId: params.userId,
-            // An import derives the sheet from the form, so a field that comes
-            // back empty starts unticked and the operator ticks it by hand.
-            displayFromValue: true,
-          });
-        }
       }
     } else {
       outcome.updated++;

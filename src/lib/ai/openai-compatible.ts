@@ -55,9 +55,19 @@ export class OpenAiCompatibleProvider implements AiProvider {
       }
 
       const body = (await res.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
+
+      // Out of tokens mid-answer. A thinking model (Gemini Pro) can spend
+      // most of AI_MAX_TOKENS before it writes a word, and what comes back is
+      // then half a sentence. That must never be saved as if it were the text.
+      if (body.choices?.[0]?.finish_reason === 'length') {
+        throw new AiError(
+          'AIの回答が途中で切れた（出力の上限に達した）。AI_MAX_TOKENS を増やすこと',
+          this.name,
+        );
+      }
 
       return {
         text: body.choices?.[0]?.message?.content?.trim() ?? '',
