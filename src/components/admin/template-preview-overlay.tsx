@@ -54,6 +54,7 @@ export function TemplatePreviewOverlay({
           src={withBasePath(`/admin/fields/preview?${query}`)}
           title={title}
           className="def-preview-frame"
+          allow="fullscreen"
         />
       </div>
     </div>

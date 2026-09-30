@@ -40,8 +40,8 @@ export function PreviewStage({
   toolbar?: React.ReactNode;
   /**
    * Inside a panel or pop-up (the split preview, the template preview): the
-   * stage fills the frame, with only a small zoom bar — no fullscreen, no
-   * extra buttons. The panel around it already has its own controls.
+   * stage fills the frame, with one small bar: zoom, 全画面表示, and the
+   * `toolbar` buttons (e.g. PDF), all at a compact size.
    */
   compact?: boolean;
 }) {
@@ -120,7 +120,7 @@ export function PreviewStage({
 
   if (compact) {
     return (
-      <div className="flex h-screen flex-col">
+      <div ref={stageRef} className="flex h-screen flex-col bg-white">
         <div className="flex items-center gap-1 border-b border-ink-100 bg-white px-2 py-1">
           <button
             type="button"
@@ -153,6 +153,16 @@ export function PreviewStage({
           >
             幅に合わせる
           </button>
+          <span className="flex-1" />
+          <button
+            type="button"
+            className="btn btn-sm btn-quiet"
+            onClick={toggleFullscreen}
+            title="スキルシートだけを画面いっぱいに表示する（Escで戻る）"
+          >
+            {isFullscreen ? '全画面を終了' : '全画面表示'}
+          </button>
+          {toolbar}
         </div>
         <div ref={areaRef} className="flex-1 overflow-auto bg-sand-200 p-3">
           <ScaledPage zoom={zoom} pageHeight={pageHeight} pageRef={pageRef}>
