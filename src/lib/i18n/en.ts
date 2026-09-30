@@ -571,6 +571,15 @@ export const EN: Record<string, string> = {
   "これらの項目は未確認のまま確定し、この内容でPDFを出力できるようになります。本当に確定しますか？": "These fields will stay unchecked, and the PDF can be downloaded with this content. Are you sure you want to finalise?",
   "このまま確定する": "Finalise anyway",
 
+
+  // --- Section colours -------------------------------------------------------
+  "シートの色": "Colour on the sheet",
+  "自動": "Auto",
+  "他のセクションと重ならない色を自動で選びます": "Automatically picks a colour no other section uses",
+  "{colour}（「{name}」で使用中）": "{colour} (used by “{name}”)",
+  "斜線の色は他のセクションで使われています。同じ色にすると、シート上で区別しにくくなります。": "Struck-through colours are used by another section. Using the same colour makes sections harder to tell apart on the sheet.",
+  "色の指定が正しくありません": "Invalid colour.",
+
   // @@END
 };
 

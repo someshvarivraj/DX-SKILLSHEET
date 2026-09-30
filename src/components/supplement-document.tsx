@@ -11,6 +11,7 @@
  * a small number of additions for the notice band and the memo list.
  */
 
+import { sectionColourStyle } from '@/lib/sheet/section-colours';
 import type { SectionView, SheetModel } from '@/lib/sheet/model';
 import { SHEET_STYLES } from './sheet-document';
 
@@ -96,7 +97,7 @@ function formatStamp(d: Date): string {
 
 function SupplementSection({ section }: { section: SectionView }) {
   return (
-    <table className={`sheet-table sec-${section.code}`}>
+    <table className={`sheet-table sec-${section.code}`} style={sectionColourStyle(section.colour)}>
       <colgroup>
         <col style={{ width: '178px' }} />
         <col />

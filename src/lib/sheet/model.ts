@@ -15,6 +15,7 @@ import type {
   ValueType,
 } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { resolveSectionColours, type SectionColour } from './section-colours';
 import { characterCount, checkStyle, type StyleIssue } from '@/lib/style/text';
 import { isFieldPrintable } from './visibility';
 
@@ -75,6 +76,8 @@ export type SectionView = {
   hideWhenEmpty: boolean;
   maxDisplayed: number;
   description: string | null;
+  /** Band colour on the printed sheet (section-colours.ts). */
+  colour: SectionColour;
   fields: FieldView[];
   records: RecordView[];
   /** True when every value in the section is empty (§5.3 hide-when-empty). */
@@ -251,6 +254,8 @@ export async function loadSheetModel(
   const emptyFields: SheetModel['emptyFields'] = [];
   let unreviewedCount = 0;
 
+  const colours = resolveSectionColours(sections);
+
   const sectionViews: SectionView[] = sections.map((section) => {
     const isRepeating = section.kind === 'REPEATING';
 
@@ -320,6 +325,7 @@ export async function loadSheetModel(
       hideWhenEmpty: section.hideWhenEmpty,
       maxDisplayed: section.maxDisplayed,
       description: section.description,
+      colour: colours.get(section.code)!,
       fields: singleFields,
       records,
       isEmpty,

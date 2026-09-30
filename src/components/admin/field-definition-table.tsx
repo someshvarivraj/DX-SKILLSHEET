@@ -2,6 +2,7 @@
 
 import { useLang, useT } from '@/lib/i18n/client';
 import { pickName } from '@/lib/i18n';
+import { SECTION_PALETTE, paletteColour } from '@/lib/sheet/section-colours';
 import { useRef, useState, useTransition } from 'react';
 import { TemplatePreviewOverlay } from './template-preview-overlay';
 import {
@@ -89,6 +90,10 @@ export type SectionRow = {
   hideWhenEmpty: boolean;
   maxDisplayed: number;
   description: string | null;
+  /** The chosen palette key, or null for automatic. */
+  colour: string | null;
+  /** The colour it actually prints in (automatic resolved). */
+  colourKey: string;
   fields: FieldRow[];
 };
 
@@ -467,6 +472,8 @@ export function FieldDefinitionTable({
   const t = useT();
   const [notice, setNotice] = useState<Notice>(null);
   const reorder = useReorder(sections, reorderSectionsAction, setNotice);
+  const colourUsage = new Map<string, SectionRow>();
+  for (const s of sections) if (!colourUsage.has(s.colourKey)) colourUsage.set(s.colourKey, s);
   // Sano-san's review (2026-09-29): two full-width dashed buttons (one above
   // the list, one below) read as confusing, and the bottom one required
   // scrolling past every section to reach anyway. One compact button in the
@@ -512,6 +519,7 @@ export function FieldDefinitionTable({
         <SectionItem
           key={section.id}
           section={section}
+          colourUsage={colourUsage}
           index={index}
           count={reorder.ordered.length}
           reorder={reorder}
@@ -525,6 +533,7 @@ export function FieldDefinitionTable({
 
 function SectionItem({
   section,
+  colourUsage,
   index,
   count,
   reorder,
@@ -532,6 +541,8 @@ function SectionItem({
   onNotice,
 }: {
   section: SectionRow;
+  /** Which section prints in each colour, to steer away from duplicates. */
+  colourUsage: Map<string, SectionRow>;
   index: number;
   count: number;
   reorder: ReturnType<typeof useReorder<SectionRow>>;
@@ -573,7 +584,15 @@ function SectionItem({
         />
         <div className="def-name-cell">
           <button type="button" className="def-name" onClick={() => setOpen((v) => !v)}>
-            <span className="def-name-ja">{pickName(lang, section.nameJa, section.nameEn)}</span>
+            <span className="def-name-ja">
+              <span
+                className="colour-dot"
+                style={{ background: paletteColour(section.colourKey)?.accent }}
+                title={t('シートの色')}
+                aria-hidden
+              />
+              {pickName(lang, section.nameJa, section.nameEn)}
+            </span>
             <span className="def-name-sub">
               {lang === 'en' ? section.nameJa : (section.nameEn ?? section.code)}
             </span>
@@ -658,7 +677,7 @@ function SectionItem({
 
       {open ? (
         <div className="def-children">
-          <SectionSettings section={section} onNotice={onNotice} />
+          <SectionSettings section={section} colourUsage={colourUsage} onNotice={onNotice} />
           <FieldList section={section} questionCodes={questionCodes} onNotice={onNotice} />
         </div>
       ) : null}
@@ -676,12 +695,15 @@ function SectionItem({
 
 function SectionSettings({
   section,
+  colourUsage,
   onNotice,
 }: {
   section: SectionRow;
+  colourUsage: Map<string, SectionRow>;
   onNotice: (n: Notice) => void;
 }) {
   const t = useT();
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(section);
   const [pending, startTransition] = useTransition();
@@ -733,6 +755,52 @@ function SectionSettings({
             {t('データが1件もない場合はシートに出さない')}
           </label>
           <div className="md:col-span-4">
+            <Labeled label="シートの色">
+              <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t('シートの色')}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.colour === null}
+                  className={`colour-auto ${draft.colour === null ? 'colour-selected' : ''}`}
+                  onClick={() => setDraft({ ...draft, colour: null })}
+                  title={t('他のセクションと重ならない色を自動で選びます')}
+                >
+                  {t('自動')}
+                </button>
+                {SECTION_PALETTE.map((c) => {
+                  const other = colourUsage.get(c.key);
+                  const takenByOther = other && other.id !== section.id;
+                  const selected = draft.colour === c.key;
+                  return (
+                    <button
+                      key={c.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={lang === 'en' ? c.nameEn : c.nameJa}
+                      title={
+                        takenByOther
+                          ? t('{colour}（「{name}」で使用中）', {
+                              colour: lang === 'en' ? c.nameEn : c.nameJa,
+                              name: pickName(lang, other.nameJa, other.nameEn),
+                            })
+                          : lang === 'en'
+                            ? c.nameEn
+                            : c.nameJa
+                      }
+                      className={`colour-swatch ${selected ? 'colour-selected' : ''} ${takenByOther ? 'colour-taken' : ''}`}
+                      style={{ background: c.accent }}
+                      onClick={() => setDraft({ ...draft, colour: c.key })}
+                    />
+                  );
+                })}
+              </div>
+              <p className="field-hint">
+                {t('斜線の色は他のセクションで使われています。同じ色にすると、シート上で区別しにくくなります。')}
+              </p>
+            </Labeled>
+          </div>
+          <div className="md:col-span-4">
             <Labeled label="説明（担当者向けのメモ）">
               <textarea
                 className="textarea"
@@ -757,6 +825,7 @@ function SectionSettings({
                     hideWhenEmpty: draft.hideWhenEmpty,
                     maxDisplayed: draft.maxDisplayed,
                     description: draft.description ?? undefined,
+                    colour: draft.colour,
                   });
                   onNotice({ ok: result.ok, text: result.message });
                 })

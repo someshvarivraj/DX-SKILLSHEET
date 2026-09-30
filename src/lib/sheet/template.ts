@@ -13,6 +13,7 @@
 
 import { prisma } from '@/lib/db';
 import type { FieldView, RecordView, SectionView, SheetModel } from './model';
+import { resolveSectionColours } from './section-colours';
 
 function placeholder(nameJa: string): string {
   return `［${nameJa}］`;
@@ -89,6 +90,12 @@ export async function loadTemplateModel(options?: {
     },
   });
 
+  // Colours depend on every section (no two share one), so they are worked
+  // out over all of them even when previewing a single section.
+  const colours = resolveSectionColours(
+    await prisma.sheetSection.findMany({ select: { code: true, colour: true, order: true } }),
+  );
+
   const sectionViews: SectionView[] = sections.map((section) => {
     const fields = section.fields.map(buildTemplateFieldView);
 
@@ -123,6 +130,7 @@ export async function loadTemplateModel(options?: {
       hideWhenEmpty: section.hideWhenEmpty,
       maxDisplayed: section.maxDisplayed,
       description: section.description,
+      colour: colours.get(section.code)!,
       // A SINGLE section's own fields are dropped for REPEATING sections
       // (their content lives in `records` instead), matching how a real
       // sheet's SectionView is built.
