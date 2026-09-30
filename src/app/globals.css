@@ -1966,11 +1966,13 @@ html[data-split] .sheet-toolbar .btn {
   gap: 1rem;
 }
 .split-preview-editor {
-  flex: 1 1 55%;
+  /* The preview gets the larger share: an A4 page is wide, and at 45% it
+     read too small next to the form (review, 2026-09-30). */
+  flex: 1 1 45%;
   min-width: 0;
 }
 .split-preview-panel {
-  flex: 1 1 45%;
+  flex: 1 1 55%;
   min-width: 0;
   position: sticky;
   top: calc(var(--app-header-h) + 0.75rem);
