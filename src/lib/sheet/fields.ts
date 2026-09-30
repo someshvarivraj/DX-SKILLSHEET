@@ -350,6 +350,8 @@ export async function generateAllSections(params: {
   personId: string;
   userId: string;
   displayFromValue?: boolean;
+  /** Called with (done, total) at the start and after every field. */
+  onProgress?: (done: number, total: number) => void;
 }): Promise<GenerationOutcome> {
   const sections = await prisma.sheetSection.findMany({ orderBy: { order: 'asc' }, select: { id: true } });
   const targets: GenerationTarget[] = [];
@@ -394,11 +396,19 @@ async function sectionTargets(sectionId: string, personId: string): Promise<Gene
  */
 async function runGeneration(
   targets: GenerationTarget[],
-  params: { versionId: string; personId: string; userId: string; displayFromValue?: boolean },
+  params: {
+    versionId: string;
+    personId: string;
+    userId: string;
+    displayFromValue?: boolean;
+    onProgress?: (done: number, total: number) => void;
+  },
 ): Promise<GenerationOutcome> {
   const outcome: GenerationOutcome = { generated: 0, skipped: 0, failed: 0, warnings: [] };
   const failures: string[] = [];
   let next = 0;
+  let finished = 0;
+  params.onProgress?.(0, targets.length);
 
   const worker = async () => {
     while (next < targets.length) {
@@ -420,6 +430,7 @@ async function runGeneration(
         outcome.failed++;
         failures.push(`${target.fieldName}（${(error as Error).message}）`);
       }
+      params.onProgress?.(++finished, targets.length);
     }
   };
 

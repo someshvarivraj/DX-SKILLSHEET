@@ -11,6 +11,7 @@ import { MemoPanel } from '@/components/editor/memo-panel';
 import { PhotoPanel } from '@/components/editor/photo-panel';
 import { ScrollRestore } from '@/components/editor/scroll-restore';
 import { SplitPreview } from '@/components/editor/split-preview';
+import { GenerationNotice } from '@/components/generation-progress';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -108,6 +109,7 @@ export default async function PersonEditorPage({
         canSubmit={user.role === 'ENGINEER'}
         canExportSupplement={showSupplement && can(user, 'sheet.export')}
       />
+      <GenerationNotice personId={personId} />
 
       <SplitPreview
         personId={personId}

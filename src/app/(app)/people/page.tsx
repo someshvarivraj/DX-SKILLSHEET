@@ -6,6 +6,7 @@ import { can } from '@/lib/auth/permissions';
 import { STATUS_LABELS } from '@/lib/sheet/version';
 import { matchesPersonQuery } from '@/lib/people-search';
 import { PageHeader } from '@/components/page-header';
+import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +102,8 @@ export default async function PeoplePage({
         }
       />
 
+      <GenerationBanner />
+
       {people.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-ink-500">まだ対象者がいません。</p>
@@ -188,6 +191,7 @@ export default async function PeoplePage({
                           >
                             {person.fullNameKatakana ?? person.fullNameEnglish}
                           </Link>
+                          <GenerationRowBadge personId={person.id} />
                           <div className="text-xs text-ink-500">{person.fullNameEnglish}</div>
                         </td>
                         <td className="tabular text-ink-700">{person.cohort ?? '—'}</td>

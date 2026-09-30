@@ -768,6 +768,28 @@ html[data-split] .sheet-toolbar .btn {
   background: var(--color-final-ink);
 }
 
+/* Shown while the AI is writing (generation-progress.tsx). */
+.ai-spinner {
+  display: inline-block;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-brand-100);
+  border-top-color: var(--color-brand-500);
+  animation: ai-spin 0.8s linear infinite;
+}
+.ai-spinner-sm {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-width: 1.5px;
+}
+@keyframes ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Status filter tabs on the people list. */
 .filter-tabs {
   display: flex;

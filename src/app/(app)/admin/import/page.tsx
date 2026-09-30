@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { ImportForm } from '@/components/admin/import-form';
 import { PageHeader } from '@/components/page-header';
+import { GenerationBanner } from '@/components/generation-progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,8 @@ export default async function ImportPage() {
       )}
 
       <ImportForm />
+
+      <GenerationBanner />
 
       <section className="card overflow-hidden">
         <h2 className="panel-head panel-title">取り込み履歴</h2>

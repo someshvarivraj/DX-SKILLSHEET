@@ -14,6 +14,8 @@ export type ImportActionState = {
   created?: number;
   updated?: number;
   needsReview?: Array<{ personId: string; name: string }>;
+  /** New people whose AI generation is now running in the background. */
+  generationQueued?: number;
 };
 
 async function guard() {
@@ -86,7 +88,8 @@ export async function runImportAction(
       created: outcome.created,
       updated: outcome.updated,
       needsReview: outcome.needsReview,
-      message: `取り込みが完了した。新規${outcome.created}件、既存${outcome.updated}件。`,
+      generationQueued: outcome.generationQueued,
+      message: `取り込みが完了しました。新規${outcome.created}件、既存${outcome.updated}件。`,
     };
   } catch (error) {
     return { step: 'idle', error: (error as Error).message };

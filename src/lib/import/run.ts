@@ -14,7 +14,7 @@ import type { ImportSource, JlptLevel, RecordKind } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { UNNAMED_PERSON } from '@/lib/constants';
 import { recordAudit } from '@/lib/audit';
-import { generateAllSections } from '@/lib/sheet/fields';
+import { enqueueGeneration } from '@/lib/sheet/generation-jobs';
 import { getOrCreateSkillSheet, getEditableVersion } from '@/lib/sheet/version';
 import { createRecord } from '@/lib/sheet/records';
 import {
@@ -186,6 +186,8 @@ export type ImportOutcome = {
   updated: number;
   /** People whose sheet already had content: differences are queued for review. */
   needsReview: Array<{ personId: string; name: string }>;
+  /** New people whose AI generation was started in the background. */
+  generationQueued: number;
 };
 
 export async function runImport(params: {
@@ -222,6 +224,7 @@ export async function runImport(params: {
     created: 0,
     updated: 0,
     needsReview: [],
+    generationQueued: 0,
   };
 
   const indexes =
@@ -295,14 +298,16 @@ export async function runImport(params: {
       outcome.created++;
       if (params.generateOnFirstImport) {
         const version = await getEditableVersion(sheet.id, params.userId);
-        await generateAllSections({
-          versionId: version.id,
+        // Queued, not awaited: with a capable model this takes minutes a
+        // person. The import returns at once and the screens show progress
+        // (see generation-jobs.ts).
+        enqueueGeneration({
           personId: person.id,
+          name: person.fullNameKatakana ?? person.fullNameEnglish,
+          versionId: version.id,
           userId: params.userId,
-          // An import derives the sheet from the form, so a field that comes
-          // back empty starts unticked and the operator ticks it by hand.
-          displayFromValue: true,
         });
+        outcome.generationQueued++;
       }
     } else {
       outcome.updated++;

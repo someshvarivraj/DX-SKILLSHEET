@@ -10,6 +10,7 @@ import {
   type ImportActionState,
 } from '@/app/(app)/admin/import/actions';
 import { buildImportFormData } from '@/lib/import/form-data';
+import { refreshGenerationStatus } from '@/components/generation-progress';
 
 const initial: ImportActionState = { step: 'idle' };
 
@@ -64,6 +65,8 @@ export function ImportForm() {
     if (importState.step === 'done' && !importState.error) {
       chooseFile(null);
       if (inputRef.current) inputRef.current.value = '';
+      // Show the background AI work straight away rather than on the next tick.
+      if (importState.generationQueued) refreshGenerationStatus();
     }
   }, [importState]);
 
@@ -198,6 +201,12 @@ export function ImportForm() {
         {importState.message ? (
           <div className="mt-3 rounded-lg border border-final-line bg-final-bg px-3 py-2 text-xs text-final-ink">
             <p className="font-semibold">{importState.message}</p>
+            {importState.generationQueued ? (
+              <p className="mt-1">
+                新規の{importState.generationQueued}名について、AIによる文章の作成を開始しました（1名あたり数分）。
+                進捗は下と対象者一覧に表示されます。この画面を閉じても作成は続きます。
+              </p>
+            ) : null}
             {importState.needsReview && importState.needsReview.length > 0 ? (
               <div className="mt-2">
                 <p className="font-medium">

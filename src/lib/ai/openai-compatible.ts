@@ -69,6 +69,14 @@ export class OpenAiCompatibleProvider implements AiProvider {
         );
       }
 
+      // One line per call — timing and token counts only, never the text —
+      // so slow generation on the server can be diagnosed from the logs.
+      console.info(
+        `[ai] ${this.model} ${((Date.now() - started) / 1000).toFixed(1)}s ` +
+          `in=${body.usage?.prompt_tokens ?? '?'} out=${body.usage?.completion_tokens ?? '?'} ` +
+          `purpose=${request.purpose ?? '-'}`,
+      );
+
       return {
         text: body.choices?.[0]?.message?.content?.trim() ?? '',
         model: this.model,
