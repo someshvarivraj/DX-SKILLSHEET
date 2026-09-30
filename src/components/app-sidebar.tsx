@@ -10,6 +10,8 @@ import { NavLink } from './nav-link';
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
 
 const STORAGE_KEY = 'skillsheet.sidebar';
+/** A person's editing screen (/people/<id>, not the list or the preview). */
+const SHEET_SCREEN = /^\/people\/[^/]+$/;
 
 /**
  * The page frame: the left menu, plus a ☰ top bar on phones.
@@ -35,17 +37,27 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [docked, setDocked] = useState(true);
-  const pathname = usePathname();
+  const [savedDocked, setSavedDocked] = useState(true);
+  // On a person's sheet the menu starts folded, so the form (and the preview
+  // beside it) get the width (Sano-san's review, 2026-09-30). Opening it there
+  // lasts until the next screen and does not change the saved preference.
+  const [openedOnSheet, setOpenedOnSheet] = useState(false);
+  const pathname = usePathname() ?? '';
+  const onSheet = SHEET_SCREEN.test(pathname);
+  const docked = onSheet ? openedOnSheet : savedDocked;
 
-  // Choosing a screen from the phone drawer closes it.
-  useEffect(() => setDrawerOpen(false), [pathname]);
+  // Choosing a screen closes the phone drawer and re-folds the menu on the
+  // next sheet.
+  useEffect(() => {
+    setDrawerOpen(false);
+    setOpenedOnSheet(false);
+  }, [pathname]);
 
   // Restore the wide-screen choice. Storage can be unavailable (private
   // window, blocked site data); the menu then simply starts open.
   useEffect(() => {
     try {
-      if (localStorage.getItem(STORAGE_KEY) === 'closed') setDocked(false);
+      if (localStorage.getItem(STORAGE_KEY) === 'closed') setSavedDocked(false);
     } catch {}
   }, []);
 
@@ -62,7 +74,11 @@ export function AppShell({
 
   const toggleDocked = () => {
     const next = !docked;
-    setDocked(next);
+    if (onSheet) {
+      setOpenedOnSheet(next);
+      return;
+    }
+    setSavedDocked(next);
     try {
       localStorage.setItem(STORAGE_KEY, next ? 'open' : 'closed');
     } catch {}
