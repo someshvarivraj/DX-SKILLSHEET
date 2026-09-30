@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { withBasePath } from '@/lib/base-path';
 import type { GenerationJob } from '@/lib/sheet/generation-jobs';
+import { MoraBot, MoraBotProgress } from '@/components/morabot';
 
 /*
  * Progress of the background AI generation that follows an import
@@ -53,7 +54,11 @@ function subscribe(listener: () => void) {
 
 const EMPTY: GenerationJob[] = [];
 function useJobs() {
-  return useSyncExternalStore(subscribe, () => jobs, () => EMPTY);
+  return useSyncExternalStore(
+    subscribe,
+    () => jobs,
+    () => EMPTY,
+  );
 }
 
 /**
@@ -106,25 +111,35 @@ export function GenerationBanner() {
   if (list.length === 0) return null;
 
   const active = list.filter(isActive);
+  // Overall progress across everyone listed. A queued person's total is not
+  // known yet, so count them at the size of the ones already measured.
+  const known = list.filter((j) => j.total > 0);
+  const perPerson = known.length ? known.reduce((n, j) => n + j.total, 0) / known.length : 0;
+  const total = list.reduce((n, j) => n + (j.total || perPerson), 0);
+  const done = list.reduce((n, j) => n + (isActive(j) ? j.done : j.total || perPerson), 0);
+  const percent = total ? Math.round((done / total) * 100) : 0;
+
   return (
-    <div className="card mb-4 border-brand-200 px-5 py-3.5" role="status">
-      <div className="flex flex-wrap items-center gap-2">
-        {active.length > 0 ? <span className="ai-spinner" aria-hidden /> : null}
-        <p className="font-bold text-ink-900">
-          {active.length > 0
-            ? `AIが文章を作成中です（残り${active.length}名）`
-            : 'AIによる文章の作成が完了しました'}
-        </p>
-        {active.length > 0 ? (
-          <p className="text-sm text-ink-500">
-            1名あたり数分かかります。この画面を閉じても作成は続きます。
-          </p>
-        ) : null}
-      </div>
-      <ul className="mt-2.5 space-y-1.5">
+    <div className="card mb-4 border-brand-200 px-5 py-4" role="status">
+      {active.length > 0 ? (
+        <MoraBotProgress
+          percent={percent}
+          label={`モラボットが文章を作成中です（残り${active.length}名）`}
+          detail={`${percent}% ・ 1名あたり数分かかります。この画面を閉じても作成は続きます。`}
+        />
+      ) : (
+        <div className="flex items-center gap-3">
+          <MoraBot mood="happy" size={48} title="" />
+          <p className="font-bold text-ink-900">AIによる文章の作成が完了しました</p>
+        </div>
+      )}
+      <ul className="mt-3 space-y-1.5">
         {list.map((job) => (
           <li key={job.personId} className="flex flex-wrap items-center gap-3 text-sm">
-            <Link href={`/people/${job.personId}`} className="min-w-[10rem] font-semibold text-ink-900 hover:text-brand-500">
+            <Link
+              href={`/people/${job.personId}`}
+              className="min-w-[10rem] font-semibold text-ink-900 hover:text-brand-500"
+            >
               {job.name}
             </Link>
             {job.status === 'running' || job.status === 'done' ? <Bar job={job} /> : null}
@@ -166,18 +181,17 @@ export function GenerationNotice({ personId }: { personId: string }) {
   const job = list.find((j) => j.personId === personId);
   if (!job || !isActive(job)) return null;
   return (
-    <div className="card flex flex-wrap items-center gap-3 border-brand-200 bg-brand-50 px-5 py-3" role="status">
-      <span className="ai-spinner" aria-hidden />
-      <p className="font-bold text-ink-900">
-        {job.status === 'queued' ? 'AIによる文章作成の順番待ちです' : 'AIが文章を作成中です'}
-      </p>
-      {job.status === 'running' ? (
-        <>
-          <Bar job={job} />
-          <span className="tabular text-sm text-ink-700">{jobLabel(job)}</span>
-        </>
-      ) : null}
-      <p className="w-full text-sm text-ink-500">
+    <div className="card border-brand-200 px-5 py-4" role="status">
+      <MoraBotProgress
+        percent={job.status === 'running' && job.total ? (job.done / job.total) * 100 : undefined}
+        label={
+          job.status === 'queued'
+            ? 'モラボットの順番待ちです'
+            : 'モラボットがこの人の文章を作成中です'
+        }
+        detail={job.status === 'running' ? jobLabel(job) : undefined}
+      />
+      <p className="mt-2 text-sm text-ink-500">
         完了した項目から順に表示されます。作成中の項目は上書きされるため、完了するまで編集はお待ちください。
       </p>
     </div>

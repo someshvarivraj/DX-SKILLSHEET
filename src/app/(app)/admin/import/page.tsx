@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { ImportForm } from '@/components/admin/import-form';
 import { PageHeader } from '@/components/page-header';
+import { MoraBot } from '@/components/morabot';
 import { GenerationBanner } from '@/components/generation-progress';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,10 @@ export default async function ImportPage() {
       <section className="card overflow-hidden">
         <h2 className="panel-head panel-title">取り込み履歴</h2>
         {batches.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-ink-400">履歴はまだありません。</p>
+          <div className="flex items-center justify-center gap-3 px-4 py-6 text-sm text-ink-500">
+            <MoraBot mood="explain" size={48} title="" />
+            履歴はまだありません。最初のファイルを上から取り込んでください。
+          </div>
         ) : (
           <div className="table-scroll">
             <table className="data-table !min-w-[40rem]">

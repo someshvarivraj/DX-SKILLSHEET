@@ -4,6 +4,7 @@ import { useTransition, useState } from 'react';
 import type { RecordKind } from '@prisma/client';
 import type { SectionView } from '@/lib/sheet/model';
 import { FieldEditor, FieldMenu } from './field-editor';
+import { MoraBot, MoraBotProgress } from '@/components/morabot';
 import {
   addRecordAction,
   deleteRecordAction,
@@ -44,10 +45,10 @@ export function SectionPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
 
   const sectionReadOnly =
-    readOnly ||
-    (editableSectionCodes !== null && !editableSectionCodes.includes(section.code));
+    readOnly || (editableSectionCodes !== null && !editableSectionCodes.includes(section.code));
 
   const displayedCount = section.records.filter((r) => r.isDisplayed).length;
 
@@ -91,7 +92,10 @@ export function SectionPanel({
             {section.document === 'SUPPLEMENT' ? (
               // Without this an operator could reasonably assume everything on
               // this screen reaches the skill sheet. These sections never do.
-              <span className="tag" title="スキルシートには載らず、社内用の補足資料にだけ載ります。">
+              <span
+                className="tag"
+                title="スキルシートには載らず、社内用の補足資料にだけ載ります。"
+              >
                 社内用（シートに載りません）
               </span>
             ) : null}
@@ -99,7 +103,8 @@ export function SectionPanel({
           </div>
           {section.kind === 'REPEATING' ? (
             <p className="panel-head-meta">
-              {section.records.length}件のうち{displayedCount}件をシートに掲載（最大{section.maxDisplayed}件）
+              {section.records.length}件のうち{displayedCount}件をシートに掲載（最大
+              {section.maxDisplayed}件）
             </p>
           ) : section.description ? (
             <p className="panel-head-meta">{section.description}</p>
@@ -113,7 +118,9 @@ export function SectionPanel({
             type="button"
             className="btn btn-secondary"
             disabled={pending}
-            onClick={() => run(async () => addRecordAction(personId, section.recordKind as RecordKind))}
+            onClick={() =>
+              run(async () => addRecordAction(personId, section.recordKind as RecordKind))
+            }
           >
             ＋ 追加
           </button>
@@ -125,21 +132,38 @@ export function SectionPanel({
               {
                 label: pending ? '作成中…' : 'このセクションをAIでまとめて作成',
                 disabled: pending,
-                onClick: () =>
-                  run(async () =>
-                    generateSectionAction(personId, {
-                      sectionId: section.id,
-                      sectionCode: section.code,
-                    }),
-                  ),
+                onClick: () => {
+                  // Before the transition, so the progress shows at once.
+                  setGenerating(true);
+                  run(async () => {
+                    try {
+                      return await generateSectionAction(personId, {
+                        sectionId: section.id,
+                        sectionCode: section.code,
+                      });
+                    } finally {
+                      setGenerating(false);
+                    }
+                  });
+                },
               },
             ]}
           />
         ) : null}
       </header>
 
+      {generating ? (
+        <div className="border-b border-ink-100 px-5 py-4">
+          <MoraBotProgress
+            label="モラボットがこのセクションの文章を作成中です…"
+            detail="項目の数によって1〜2分かかります"
+          />
+        </div>
+      ) : null}
       {notice ? (
-        <p className="border-b border-ink-100 bg-final-bg px-5 py-2 text-sm text-final-ink">{notice}</p>
+        <p className="border-b border-ink-100 bg-final-bg px-5 py-2 text-sm text-final-ink">
+          {notice}
+        </p>
       ) : null}
       {warnings.map((w, i) => (
         <p key={i} className="border-b border-ink-100 bg-warn-bg px-5 py-2 text-sm text-warn-ink">
@@ -149,9 +173,10 @@ export function SectionPanel({
 
       {section.kind === 'REPEATING' ? (
         section.records.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-ink-400">
+          <div className="flex items-center justify-center gap-3 px-5 py-10 text-sm text-ink-500">
+            <MoraBot mood="explain" size={52} title="" />
             まだ登録がありません。{canAdd ? '「＋ 追加」から登録できます。' : ''}
-          </p>
+          </div>
         ) : (
           section.records.map((record, index) => (
             <div key={record.id} className="border-b border-ink-100 last:border-0">
@@ -181,9 +206,17 @@ export function SectionPanel({
                     className="btn btn-quiet !text-[#b03a22]"
                     disabled={pending}
                     onClick={() => {
-                      if (!window.confirm(`「${record.label || `${section.nameJa}${index + 1}`}」を削除します。よろしいですか？`)) return;
+                      if (
+                        !window.confirm(
+                          `「${record.label || `${section.nameJa}${index + 1}`}」を削除します。よろしいですか？`,
+                        )
+                      )
+                        return;
                       run(async () =>
-                        deleteRecordAction(personId, { recordId: record.id, sectionCode: section.code }),
+                        deleteRecordAction(personId, {
+                          recordId: record.id,
+                          sectionCode: section.code,
+                        }),
                       );
                     }}
                   >

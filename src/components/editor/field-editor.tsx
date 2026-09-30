@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
+import { MoraBot } from '@/components/morabot';
 import {
   generateFieldAction,
   loadHistoryAction,
@@ -70,6 +71,7 @@ export function FieldEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  const [aiBusy, setAiBusy] = useState(false);
 
   const disabled = Boolean(readOnly) || field.isLocked || pending;
   const actions = fieldActions(field.processing, field.valueType);
@@ -86,6 +88,20 @@ export function FieldEditor({
         setNotice((error as Error).message);
       }
     });
+
+  // An AI call takes a while (Gemini Pro ~20 s): MoraBot shows it is working.
+  // Set before the transition starts: an update made inside a transition only
+  // shows once the transition ends, which would be after the AI has finished.
+  const runAi = (fn: () => Promise<{ message?: string; warnings?: string[] }>) => {
+    setAiBusy(true);
+    run(async () => {
+      try {
+        return await fn();
+      } finally {
+        setAiBusy(false);
+      }
+    });
+  };
 
   const save = () => {
     if (readOnly || field.isLocked || value === field.valueJa) return;
@@ -154,13 +170,15 @@ export function FieldEditor({
       label: 'AIで作り直す',
       disabled,
       onClick: () =>
-        run(async () =>
-          generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode }),
-        ),
+        runAi(() => generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode })),
     });
   }
   if (!readOnly && actions.regenerateWithInstructions) {
-    menuItems.push({ label: '指示してAIで作り直す', disabled, onClick: () => togglePanel('prompt') });
+    menuItems.push({
+      label: '指示してAIで作り直す',
+      disabled,
+      onClick: () => togglePanel('prompt'),
+    });
   }
   if (actions.showOriginal && field.sourceText) {
     menuItems.push({
@@ -226,15 +244,16 @@ export function FieldEditor({
           ?
         </button>
         {field.isLocked ? <span className="tag">ロック中</span> : null}
-        {field.displayToggle && !field.isDisplayed ? <span className="tag">PDFに載せない</span> : null}
+        {field.displayToggle && !field.isDisplayed ? (
+          <span className="tag">PDFに載せない</span>
+        ) : null}
 
         <span className="flex-1" />
 
         <SaveIndicator state={saveState} />
         {hasTarget ? (
           <span className={`field-count ${overLimit ? 'field-count-over' : ''}`}>
-            {length}字
-            {field.targetLengthMax ? ` / 目安${field.targetLengthMax}字` : ''}
+            {length}字{field.targetLengthMax ? ` / 目安${field.targetLengthMax}字` : ''}
           </span>
         ) : null}
 
@@ -269,8 +288,12 @@ export function FieldEditor({
         <div className="field-help">
           {field.helpText ? <p>{field.helpText}</p> : null}
           <p className="text-xs text-ink-500">
-            {field.includeInPdf ? 'スキルシート（PDF）に載る項目です。' : 'スキルシート（PDF）には載りません。'}
-            {field.sourceCodes.length > 0 ? ` 元になる設問：${field.sourceCodes.join('、')}` : ' 手で入力する項目です。'}
+            {field.includeInPdf
+              ? 'スキルシート（PDF）に載る項目です。'
+              : 'スキルシート（PDF）には載りません。'}
+            {field.sourceCodes.length > 0
+              ? ` 元になる設問：${field.sourceCodes.join('、')}`
+              : ' 手で入力する項目です。'}
           </p>
         </div>
       ) : null}
@@ -301,6 +324,12 @@ export function FieldEditor({
         />
       )}
 
+      {aiBusy ? (
+        <p className="field-msg flex items-center gap-2 !text-brand-500">
+          <MoraBot mood="think" size={28} animate title="" />
+          モラボットが文章を作成中です…
+        </p>
+      ) : null}
       {[...field.styleIssues.map((i) => i.message), ...warnings].map((message, i) => (
         <p key={i} className="field-msg">
           ⚠ {message}
@@ -323,7 +352,7 @@ export function FieldEditor({
               className="btn btn-primary"
               disabled={pending || prompt.trim() === ''}
               onClick={() =>
-                run(async () => {
+                runAi(async () => {
                   const result = await generateFieldAction(personId, {
                     fieldId: field.id,
                     recordId,
@@ -397,7 +426,8 @@ export function FieldEditor({
 function SaveIndicator({ state }: { state: SaveState }) {
   if (state === 'saving') return <span className="save-state">保存中…</span>;
   if (state === 'saved') return <span className="save-state save-state-ok">✓ 保存しました</span>;
-  if (state === 'error') return <span className="save-state save-state-error">保存できませんでした</span>;
+  if (state === 'error')
+    return <span className="save-state save-state-error">保存できませんでした</span>;
   return null;
 }
 
@@ -406,14 +436,24 @@ type MenuEntry =
   | { separator?: false; label: string; onClick: () => void; disabled?: boolean };
 
 /** The ⋯ button and its drop-down of less common actions. */
-export function FieldMenu({ items, label = 'その他の操作' }: { items: MenuEntry[]; label?: string }) {
+export function FieldMenu({
+  items,
+  label = 'その他の操作',
+}: {
+  items: MenuEntry[];
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !rootRef.current?.contains(e.target as Node)) {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === 'Escape'
+          : !rootRef.current?.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
