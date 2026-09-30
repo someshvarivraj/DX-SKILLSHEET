@@ -160,7 +160,9 @@ export async function generateSectionAction(
   refresh(personId);
   return {
     ok: true,
-    message: `${outcome.generated}項目を生成した（ロック等で${outcome.skipped}項目は対象外）`,
+    message:
+      `${outcome.generated}項目を生成した（ロック等で${outcome.skipped}項目は対象外）` +
+      (outcome.failed > 0 ? `。${outcome.failed}項目は生成できなかった` : ''),
     warnings: [...new Set(outcome.warnings)],
   };
   });

@@ -1,10 +1,12 @@
 /**
  * OpenAI-compatible provider (chat/completions shape).
  *
- * Present so that a self-hosted model inside the VPC, or an approved managed
- * endpoint, can be used without touching application code. Not enabled by
- * default: §3 forbids sending data outside AWS, so AI_BASE_URL must point at an
- * endpoint inside the AWS boundary.
+ * Used for Google's Gemini API through its OpenAI-compatible endpoint
+ * (AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai),
+ * adopted 2026-09-24 in place of Bedrock. That sends answers outside AWS, so
+ * it requires Sano-san's written approval before use with real data (spec §3,
+ * docs/AWS-REQUIREMENTS.md §4). Any other OpenAI-compatible endpoint works the
+ * same way without code changes.
  */
 
 import { getEnv } from '@/lib/env';
@@ -41,6 +43,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
           temperature: request.temperature ?? env.AI_TEMPERATURE,
           max_tokens: request.maxTokens ?? env.AI_MAX_TOKENS,
           stream: false,
+          ...(env.AI_REASONING_EFFORT ? { reasoning_effort: env.AI_REASONING_EFFORT } : {}),
         }),
       });
 
@@ -52,9 +55,19 @@ export class OpenAiCompatibleProvider implements AiProvider {
       }
 
       const body = (await res.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
+
+      // Out of tokens mid-answer. A thinking model (Gemini Pro) can spend
+      // most of AI_MAX_TOKENS before it writes a word, and what comes back is
+      // then half a sentence. That must never be saved as if it were the text.
+      if (body.choices?.[0]?.finish_reason === 'length') {
+        throw new AiError(
+          'AIの回答が途中で切れた（出力の上限に達した）。AI_MAX_TOKENS を増やすこと',
+          this.name,
+        );
+      }
 
       return {
         text: body.choices?.[0]?.message?.content?.trim() ?? '',

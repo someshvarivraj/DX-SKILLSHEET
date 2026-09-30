@@ -13,6 +13,7 @@
 
 import type { ChangeType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { getEnv } from '@/lib/env';
 import { recordAudit } from '@/lib/audit';
 import { loadGlossary } from '@/lib/glossary';
 import { processField, type FieldDefinition } from '@/lib/processing/pipeline';
@@ -323,6 +324,9 @@ export async function generateFieldValue(params: {
   };
 }
 
+type GenerationTarget = { fieldId: string; fieldName: string; recordId: string | null };
+export type GenerationOutcome = { generated: number; skipped: number; failed: number; warnings: string[] };
+
 /** Initial generation for a whole section (§7.5 bulk generation). */
 export async function generateSection(params: {
   versionId: string;
@@ -331,9 +335,31 @@ export async function generateSection(params: {
   userId: string;
   /** Forwarded to writeFieldValue; set by the importer. */
   displayFromValue?: boolean;
-}) {
+}): Promise<GenerationOutcome> {
+  const targets = await sectionTargets(params.sectionId, params.personId);
+  return runGeneration(targets, params);
+}
+
+/**
+ * Every section at once — the importer's "generate everything for a new
+ * person". Pooled across sections rather than section by section, so the
+ * concurrency limit is actually used (most sections have only a few fields).
+ */
+export async function generateAllSections(params: {
+  versionId: string;
+  personId: string;
+  userId: string;
+  displayFromValue?: boolean;
+}): Promise<GenerationOutcome> {
+  const sections = await prisma.sheetSection.findMany({ orderBy: { order: 'asc' }, select: { id: true } });
+  const targets: GenerationTarget[] = [];
+  for (const section of sections) targets.push(...(await sectionTargets(section.id, params.personId)));
+  return runGeneration(targets, params);
+}
+
+async function sectionTargets(sectionId: string, personId: string): Promise<GenerationTarget[]> {
   const section = await prisma.sheetSection.findUniqueOrThrow({
-    where: { id: params.sectionId },
+    where: { id: sectionId },
     include: { fields: { where: { isActive: true }, orderBy: { order: 'asc' } } },
   });
 
@@ -341,33 +367,70 @@ export async function generateSection(params: {
     section.kind === 'REPEATING'
       ? await prisma.sheetRecord.findMany({
           where: {
-            skillSheet: { personId: params.personId },
+            skillSheet: { personId },
             kind: section.recordKind!,
             deletedAt: null,
           },
         })
       : [null];
 
-  const outcome = { generated: 0, skipped: 0, warnings: [] as string[] };
-
+  const targets: GenerationTarget[] = [];
   for (const record of records) {
     for (const field of section.fields) {
       if (field.processing === 'MANUAL') continue;
-      const result = await generateFieldValue({
-        versionId: params.versionId,
-        fieldId: field.id,
-        recordId: record?.id ?? null,
-        personId: params.personId,
-        userId: params.userId,
-        skipLocked: true,
-        displayFromValue: params.displayFromValue,
-      });
-      if (result.ok) outcome.generated++;
-      else outcome.skipped++;
-      if (result.warnings?.length) outcome.warnings.push(...result.warnings);
+      targets.push({ fieldId: field.id, fieldName: field.nameJa, recordId: record?.id ?? null });
     }
   }
+  return targets;
+}
 
+/**
+ * Generates the targets, up to AI_CONCURRENCY at a time. A capable model
+ * (Gemini Pro) takes ~20 s per field; one at a time, a 20-field section would
+ * outlast the proxy's timeout, and a new person's ~50 fields would take a
+ * quarter of an hour. Each field reads and writes only its own value, so they
+ * are independent. One field failing (an AI error, a cut-off answer) is
+ * reported and the rest still run, instead of the whole batch stopping.
+ */
+async function runGeneration(
+  targets: GenerationTarget[],
+  params: { versionId: string; personId: string; userId: string; displayFromValue?: boolean },
+): Promise<GenerationOutcome> {
+  const outcome: GenerationOutcome = { generated: 0, skipped: 0, failed: 0, warnings: [] };
+  const failures: string[] = [];
+  let next = 0;
+
+  const worker = async () => {
+    while (next < targets.length) {
+      const target = targets[next++]!;
+      try {
+        const result = await generateFieldValue({
+          versionId: params.versionId,
+          fieldId: target.fieldId,
+          recordId: target.recordId,
+          personId: params.personId,
+          userId: params.userId,
+          skipLocked: true,
+          displayFromValue: params.displayFromValue,
+        });
+        if (result.ok) outcome.generated++;
+        else outcome.skipped++;
+        if (result.warnings?.length) outcome.warnings.push(...result.warnings);
+      } catch (error) {
+        outcome.failed++;
+        failures.push(`${target.fieldName}（${(error as Error).message}）`);
+      }
+    }
+  };
+
+  const concurrency = Math.max(1, Math.min(getEnv().AI_CONCURRENCY, targets.length));
+  await Promise.all(Array.from({ length: concurrency }, worker));
+
+  if (failures.length > 0) {
+    outcome.warnings.unshift(
+      `${failures.length}項目を生成できなかった。該当項目の「⋯」から作り直すこと: ${failures.join('、')}`,
+    );
+  }
   return outcome;
 }
 
