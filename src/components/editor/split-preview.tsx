@@ -24,11 +24,14 @@ export function SplitPreview({
   personId,
   tab,
   preset,
+  refreshKey,
   children,
 }: {
   personId: string;
   tab: string | null;
   preset: string | null;
+  /** Changes when the sheet's content changes; the open preview then reloads. */
+  refreshKey?: string;
   children: React.ReactNode;
 }) {
   const [mode, setMode] = useState<Mode>('hidden');
@@ -55,6 +58,35 @@ export function SplitPreview({
   // A raw iframe src — Next's basePath rewriting only applies to next/link
   // and router navigation, not to this.
   const previewSrc = withBasePath(`/people/${personId}/preview${query.size > 0 ? `?${query}` : ''}`);
+
+  // Reload the open preview when the sheet changes (a value saved, the photo
+  // uploaded), keeping the reader where they were on the page.
+  const lastKey = useRef(refreshKey);
+  const keepScroll = useRef<number | null>(null);
+  useEffect(() => {
+    if (refreshKey === lastKey.current) return;
+    lastKey.current = refreshKey;
+    if (mode === 'hidden') return;
+    keepScroll.current = previewScroller()?.scrollTop ?? null;
+    setReloadKey((k) => k + 1);
+    // `mode` deliberately left out: opening the panel is not a content change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
+  /** The scrolling area inside the preview page (preview-stage.tsx). */
+  const previewScroller = () =>
+    iframeRef.current?.contentDocument?.querySelector<HTMLElement>('[data-preview-scroll]') ?? null;
+
+  const restoreScroll = () => {
+    const top = keepScroll.current;
+    if (top === null) return;
+    keepScroll.current = null;
+    // The page fits itself to the panel after load; restore after that.
+    setTimeout(() => {
+      const scroller = previewScroller();
+      if (scroller) scroller.scrollTop = top;
+    }, 150);
+  };
 
   const reload = () => {
     // Changing the src (even to the same value) does not reload an iframe;
@@ -123,6 +155,7 @@ export function SplitPreview({
           src={previewSrc}
           title="スキルシートのプレビュー"
           className="split-preview-frame"
+          onLoad={restoreScroll}
           allow="fullscreen"
         />
       </div>

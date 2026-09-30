@@ -83,6 +83,21 @@ export default async function PersonEditorPage({
   const editableSectionCodes =
     user.role === 'ENGINEER' ? [...ENGINEER_EDITABLE_SECTIONS] : null;
 
+  // Changes whenever anything the printed sheet shows changes — a saved value,
+  // a record shown or hidden, the photo — so the side-by-side preview can
+  // reload itself instead of waiting for someone to press its ⟳ button.
+  const previewKey = sheetFingerprint([
+    model.person.photoKey ?? '',
+    model.version.status,
+    ...model.sections.flatMap((section) => [
+      ...section.fields.map((f) => `${f.id}:${f.isDisplayed}:${f.valueJa}`),
+      ...section.records.flatMap((r) => [
+        `${r.id}:${r.isDisplayed}`,
+        ...r.fields.map((f) => `${f.id}:${f.isDisplayed}:${f.valueJa}`),
+      ]),
+    ]),
+  ]);
+
   return (
     <div className="space-y-4">
       <ScrollRestore personId={personId} />
@@ -94,7 +109,12 @@ export default async function PersonEditorPage({
         canExportSupplement={showSupplement && can(user, 'sheet.export')}
       />
 
-      <SplitPreview personId={personId} tab={tab ?? null} preset={preset ?? null}>
+      <SplitPreview
+        personId={personId}
+        tab={tab ?? null}
+        preset={preset ?? null}
+        refreshKey={previewKey}
+      >
         <div className="space-y-4">
           {/* Sano-san's review (2026-09-23, item 7): the tabs come first, and
               the photo sits inside 個人情報 rather than as a section of its own
@@ -131,4 +151,18 @@ export default async function PersonEditorPage({
       </SplitPreview>
     </div>
   );
+}
+
+/** A short, stable fingerprint of a list of strings (FNV-1a, 32-bit). */
+function sheetFingerprint(parts: string[]): string {
+  let hash = 0x811c9dc5;
+  for (const part of parts) {
+    for (let i = 0; i < part.length; i++) {
+      hash ^= part.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    hash ^= 0x1f; // separator, so ["ab","c"] and ["a","bc"] differ
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
 }
