@@ -14,6 +14,7 @@ import {
 } from '@/lib/form/parse-apps-script';
 import { expandSourceCodes } from '@/lib/sheet/question-coverage';
 import { generateUniqueCode } from '@/lib/sheet/generate-code';
+import { nextSectionColour } from '@/lib/sheet/section-colours';
 
 /**
  * In-app replacement for `npm run form:parse` + `npm run db:seed`'s
@@ -213,8 +214,19 @@ export async function importFormScriptAction(
           'section',
           async (c) => (await tx.sheetSection.findUnique({ where: { code: c } })) !== null,
         );
+        // Read inside the transaction, so each new section also avoids the
+        // colours of the ones created just before it in this import.
+        const colour = nextSectionColour(
+          await tx.sheetSection.findMany({ select: { code: true, colour: true, order: true } }),
+        );
         const section = await tx.sheetSection.create({
-          data: { code: sectionCode, nameJa: ja || '未分類（自動取り込み）', nameEn: en, order: sectionOrder },
+          data: {
+            code: sectionCode,
+            nameJa: ja || '未分類（自動取り込み）',
+            nameEn: en,
+            order: sectionOrder,
+            colour,
+          },
         });
         sectionsCreated += 1;
 

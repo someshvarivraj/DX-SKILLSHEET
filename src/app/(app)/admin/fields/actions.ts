@@ -11,6 +11,7 @@ import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { recordAudit } from '@/lib/audit';
+import { isPaletteKey, nextSectionColour } from '@/lib/sheet/section-colours';
 import { generateUniqueCode } from '@/lib/sheet/generate-code';
 
 async function guard() {
@@ -36,8 +37,13 @@ export async function updateSectionAction(input: {
   hideWhenEmpty: boolean;
   maxDisplayed: number;
   description?: string;
+  /** A SECTION_PALETTE key, or null for automatic. Omitted = unchanged. */
+  colour?: string | null;
 }): Promise<SaveResult> {
   const user = await guard();
+  if (input.colour != null && !isPaletteKey(input.colour)) {
+    return { ok: false, message: '色の指定が正しくありません' };
+  }
   await prisma.sheetSection.update({
     where: { id: input.id },
     data: {
@@ -48,6 +54,7 @@ export async function updateSectionAction(input: {
       hideWhenEmpty: input.hideWhenEmpty,
       maxDisplayed: input.maxDisplayed,
       description: input.description || null,
+      ...(input.colour !== undefined ? { colour: input.colour } : {}),
     },
   });
   await recordAudit({
@@ -238,7 +245,11 @@ export async function createSectionAction(input: {
     async (c) => (await prisma.sheetSection.findUnique({ where: { code: c } })) !== null,
   );
 
-  const data = { code, nameJa, nameEn: input.nameEn || null };
+  // A colour no other section uses, saved now so it does not shift later.
+  const colour = nextSectionColour(
+    await prisma.sheetSection.findMany({ select: { code: true, colour: true, order: true } }),
+  );
+  const data = { code, nameJa, nameEn: input.nameEn || null, colour };
   let section;
   if (input.position === 'first') {
     // Shift everything down one step rather than going below the first order

@@ -5,6 +5,7 @@ import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
 import { FormScriptImport } from '@/components/admin/form-script-import';
 import { expandSourceCodes } from '@/lib/sheet/question-coverage';
+import { resolveSectionColours } from '@/lib/sheet/section-colours';
 import { PageHeader } from '@/components/page-header';
 import { getT } from '@/lib/i18n/server';
 import { TemplatePreviewButton } from '@/components/admin/template-preview-overlay';
@@ -63,6 +64,8 @@ export default async function FieldDefinitionPage() {
 
   const unassigned = questions.filter((q) => !expanded.has(q.code));
 
+  const colours = resolveSectionColours(sections);
+
   const rows = sections.map((section) => ({
     id: section.id,
     code: section.code,
@@ -74,6 +77,8 @@ export default async function FieldDefinitionPage() {
     hideWhenEmpty: section.hideWhenEmpty,
     maxDisplayed: section.maxDisplayed,
     description: section.description,
+    colour: section.colour,
+    colourKey: colours.get(section.code)!.key,
     fields: section.fields.map((f) => ({
       id: f.id,
       code: f.code,

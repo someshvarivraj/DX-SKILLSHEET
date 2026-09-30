@@ -245,6 +245,10 @@ model SheetSection {
   /// Maximum records displayed at once — spec §5.4 caps this at 3.
   maxDisplayed Int         @default(3)
   description  String?
+  /// Band colour on the printed sheet: a key of SECTION_PALETTE
+  /// (src/lib/sheet/section-colours.ts). Null = automatic, i.e. the
+  /// section's traditional colour, or the first one no other section uses.
+  colour       String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

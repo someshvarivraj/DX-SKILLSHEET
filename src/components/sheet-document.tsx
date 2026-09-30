@@ -18,6 +18,7 @@
  * admin UI around it.
  */
 
+import { sectionColourStyle } from '@/lib/sheet/section-colours';
 import type { SectionView, SheetModel } from '@/lib/sheet/model';
 
 /**
@@ -368,7 +369,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
   const rowCount = Math.max(identity.length + (ageGenderRow ? 1 : 0), 1);
 
   return (
-    <table className={sectionClass(section.code)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />
@@ -414,7 +415,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
 /** Career aspirations: a grouped block with one spanning label, as in the samples. */
 function GroupedBlock({ section }: { section: SectionView }) {
   return (
-    <table className={sectionClass(section.code)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
       <colgroup>
         <col style={{ width: '72px' }} />
         <col style={{ width: '172px' }} />
@@ -440,7 +441,7 @@ function GroupedBlock({ section }: { section: SectionView }) {
 function RepeatingBlock({ section }: { section: SectionView }) {
   if (section.code === 'education') {
     return (
-      <table className={sectionClass(section.code)}>
+      <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
         <colgroup>
           {/* Wide enough that a full 「2022年8月 - 2026年5月」 and 「学士（工学）」
               each stay on one line rather than breaking mid-parenthesis. */}
@@ -479,7 +480,7 @@ function RepeatingBlock({ section }: { section: SectionView }) {
   }
 
   return (
-    <table className={sectionClass(section.code)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />
@@ -526,7 +527,7 @@ function RecordRows({
 
 function SimpleBlock({ section }: { section: SectionView }) {
   return (
-    <table className={sectionClass(section.code)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />

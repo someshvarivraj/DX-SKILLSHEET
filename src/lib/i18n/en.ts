@@ -570,6 +570,15 @@ export const EN: Record<string, string> = {
   "確定中…": "Finalising…",
   "確認して確定する": "Confirm and finalise",
 
+
+  // --- Section colours -------------------------------------------------------
+  "シートの色": "Colour on the sheet",
+  "自動": "Auto",
+  "他のセクションと重ならない色を自動で選びます": "Automatically picks a colour no other section uses",
+  "{colour}（「{name}」で使用中）": "{colour} (used by “{name}”)",
+  "斜線の色は他のセクションで使われています。同じ色にすると、シート上で区別しにくくなります。": "Struck-through colours are used by another section. Using the same colour makes sections harder to tell apart on the sheet.",
+  "色の指定が正しくありません": "Invalid colour.",
+
   // @@END
 };
 
