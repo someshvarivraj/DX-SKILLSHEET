@@ -164,7 +164,7 @@ export function PreviewStage({
           </button>
           {toolbar}
         </div>
-        <div ref={areaRef} className="flex-1 overflow-auto bg-sand-200 p-3">
+        <div ref={areaRef} data-preview-scroll="" className="flex-1 overflow-auto bg-sand-200 p-3">
           <ScaledPage zoom={zoom} pageHeight={pageHeight} pageRef={pageRef}>
             {children}
           </ScaledPage>

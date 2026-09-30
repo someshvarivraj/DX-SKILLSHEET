@@ -47,6 +47,11 @@ export default async function PreviewPage({
   // §11.1: only a finalised version can be exported. Offering the button before
   // then sends the operator to an endpoint that can only refuse them.
   const isFinal = model.version.status === 'FINAL';
+  // The same file URL the editing screen shows. The PDF embeds the photo on
+  // its own (lib/pdf/render.ts); the on-screen preview has to be given it.
+  const photoUrl = model.person.photoKey
+    ? withBasePath(`/api/files/${encodeURIComponent(model.person.photoKey)}`)
+    : null;
 
   // Back to the same tab the preview was opened from (Sano-san's review,
   // 2026-09-23 item 5). The editing screen then scrolls to the field that was
@@ -89,7 +94,7 @@ export default async function PreviewPage({
       >
         <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />
         <div className="p-[14mm]">
-          <SkillSheetDocument model={printable} />
+          <SkillSheetDocument model={printable} photoUrl={photoUrl} />
         </div>
       </PreviewStage>
     );
@@ -134,7 +139,7 @@ export default async function PreviewPage({
       >
         <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />
         <div className="p-[14mm]">
-          <SkillSheetDocument model={printable} />
+          <SkillSheetDocument model={printable} photoUrl={photoUrl} />
         </div>
       </PreviewStage>
     </div>
