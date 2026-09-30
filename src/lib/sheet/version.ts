@@ -122,9 +122,9 @@ export async function finaliseVersion(
   options: {
     /**
      * The operator saw the list of unchecked fields and chose to finalise
-     * anyway (2026-09-30: a confirmation rather than a hard stop). Those
-     * fields are marked checked — it is their confirmation — and the audit
-     * log records how many were confirmed this way.
+     * anyway (2026-09-30: a confirmation rather than a hard stop). The fields
+     * stay unchecked — nobody actually checked them — and the audit log
+     * records how many were left that way.
      */
     confirmUnreviewed?: boolean;
   } = {},
@@ -172,16 +172,10 @@ export async function finaliseVersion(
     };
   }
 
-  const [, updated] = await prisma.$transaction([
-    prisma.fieldValue.updateMany({
-      where: { id: { in: unreviewed.map((v) => v.id) } },
-      data: { isReviewed: true },
-    }),
-    prisma.sheetVersion.update({
-      where: { id: versionId },
-      data: { status: 'FINAL', finalisedAt: new Date(), finalisedById: userId },
-    }),
-  ]);
+  const updated = await prisma.sheetVersion.update({
+    where: { id: versionId },
+    data: { status: 'FINAL', finalisedAt: new Date(), finalisedById: userId },
+  });
 
   await recordAudit({
     userId,
@@ -191,9 +185,9 @@ export async function finaliseVersion(
     personId: version.skillSheet.personId,
     summary:
       unreviewed.length > 0
-        ? `第${version.versionNo}版を確定した（未確認の${unreviewed.length}項目をまとめて確認済みにした）`
+        ? `第${version.versionNo}版を確定した（未確認の${unreviewed.length}項目を残したまま）`
         : `第${version.versionNo}版を確定した`,
-    meta: unreviewed.length > 0 ? { confirmedUnreviewed: unreviewed.length } : undefined,
+    meta: unreviewed.length > 0 ? { finalisedWithUnreviewed: unreviewed.length } : undefined,
   });
 
   return { ok: true as const, version: updated };

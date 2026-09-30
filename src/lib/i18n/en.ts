@@ -566,9 +566,10 @@ export const EN: Record<string, string> = {
 
   // --- Finalise confirmation -------------------------------------------------
   "未確認の項目が{n}件あります": "{n} fields haven't been checked yet",
-  "確定すると、これらの項目はすべて「確認済み」になり、この内容でPDFを出力できるようになります。本当に確定しますか？": "Finalising marks all of these as checked, and the PDF can then be downloaded with this content. Are you sure you want to finalise?",
   "確定中…": "Finalising…",
-  "確認して確定する": "Confirm and finalise",
+
+  "これらの項目は未確認のまま確定し、この内容でPDFを出力できるようになります。本当に確定しますか？": "These fields will stay unchecked, and the PDF can be downloaded with this content. Are you sure you want to finalise?",
+  "このまま確定する": "Finalise anyway",
 
   // @@END
 };

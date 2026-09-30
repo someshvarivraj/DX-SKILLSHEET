@@ -249,8 +249,8 @@ type UnreviewedItem = {
 };
 
 /**
- * "Some fields are still unchecked — finalise anyway?" Finalising confirms
- * them (they are marked checked), so the list shows exactly what that covers.
+ * "Some fields are still unchecked — finalise anyway?" They stay unchecked;
+ * the list shows exactly which ones go out without a check.
  */
 function ConfirmFinaliseDialog({
   items,
@@ -289,7 +289,7 @@ function ConfirmFinaliseDialog({
             </h2>
             <p className="mt-1 text-sm text-ink-700">
               {t(
-                '確定すると、これらの項目はすべて「確認済み」になり、この内容でPDFを出力できるようになります。本当に確定しますか？',
+                'これらの項目は未確認のまま確定し、この内容でPDFを出力できるようになります。本当に確定しますか？',
               )}
             </p>
           </div>
@@ -307,7 +307,7 @@ function ConfirmFinaliseDialog({
             {t('キャンセル')}
           </button>
           <button type="button" className="btn btn-primary" onClick={onConfirm} disabled={pending} autoFocus>
-            {pending ? t('確定中…') : t('確認して確定する')}
+            {pending ? t('確定中…') : t('このまま確定する')}
           </button>
         </div>
       </div>
