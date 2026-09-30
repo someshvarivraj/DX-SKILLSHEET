@@ -42,6 +42,19 @@ export default async function TemplatePreviewPage({
   if (section && model.sections.length === 0) notFound();
   const printable = toPrintableModel(model, true);
 
+  // Inside the pop-up on the field-definition screen: only the sheet and a
+  // small zoom bar — the pop-up's own bar already names what is shown.
+  if (embed) {
+    return (
+      <PreviewStage compact>
+        <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />
+        <div className="p-[14mm]">
+          <SkillSheetDocument model={printable} />
+        </div>
+      </PreviewStage>
+    );
+  }
+
   return (
     <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -55,13 +68,9 @@ export default async function TemplatePreviewPage({
 
       <PreviewStage
         toolbar={
-          // Inside the pop-up (embed=1) this link would load the whole app
-          // inside the pop-up; closing the pop-up is the way back there.
-          embed ? null : (
-            <Link href="/admin/fields" className="btn btn-secondary">
-              項目定義に戻る
-            </Link>
-          )
+          <Link href="/admin/fields" className="btn btn-secondary">
+            項目定義に戻る
+          </Link>
         }
       >
         <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />

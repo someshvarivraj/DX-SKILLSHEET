@@ -33,10 +33,10 @@ export default async function PreviewPage({
   searchParams,
 }: {
   params: Promise<{ personId: string }>;
-  searchParams: Promise<{ preset?: string; tab?: string }>;
+  searchParams: Promise<{ preset?: string; tab?: string; embed?: string }>;
 }) {
   const { personId } = await params;
-  const { preset, tab } = await searchParams;
+  const { preset, tab, embed } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   if (!canAccessPerson(user, personId)) notFound();
@@ -56,6 +56,19 @@ export default async function PreviewPage({
   if (tab) backQuery.set('tab', tab);
   const backHref = `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
 
+  // Inside the editor's split panel: only the sheet and a small zoom bar. The
+  // heading, 編集に戻る and PDF button are all already on the editor beside it.
+  if (embed) {
+    return (
+      <PreviewStage compact>
+        <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />
+        <div className="p-[14mm]">
+          <SkillSheetDocument model={printable} />
+        </div>
+      </PreviewStage>
+    );
+  }
+
   return (
     <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -66,7 +79,7 @@ export default async function PreviewPage({
           {STATUS_LABELS[model.version.status]} 第{model.version.versionNo}版
         </span>
         <span className="text-xs text-ink-500">
-          画面のプレビューとPDFは同じHTMLから生成されるため、見た目は一致する。
+          PDFと同じ見た目で表示しています。
         </span>
       </div>
 

@@ -730,6 +730,23 @@ body {
   border-top: 1px solid var(--color-ink-100);
 }
 
+/* With the preview open beside the editor (html[data-split], set by
+   split-preview.tsx) the toolbar shrinks to one short row. */
+html[data-split] .sheet-toolbar {
+  padding: 0.5rem 0.9rem;
+}
+html[data-split] .sheet-toolbar :is(.sheet-toolbar-sub, .sheet-toolbar-hint, .progress) {
+  display: none;
+}
+html[data-split] .sheet-toolbar h1 {
+  font-size: 1rem;
+}
+html[data-split] .sheet-toolbar .btn {
+  min-height: 1.9rem;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8125rem;
+}
+
 /* The sheet's progress, in the toolbar. */
 .progress {
   height: 6px;
@@ -803,6 +820,11 @@ body {
     border-color 0.12s ease,
     box-shadow 0.12s ease,
     transform 0.08s ease;
+}
+.btn-sm {
+  min-height: 1.75rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.8125rem;
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);

@@ -91,13 +91,13 @@ export function SheetToolbar({
 
   return (
     <>
-      <div className="card sticky-below-header px-5 py-3.5">
+      <div className="card sticky-below-header sheet-toolbar px-5 py-3.5">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <div className="min-w-0">
             <h1 className="text-lg font-bold leading-snug text-ink-900">
               {model.person.fullNameKatakana ?? model.person.fullNameEnglish}
             </h1>
-            <p className="tabular text-xs text-ink-500">
+            <p className="sheet-toolbar-sub tabular text-xs text-ink-500">
               {model.person.fullNameEnglish}
               {model.person.employeeNumber ? ` ・ No.${model.person.employeeNumber}` : ''}
             </p>
@@ -166,7 +166,7 @@ export function SheetToolbar({
 
         {/* One short line on what to do next, only when there is something to
             do. */}
-        <p className="mt-2 text-sm text-ink-500">
+        <p className="sheet-toolbar-hint mt-2 text-sm text-ink-500">
           {isFinal
             ? '確定済みです。内容を直すと、新しい下書きが作られます。'
             : model.unreviewedCount > 0

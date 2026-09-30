@@ -33,10 +33,17 @@ const MAX_FIT = 1.4;
 export function PreviewStage({
   children,
   toolbar,
+  compact = false,
 }: {
   children: React.ReactNode;
   /** Buttons shown beside the zoom controls, e.g. 編集に戻る / PDFをダウンロード. */
   toolbar?: React.ReactNode;
+  /**
+   * Inside a panel or pop-up (the split preview, the template preview): the
+   * stage fills the frame, with only a small zoom bar — no fullscreen, no
+   * extra buttons. The panel around it already has its own controls.
+   */
+  compact?: boolean;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
@@ -111,13 +118,56 @@ export function PreviewStage({
     setZoom(next ?? zoom);
   };
 
+  if (compact) {
+    return (
+      <div className="flex h-screen flex-col">
+        <div className="flex items-center gap-1 border-b border-ink-100 bg-white px-2 py-1">
+          <button
+            type="button"
+            className="btn btn-sm btn-quiet"
+            onClick={() => step(-1)}
+            disabled={zoom <= STEPS[0]}
+            aria-label="縮小"
+            title="縮小"
+          >
+            −
+          </button>
+          <span className="tabular w-11 text-center text-xs font-semibold text-ink-700">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm btn-quiet"
+            onClick={() => step(1)}
+            disabled={zoom >= STEPS[STEPS.length - 1]}
+            aria-label="拡大"
+            title="拡大"
+          >
+            ＋
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${fitting ? 'btn-secondary' : 'btn-quiet'}`}
+            onClick={() => setFitting(true)}
+            title="用紙の幅を枠に合わせる"
+          >
+            幅に合わせる
+          </button>
+        </div>
+        <div ref={areaRef} className="flex-1 overflow-auto bg-sand-200 p-3">
+          <ScaledPage zoom={zoom} pageHeight={pageHeight} pageRef={pageRef}>
+            {children}
+          </ScaledPage>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={stageRef}
       className={
-        isFullscreen
-          ? 'flex h-screen flex-col bg-ink-700'
-          : 'card flex flex-col overflow-hidden'
+        isFullscreen ? 'flex h-screen flex-col bg-ink-700' : 'card flex flex-col overflow-hidden'
       }
     >
       <div
@@ -195,28 +245,44 @@ export function PreviewStage({
           isFullscreen ? 'flex-1 bg-ink-700 p-4' : 'max-h-[80vh] bg-sand-200 p-4'
         }`}
       >
-        {/* The scaled page. The outer box reserves the scaled height, because a
-            transform does not affect layout and the page would otherwise
-            overlap whatever follows it. */}
-        <div
-          style={{
-            width: A4_PX * zoom,
-            height: pageHeight ? pageHeight * zoom : undefined,
-            margin: '0 auto',
-          }}
-        >
-          <div
-            ref={pageRef}
-            style={{
-              width: A4_PX,
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top left',
-            }}
-            className="bg-white shadow-lift"
-          >
-            {children}
-          </div>
-        </div>
+        <ScaledPage zoom={zoom} pageHeight={pageHeight} pageRef={pageRef}>
+          {children}
+        </ScaledPage>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The page drawn at `zoom`. The outer box reserves the scaled height, because a
+ * transform does not affect layout and the page would otherwise overlap
+ * whatever follows it.
+ */
+function ScaledPage({
+  zoom,
+  pageHeight,
+  pageRef,
+  children,
+}: {
+  zoom: number;
+  pageHeight: number;
+  pageRef: React.RefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        width: A4_PX * zoom,
+        height: pageHeight ? pageHeight * zoom : undefined,
+        margin: '0 auto',
+      }}
+    >
+      <div
+        ref={pageRef}
+        style={{ width: A4_PX, transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+        className="bg-white shadow-lift"
+      >
+        {children}
       </div>
     </div>
   );
