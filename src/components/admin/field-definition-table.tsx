@@ -1054,8 +1054,8 @@ function AddFieldForm({
           onChange={(v) => setProcessing(v as Processing)}
           options={PROCESSING_OPTIONS.map((o) => ({
             value: o.value,
-            label: o.label,
-            hint: o.hint,
+            label: t(o.label),
+            hint: t(o.hint),
           }))}
         />
       </Labeled>
@@ -1134,8 +1134,8 @@ function FieldDetail({
           onChange={(v) => setDraft({ ...draft, processing: v as Processing })}
           options={PROCESSING_OPTIONS.map((o) => ({
             value: o.value,
-            label: o.label,
-            hint: o.hint,
+            label: t(o.label),
+            hint: t(o.hint),
           }))}
         />
         <p className="mt-1 text-xs text-ink-500">
