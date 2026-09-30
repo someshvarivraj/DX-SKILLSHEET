@@ -1,10 +1,12 @@
 /**
  * OpenAI-compatible provider (chat/completions shape).
  *
- * Present so that a self-hosted model inside the VPC, or an approved managed
- * endpoint, can be used without touching application code. Not enabled by
- * default: §3 forbids sending data outside AWS, so AI_BASE_URL must point at an
- * endpoint inside the AWS boundary.
+ * Used for Google's Gemini API through its OpenAI-compatible endpoint
+ * (AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai),
+ * adopted 2026-09-24 in place of Bedrock. That sends answers outside AWS, so
+ * it requires Sano-san's written approval before use with real data (spec §3,
+ * docs/AWS-REQUIREMENTS.md §4). Any other OpenAI-compatible endpoint works the
+ * same way without code changes.
  */
 
 import { getEnv } from '@/lib/env';
@@ -41,6 +43,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
           temperature: request.temperature ?? env.AI_TEMPERATURE,
           max_tokens: request.maxTokens ?? env.AI_MAX_TOKENS,
           stream: false,
+          ...(env.AI_REASONING_EFFORT ? { reasoning_effort: env.AI_REASONING_EFFORT } : {}),
         }),
       });
 

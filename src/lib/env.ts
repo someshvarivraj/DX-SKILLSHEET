@@ -74,6 +74,13 @@ const schema = z.object({
   AI_TEMPERATURE: z.coerce.number().min(0).max(1).default(0),
   AI_MAX_TOKENS: z.coerce.number().int().positive().default(1500),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+  /**
+   * openai-compatible only, and only sent when set. Gemini 3.x "thinks"
+   * before answering, and that hidden thinking is billed and counts against
+   * AI_MAX_TOKENS; `low` measured at about half the tokens of the default with
+   * the same text for a skill-sheet field (2026-09-30).
+   */
+  AI_REASONING_EFFORT: z.enum(['none', 'low', 'medium', 'high']).optional(),
 
   /** Chromium executable used for PDF rendering. */
   CHROMIUM_PATH: z.string().optional(),
