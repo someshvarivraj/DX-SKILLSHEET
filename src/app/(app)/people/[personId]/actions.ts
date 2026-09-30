@@ -320,7 +320,10 @@ export async function setHiddenFieldsAction(
   });
 }
 
-export async function finaliseAction(personId: string): Promise<ActionResult> {
+export async function finaliseAction(
+  personId: string,
+  options: { confirmUnreviewed?: boolean } = {},
+): Promise<ActionResult> {
   const user = await requireUser();
   if (!can(user, 'sheet.finalise')) {
     return { ok: false, message: '確定する権限がない' };
@@ -328,7 +331,9 @@ export async function finaliseAction(personId: string): Promise<ActionResult> {
   const sheet = await prisma.skillSheet.findUniqueOrThrow({ where: { personId } });
   if (!sheet.currentVersionId) return { ok: false, message: '版が存在しない' };
 
-  const result = await finaliseVersion(sheet.currentVersionId, user.id);
+  const result = await finaliseVersion(sheet.currentVersionId, user.id, {
+    confirmUnreviewed: options.confirmUnreviewed,
+  });
   refresh(personId);
   if (!result.ok) {
     return {

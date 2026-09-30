@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import type { SheetModel } from '@/lib/sheet/model';
 import { withBasePath } from '@/lib/base-path';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/app/(app)/people/[personId]/actions';
 import { saveEditingPosition } from './scroll-restore';
 import { FieldMenu } from './field-editor';
+import { MoraBot } from '@/components/morabot';
 import { useLang, useT } from '@/lib/i18n/client';
 import { pickName } from '@/lib/i18n';
 
@@ -50,14 +51,35 @@ export function SheetToolbar({
   const t = useT();
   const lang = useLang();
   const [notice, setNotice] = useState<string | null>(null);
-  const [unreviewed, setUnreviewed] = useState<
-    Array<{ sectionName: string; fieldName: string; sectionNameEn?: string | null; fieldNameEn?: string | null }>
-  >([]);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [confirming, setConfirming] = useState<UnreviewedItem[] | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
   const isFinal = model.version.status === 'FINAL';
+
+  // What the operator has not ticked 確認 on yet, named with its section so a
+  // field name shared by several sections (備考, 果たした役割) is clear.
+  const unreviewedNow: UnreviewedItem[] = model.sections.flatMap((s) =>
+    (s.kind === 'REPEATING' ? s.records.flatMap((r) => r.fields) : s.fields)
+      .filter((f) => f.valueJa && !f.isReviewed)
+      .map((f) => ({
+        sectionName: s.nameJa,
+        sectionNameEn: s.nameEn,
+        fieldName: f.nameJa,
+        fieldNameEn: f.nameEn,
+      })),
+  );
+
+  const finalise = (confirmUnreviewed: boolean) =>
+    startTransition(async () => {
+      const result = await finaliseAction(model.personId, { confirmUnreviewed });
+      setConfirming(null);
+      // The sheet changed since this screen loaded: ask again with the list
+      // the server found, rather than showing a refusal.
+      if (result.unreviewed) setConfirming(result.unreviewed);
+      else setNotice(result.message ?? null);
+    });
 
   const filled = model.sections
     .flatMap((s) => (s.kind === 'REPEATING' ? s.records.flatMap((r) => r.fields) : s.fields))
@@ -155,15 +177,14 @@ export function SheetToolbar({
               type="button"
               className="btn btn-primary"
               disabled={pending || isFinal}
-              title={model.unreviewedCount > 0 ? t('すべての項目に「確認」を付けると確定できます') : undefined}
-              onClick={() =>
-                startTransition(async () => {
-                  setUnreviewed([]);
-                  const result = await finaliseAction(model.personId);
-                  setNotice(result.message ?? null);
-                  if (result.unreviewed) setUnreviewed(result.unreviewed);
-                })
-              }
+              onClick={() => {
+                // Unchecked fields: ask first (2026-09-30) instead of refusing.
+                if (unreviewedNow.length > 0) {
+                  setConfirming(unreviewedNow);
+                  return;
+                }
+                finalise(false);
+              }}
             >
               {isFinal ? t('確定済み') : t('確定する')}
             </button>
@@ -192,14 +213,15 @@ export function SheetToolbar({
         <p className="card border-brand-100 bg-brand-50 px-5 py-2.5 text-sm text-ink-700">{t(notice)}</p>
       ) : null}
 
-      {unreviewed.length > 0 ? (
-        <ListCard
-          title={t('まだ確認していない項目（{n}件）', { n: unreviewed.length })}
-          onClose={() => setUnreviewed([])}
-          items={unreviewed.map((u) => ({
+      {confirming ? (
+        <ConfirmFinaliseDialog
+          items={confirming.map((u) => ({
             section: pickName(lang, u.sectionName, u.sectionNameEn),
             name: pickName(lang, u.fieldName, u.fieldNameEn),
           }))}
+          pending={pending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => finalise(true)}
         />
       ) : null}
 
@@ -216,6 +238,80 @@ export function SheetToolbar({
         />
       ) : null}
     </>
+  );
+}
+
+type UnreviewedItem = {
+  sectionName: string;
+  fieldName: string;
+  sectionNameEn?: string | null;
+  fieldNameEn?: string | null;
+};
+
+/**
+ * "Some fields are still unchecked — finalise anyway?" Finalising confirms
+ * them (they are marked checked), so the list shows exactly what that covers.
+ */
+function ConfirmFinaliseDialog({
+  items,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  items: Array<{ section: string; name: string }>;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const t = useT();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !pending) onCancel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onCancel, pending]);
+
+  return (
+    <div className="dialog-overlay" onClick={pending ? undefined : onCancel}>
+      <div
+        className="dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="finalise-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-4">
+          <MoraBot mood="trouble" size={72} title="" />
+          <div className="min-w-0">
+            <h2 id="finalise-title" className="text-lg font-bold text-ink-900">
+              {t('未確認の項目が{n}件あります', { n: items.length })}
+            </h2>
+            <p className="mt-1 text-sm text-ink-700">
+              {t(
+                '確定すると、これらの項目はすべて「確認済み」になり、この内容でPDFを出力できるようになります。本当に確定しますか？',
+              )}
+            </p>
+          </div>
+        </div>
+        <ul className="dialog-list">
+          {items.map((item, i) => (
+            <li key={i}>
+              <span className="text-ink-500">{item.section}／</span>
+              {item.name}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
+            {t('キャンセル')}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={onConfirm} disabled={pending} autoFocus>
+            {pending ? t('確定中…') : t('確認して確定する')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
