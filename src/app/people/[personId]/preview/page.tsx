@@ -56,11 +56,37 @@ export default async function PreviewPage({
   if (tab) backQuery.set('tab', tab);
   const backHref = `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
 
-  // Inside the editor's split panel: only the sheet and a small zoom bar. The
-  // heading, 編集に戻る and PDF button are all already on the editor beside it.
+  // Inside the editor's split panel: the sheet and one small bar (zoom,
+  // 全画面表示, PDF). The heading and 編集に戻る are left out — the editor is
+  // right beside it.
   if (embed) {
     return (
-      <PreviewStage compact>
+      <PreviewStage
+        compact
+        toolbar={
+          can(user, 'sheet.export') ? (
+            isFinal ? (
+              // The endpoint answers with a download (Content-Disposition:
+              // attachment), so this frame stays on the preview.
+              <a
+                href={withBasePath(`/api/people/${personId}/pdf`)}
+                className="btn btn-sm btn-primary"
+              >
+                PDFをダウンロード
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                disabled
+                title="PDFは確定版のみ出力できます。先に「確定する」を押してください。"
+              >
+                PDFをダウンロード
+              </button>
+            )
+          ) : null
+        }
+      >
         <style dangerouslySetInnerHTML={{ __html: SHEET_STYLES }} />
         <div className="p-[14mm]">
           <SkillSheetDocument model={printable} />
@@ -78,9 +104,7 @@ export default async function PreviewPage({
         <span className="badge badge-draft">
           {STATUS_LABELS[model.version.status]} 第{model.version.versionNo}版
         </span>
-        <span className="text-xs text-ink-500">
-          PDFと同じ見た目で表示しています。
-        </span>
+        <span className="text-xs text-ink-500">PDFと同じ見た目で表示しています。</span>
       </div>
 
       <PreviewStage
