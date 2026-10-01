@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildLoginEmail, buildReviewRequestEmail } from '../src/lib/mail';
+
+// The builders read APP_NAME from the environment; give the two settings the
+// app refuses to start without (placeholders — nothing connects to them).
+beforeAll(() => {
+  vi.stubEnv('DATABASE_URL', 'postgresql://test:test@localhost:5432/test');
+  vi.stubEnv('AUTH_SECRET', 'test-secret-test-secret-test-secret-123');
+});
 
 describe('emails carry a clickable link (HTML) as well as plain text', () => {
   const link = 'https://dx.morabu.com/skill-sheet-2/auth/verify?token=abc&x=1';
