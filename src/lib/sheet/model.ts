@@ -381,7 +381,6 @@ export function toPrintableModel(
   const sections = model.sections
     .filter((s) => s.document === document)
     .filter((s) => s.isVisible)
-    .filter((s) => !(s.hideWhenEmpty && s.isEmpty))
     .map((s) => ({
       ...s,
       // The rule itself lives in ./visibility, where it is documented and

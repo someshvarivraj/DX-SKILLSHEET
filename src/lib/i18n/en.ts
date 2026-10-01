@@ -580,6 +580,13 @@ export const EN: Record<string, string> = {
   "斜線の色は他のセクションで使われています。同じ色にすると、シート上で区別しにくくなります。": "Struck-through colours are used by another section. Using the same colour makes sections harder to tell apart on the sheet.",
   "色の指定が正しくありません": "Invalid colour.",
 
+
+  // --- Required = always printed ---------------------------------------------
+  "必須：空欄でもシートに表示する（押すと任意に）": "Required: shown on the sheet even when empty (click to make optional)",
+  "任意：入力があるときだけシートに表示する（押すと必須に）": "Optional: shown on the sheet only when filled in (click to make required)",
+  "すべて必須：空欄でもシートに表示する（押すとすべて任意に）": "All required: shown even when empty (click to make all optional)",
+  "押すとこのセクションの項目をすべて必須（空欄でもシートに表示）にする": "Click to make every field in this section required (shown even when empty)",
+
   // @@END
 };
 

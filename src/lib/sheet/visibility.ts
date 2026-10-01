@@ -4,22 +4,28 @@
  * Kept separate from `model.ts` because that module opens a database
  * connection on import, and this rule is worth testing on its own.
  *
- * The rule is Sano-san's, and it is deliberately not "hide what is empty":
+ * The rule (2026-10-01; it replaces "printing follows the display checkbox,
+ * not emptiness"):
  *
- *   Every person keeps every field, so that a field can be filled in later —
- *   someone with no GitHub account today may create one next month, and if the
- *   field does not exist there is nowhere to put it. What prints is decided by
- *   the field's display checkbox, which an operator sets per person. The
- *   importer starts empty fields unticked, and the operator adjusts by hand.
+ *  - A REQUIRED field always prints — even empty, as its label with a blank
+ *    to fill in — so the reader sees that the item exists and is missing.
+ *  - Any other field prints only when it has a value and is ticked for
+ *    display. Empty optional items no longer leave blank rows on the sheet.
+ *  - A section with nothing left to print drops out by itself, which made the
+ *    per-section "hide when empty" setting unnecessary.
  *
- * So a ticked-but-empty field still prints its label, and an unticked field
- * never prints even when it has content.
+ * Not printing an empty field does not remove it: every person keeps every
+ * field, so it can still be filled in later and will then print.
+ *
+ * `includeInPdf` and the per-recipient preset still apply to every field.
  */
 
 export type PrintableField = {
   code: string;
   includeInPdf: boolean;
   isDisplayed: boolean;
+  isRequired: boolean;
+  valueJa: string;
 };
 
 export type PrintOptions = {
@@ -32,5 +38,6 @@ export type PrintOptions = {
 export function isFieldPrintable(field: PrintableField, opts: PrintOptions): boolean {
   if (opts.forPdf && !field.includeInPdf) return false;
   if (opts.hiddenFieldCodes.has(field.code)) return false;
-  return field.isDisplayed;
+  if (field.isRequired) return true;
+  return field.isDisplayed && field.valueJa.trim() !== '';
 }

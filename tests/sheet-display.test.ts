@@ -103,39 +103,53 @@ describe('C-1 — the email address never reaches the printed sheet', () => {
   });
 });
 
-describe('A-3 — printing follows the display checkbox, not emptiness', () => {
+describe('A-3 — required fields always print; others only when filled', () => {
   const opts = { forPdf: true, hiddenFieldCodes: new Set<string>() };
-
-  it('keeps a ticked field that is empty, so the row exists to fill in later', () => {
-    // Sano-san's case: someone has no GitHub today but may create one later.
-    // The old behaviour dropped the row, leaving nowhere to put it.
-    expect(
-      isFieldPrintable({ code: 'oth_github', includeInPdf: true, isDisplayed: true }, opts),
-    ).toBe(true);
+  const f = (over: Partial<Parameters<typeof isFieldPrintable>[0]>) => ({
+    code: 'oth_github',
+    includeInPdf: true,
+    isDisplayed: true,
+    isRequired: false,
+    valueJa: '',
+    ...over,
   });
 
-  it('omits a field the operator has unticked, even though it has content', () => {
-    expect(
-      isFieldPrintable({ code: 'oth_hobbies', includeInPdf: true, isDisplayed: false }, opts),
-    ).toBe(false);
+  it('prints a required field even when it is empty', () => {
+    expect(isFieldPrintable(f({ isRequired: true, valueJa: '' }), opts)).toBe(true);
   });
 
-  it('still honours includeInPdf and the per-recipient preset', () => {
-    expect(
-      isFieldPrintable({ code: 'jlpt_scores', includeInPdf: false, isDisplayed: true }, opts),
-    ).toBe(false);
+  it('prints a required field even when it was left unticked', () => {
+    // The importer unticks empty fields; required overrides that.
+    expect(isFieldPrintable(f({ isRequired: true, isDisplayed: false }), opts)).toBe(true);
+  });
+
+  it('leaves an empty optional field off the sheet', () => {
+    expect(isFieldPrintable(f({ valueJa: '' }), opts)).toBe(false);
+    expect(isFieldPrintable(f({ valueJa: '   ' }), opts)).toBe(false);
+  });
+
+  it('prints an optional field that has a value and is ticked', () => {
+    expect(isFieldPrintable(f({ valueJa: 'github.com/x' }), opts)).toBe(true);
+  });
+
+  it('omits an optional field the operator has unticked, even with content', () => {
+    expect(isFieldPrintable(f({ valueJa: '長距離走', isDisplayed: false }), opts)).toBe(false);
+  });
+
+  it('still honours includeInPdf and the per-recipient preset, even when required', () => {
+    expect(isFieldPrintable(f({ isRequired: true, includeInPdf: false }), opts)).toBe(false);
     // ...but a screen-only view may still show it.
     expect(
-      isFieldPrintable(
-        { code: 'jlpt_scores', includeInPdf: false, isDisplayed: true },
-        { forPdf: false, hiddenFieldCodes: new Set() },
-      ),
+      isFieldPrintable(f({ includeInPdf: false, valueJa: 'x' }), {
+        forPdf: false,
+        hiddenFieldCodes: new Set(),
+      }),
     ).toBe(true);
     expect(
-      isFieldPrintable(
-        { code: 'dietary', includeInPdf: true, isDisplayed: true },
-        { forPdf: true, hiddenFieldCodes: new Set(['dietary']) },
-      ),
+      isFieldPrintable(f({ code: 'dietary', isRequired: true }), {
+        forPdf: true,
+        hiddenFieldCodes: new Set(['dietary']),
+      }),
     ).toBe(false);
   });
 
