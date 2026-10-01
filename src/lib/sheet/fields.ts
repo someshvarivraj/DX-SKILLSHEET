@@ -14,6 +14,7 @@
 import type { ChangeType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getEnv } from '@/lib/env';
+import { parseGridText } from './grid';
 import { recordAudit } from '@/lib/audit';
 import { loadGlossary } from '@/lib/glossary';
 import { processField, type FieldDefinition } from '@/lib/processing/pipeline';
@@ -207,11 +208,21 @@ export async function editFieldValue(params: {
     throw new Error('この項目はロックされている。ロックを解除してから編集すること');
   }
 
+  const valueJa = params.normalise === false ? params.valueJa : normaliseJapanese(params.valueJa);
+  // A GRID prints from its structured rows, not the text. Without rebuilding
+  // them here a hand edit changed the box on screen but the PDF kept printing
+  // the old scores.
+  const field = await prisma.sheetField.findUnique({
+    where: { id: params.fieldId },
+    select: { valueType: true },
+  });
+
   const value = await writeFieldValue({
     versionId: params.versionId,
     fieldId: params.fieldId,
     recordId: params.recordId,
-    valueJa: params.normalise === false ? params.valueJa : normaliseJapanese(params.valueJa),
+    valueJa,
+    ...(field?.valueType === 'GRID' ? { valueJson: parseGridText(valueJa) } : {}),
     changeType: 'MANUAL_EDIT',
     userId: params.userId,
     markReviewed: true,
@@ -492,7 +503,7 @@ export async function revertFieldValue(params: {
 }) {
   const entry = await prisma.fieldValueHistory.findUniqueOrThrow({
     where: { id: params.historyId },
-    include: { fieldValue: true },
+    include: { fieldValue: { include: { field: { select: { valueType: true } } } } },
   });
 
   const value = await writeFieldValue({
@@ -500,7 +511,12 @@ export async function revertFieldValue(params: {
     fieldId: entry.fieldValue.fieldId,
     recordId: entry.fieldValue.recordId,
     valueJa: entry.valueJa,
-    valueJson: entry.valueJson,
+    // For a GRID the rows are rebuilt from the text: entries written by a hand
+    // edit before 2026-10-01 carried the old, unedited rows.
+    valueJson:
+      entry.fieldValue.field.valueType === 'GRID'
+        ? parseGridText(entry.valueJa ?? '')
+        : entry.valueJson,
     changeType: 'REVERT',
     userId: params.userId,
     markReviewed: true,
