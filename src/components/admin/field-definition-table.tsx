@@ -322,7 +322,11 @@ function SavingCheckbox({
       checked={value}
       disabled={pending}
       aria-label={label}
-      title={value ? t('必須（押すと任意に）') : t('任意（押すと必須に）')}
+      title={
+        value
+          ? t('必須：空欄でもシートに表示する（押すと任意に）')
+          : t('任意：入力があるときだけシートに表示する（押すと必須に）')
+      }
       onChange={(e) => {
         const next = e.target.checked;
         setValue(next);
@@ -371,8 +375,8 @@ function SectionRequiredCheckbox({
         activeFields.length === 0
           ? t('項目がありません')
           : allRequired
-            ? t('すべて必須（押すとすべて任意に）')
-            : t('押すとこのセクションの項目をすべて必須にする')
+            ? t('すべて必須：空欄でもシートに表示する（押すとすべて任意に）')
+            : t('押すとこのセクションの項目をすべて必須（空欄でもシートに表示）にする')
       }
       onChange={(e) => {
         const next = e.target.checked;
@@ -613,7 +617,6 @@ function SectionItem({
             ? t('繰り返し・最大{n}件', { n: section.maxDisplayed })
             : t('単一')}
           {t('・項目{n}件', { n: section.fields.length })}
-          {section.hideWhenEmpty ? <span className="def-tag">{t('データなしで非表示')}</span> : null}
         </span>
         <span className="grid place-items-center">
           <SavingSwitch
@@ -746,14 +749,6 @@ function SectionSettings({
               />
             </Labeled>
           ) : null}
-          <label className="flex items-center gap-2 self-end pb-2 text-xs text-ink-700">
-            <input
-              type="checkbox"
-              checked={draft.hideWhenEmpty}
-              onChange={(e) => setDraft({ ...draft, hideWhenEmpty: e.target.checked })}
-            />
-            {t('データが1件もない場合はシートに出さない')}
-          </label>
           <div className="md:col-span-4">
             <Labeled label="シートの色">
               <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t('シートの色')}>
