@@ -696,6 +696,29 @@ html[data-split] .page {
   padding: 0.6rem 0.75rem;
 }
 
+/* A GRID field: one labelled box per row (JLPT 各スコア). */
+.grid-inputs {
+  display: grid;
+  gap: 0.5rem;
+}
+.grid-input-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 15rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.grid-input-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-700);
+}
+@media (max-width: 640px) {
+  .grid-input-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
 /* The ⋯ menu that holds a field's less common actions. */
 .menu-root {
   position: relative;

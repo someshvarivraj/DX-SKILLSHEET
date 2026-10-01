@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
+import { composeGridText, gridRowsOf } from '@/lib/sheet/grid';
 import { MoraBot } from '@/components/morabot';
 import { useLang, useT } from '@/lib/i18n/client';
 import { pickName } from '@/lib/i18n';
@@ -64,9 +65,16 @@ export function FieldEditor({
   // writes the stale text back over the new value. Edits typed since the last
   // server value are kept.
   const [serverValue, setServerValue] = useState(field.valueJa);
+  // A GRID (e.g. JLPT 各スコア) is edited one labelled box per row
+  // (2026-10-01: Sano-san asked for a box per score). The rows are kept
+  // separately so a label stays on screen even while its value is cleared.
+  const [gridRows, setGridRows] = useState(() => gridRowsOf(field.valueJson, field.valueJa));
   if (serverValue !== field.valueJa) {
     setServerValue(field.valueJa);
-    if (value === serverValue) setValue(field.valueJa);
+    if (value === serverValue) {
+      setValue(field.valueJa);
+      setGridRows(gridRowsOf(field.valueJson, field.valueJa));
+    }
   }
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [panel, setPanel] = useState<null | 'prompt' | 'source' | 'history' | 'help'>(null);
@@ -303,7 +311,29 @@ export function FieldEditor({
         </div>
       ) : null}
 
-      {isLongText ? (
+      {field.valueType === 'GRID' && gridRows.length > 0 ? (
+        <div className="grid-inputs">
+          {gridRows.map((r, i) => (
+            <label key={i} className="grid-input-row">
+              <span className="grid-input-label">{r.row}</span>
+              <input
+                className="input"
+                value={r.value}
+                disabled={disabled}
+                onChange={(e) => {
+                  const next = gridRows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x));
+                  setGridRows(next);
+                  setValue(composeGridText(next));
+                }}
+                onBlur={save}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur();
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      ) : isLongText ? (
         <textarea
           id={`input-${field.id}${recordId ?? ''}`}
           className="textarea"
