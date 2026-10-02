@@ -23,9 +23,9 @@ const prisma = new PrismaClient();
 const FILES = ['data/sample-responses.csv', 'data/sample-responses-2.csv'];
 
 async function main() {
-  const revision = await prisma.formRevision.findFirst({ where: { isActive: true } });
-  if (!revision) {
-    throw new Error('有効なフォーム改訂がない。先に npm run db:seed を実行すること');
+  const set = await prisma.questionSet.findFirst({ where: { isDefault: true } });
+  if (!set) {
+    throw new Error('取り込み先の質問セットがない。先に npm run db:seed を実行すること');
   }
 
   const operator = await prisma.user.findFirst({
@@ -47,7 +47,7 @@ async function main() {
     const outcome = await runImport({
       fileName: file.split('/').pop() ?? file,
       buffer: readFileSync(path).buffer as ArrayBuffer,
-      formRevisionId: revision.id,
+      setId: set.id,
       source: 'CSV',
       userId: operator.id,
       generateOnFirstImport: true,

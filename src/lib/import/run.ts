@@ -18,12 +18,14 @@ import { enqueueGeneration } from '@/lib/sheet/generation-jobs';
 import { getOrCreateSkillSheet, getEditableVersion } from '@/lib/sheet/version';
 import { createRecord } from '@/lib/sheet/records';
 import {
-  isSystemColumn,
-  matchColumns,
-  rowToAnswers,
-  type ColumnMatch,
-  type QuestionRef,
-} from './match';
+  latestAnswerMap,
+  loadSetQuestions,
+  saveImportedResponse,
+  toAnswerMap,
+  toItemAnswers,
+  type SetCodeMap,
+} from '@/lib/items/answers';
+import { isSystemColumn, matchColumns, rowToAnswers, type ColumnMatch } from './match';
 import { parseUpload, type ParsedFile } from './parse';
 
 export type ImportPreviewRow = {
@@ -38,13 +40,14 @@ export type ImportPreviewRow = {
 
 export type ImportPreview = {
   fileName: string;
-  formRevisionCode: string;
+  /** The question set the file is read with. */
+  setName: string;
   totalRows: number;
   rows: ImportPreviewRow[];
   matched: ColumnMatch[];
   /** Columns that matched no question — spec §5.3 "unassigned questions". */
   unmapped: string[];
-  /** Questions in the revision that the file does not contain. */
+  /** Questions in the set that the file does not contain. */
   missingQuestions: string[];
 };
 
@@ -62,25 +65,18 @@ function findEmail(row: Record<string, string>): string | null {
   return any ? any.trim().toLowerCase() : null;
 }
 
-async function loadQuestions(formRevisionId: string): Promise<{
-  refs: QuestionRef[];
-  types: Map<string, string>;
-}> {
-  const questions = await prisma.formQuestion.findMany({
-    where: { formRevisionId },
-    orderBy: { order: 'asc' },
-  });
-  return {
-    refs: questions.map((q) => ({
-      code: q.code,
-      fullTitle: q.responseHeader ?? q.titleJa,
-      titleJa: q.titleJa,
-      titleEn: q.titleEn,
-      type: q.type,
-      gridRows: q.gridRows,
-    })),
-    types: new Map(questions.map((q) => [q.code, q.type as string])),
-  };
+/**
+ * One row's answers, by form code (as the file has them) and as the lookup by
+ * item key that everything after the import reads.
+ */
+function readRow(
+  row: Record<string, string>,
+  matches: ColumnMatch[],
+  types: Map<string, string>,
+  codes: SetCodeMap,
+) {
+  const items = toItemAnswers(rowToAnswers(row, matches, types), codes);
+  return { items, answers: toAnswerMap(items) };
 }
 
 /** What the importer needs from an existing person to merge a row into it. */
@@ -128,13 +124,11 @@ export async function findExistingPerson(
 export async function previewImport(params: {
   fileName: string;
   buffer: ArrayBuffer;
-  formRevisionId: string;
+  setId: string;
 }): Promise<{ preview: ImportPreview; parsed: ParsedFile; matches: ColumnMatch[] }> {
   const parsed = await parseUpload(params.fileName, params.buffer);
-  const revision = await prisma.formRevision.findUniqueOrThrow({
-    where: { id: params.formRevisionId },
-  });
-  const { refs, types } = await loadQuestions(params.formRevisionId);
+  const set = await prisma.questionSet.findUniqueOrThrow({ where: { id: params.setId } });
+  const { refs, types, codes } = await loadSetQuestions(params.setId);
 
   const matches = matchColumns(parsed.headers, refs);
   const unmapped = matches
@@ -147,7 +141,7 @@ export async function previewImport(params: {
   const rows: ImportPreviewRow[] = [];
   for (let i = 0; i < parsed.rows.length; i++) {
     const row = parsed.rows[i];
-    const answers = rowToAnswers(row, matches, types);
+    const { answers } = readRow(row, matches, types, codes);
     const email = findEmail(row);
     const person = await findExistingPerson(
       email,
@@ -168,7 +162,7 @@ export async function previewImport(params: {
   return {
     preview: {
       fileName: params.fileName,
-      formRevisionCode: revision.code,
+      setName: set.name,
       totalRows: parsed.rows.length,
       rows,
       matched: matches,
@@ -193,7 +187,7 @@ export type ImportOutcome = {
 export async function runImport(params: {
   fileName: string;
   buffer: ArrayBuffer;
-  formRevisionId: string;
+  setId: string;
   source: ImportSource;
   userId: string;
   /** Row indexes to import; omit for all rows. */
@@ -204,13 +198,13 @@ export async function runImport(params: {
   const { parsed, matches, preview } = await previewImport({
     fileName: params.fileName,
     buffer: params.buffer,
-    formRevisionId: params.formRevisionId,
+    setId: params.setId,
   });
-  const { types } = await loadQuestions(params.formRevisionId);
+  const { types, codes } = await loadSetQuestions(params.setId);
 
   const batch = await prisma.importBatch.create({
     data: {
-      formRevisionId: params.formRevisionId,
+      questionSetId: params.setId,
       importedById: params.userId,
       source: params.source,
       fileName: params.fileName,
@@ -233,7 +227,7 @@ export async function runImport(params: {
   for (const index of indexes) {
     const row = parsed.rows[index];
     if (!row) continue;
-    const answers = rowToAnswers(row, matches, types);
+    const { items, answers } = readRow(row, matches, types, codes);
     const email = findEmail(row);
     const nameEnglish = String(answers['A-1-1'] ?? '').trim();
     const nameKatakana = String(answers['A-1-2'] ?? '').trim();
@@ -267,26 +261,17 @@ export async function runImport(params: {
           },
         });
 
-    const hadResponses = await prisma.formResponse.count({
-      where: { personId: person.id },
+    const hadResponses = await prisma.response.count({
+      where: { personId: person.id, status: 'SUBMITTED' },
     });
 
-    // --- import layer (written once, read-only afterwards) ------------------
-    await prisma.formResponse.upsert({
-      where: {
-        importBatchId_responseKey: {
-          importBatchId: batch.id,
-          responseKey: email ?? person.id,
-        },
-      },
-      create: {
-        importBatchId: batch.id,
-        personId: person.id,
-        responseKey: email ?? person.id,
-        submittedAt: parseDate(String(row['タイムスタンプ'] ?? row['Timestamp'] ?? '')),
-        answers: answers as never,
-      },
-      update: { answers: answers as never, personId: person.id },
+    // --- answers, per item (kept as imported; read-only afterwards) ---------
+    await saveImportedResponse({
+      setId: params.setId,
+      personId: person.id,
+      importBatchId: batch.id,
+      submittedAt: parseDate(String(row['タイムスタンプ'] ?? row['Timestamp'] ?? '')),
+      answers: items,
     });
 
     await upsertJlpt(person.id, answers);
@@ -462,10 +447,7 @@ export type FieldDiff = {
  */
 export async function diffLatestImport(personId: string): Promise<FieldDiff[]> {
   const [latest, sheet] = await Promise.all([
-    prisma.formResponse.findFirst({
-      where: { personId },
-      orderBy: { createdAt: 'desc' },
-    }),
+    latestAnswerMap(personId),
     prisma.skillSheet.findUnique({
       where: { personId },
       include: {
@@ -483,8 +465,8 @@ export async function diffLatestImport(personId: string): Promise<FieldDiff[]> {
     }),
   ]);
 
-  if (!latest || !sheet?.currentVersion) return [];
-  const answers = latest.answers as Record<string, unknown>;
+  if (!latest.responseId || !sheet?.currentVersion) return [];
+  const answers = latest.answers;
   const diffs: FieldDiff[] = [];
 
   for (const value of sheet.currentVersion.values) {

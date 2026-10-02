@@ -54,15 +54,22 @@ export type ParsedForm = {
   questions: ParsedQuestion[];
 };
 
+/**
+ * A question code at the start of a title: "A-1-1.", "B-1-2(B).", "G-1-1A.",
+ * and deeper ones such as "B-1-4-2." (the "Other" university name, which an
+ * earlier pattern missed).
+ */
+const CODE_PATTERN = /^([A-Z]-\d+(?:-\d+)+(?:\([A-Z]\)|[A-Z])?)\s*[.．]/;
+
 /** "A-1-1. 氏名（英）／Full Name (English)" -> "A-1-1" */
 export function extractCode(title: string): string | null {
-  const m = title.trim().match(/^([A-Z]-\d+-\d+(?:\([A-Z]\)|[A-Z])?)\s*[.．]/);
+  const m = title.trim().match(CODE_PATTERN);
   return m ? m[1] : null;
 }
 
 /** Split "日本語タイトル／English title" on the full-width solidus. */
 export function splitTitle(title: string): { ja: string; en: string | null } {
-  const withoutCode = title.replace(/^[A-Z]-\d+-\d+(?:\([A-Z]\)|[A-Z])?\s*[.．]\s*/, '').trim();
+  const withoutCode = title.trim().replace(CODE_PATTERN, '').trim();
   const idx = withoutCode.indexOf('／');
   if (idx === -1) return { ja: withoutCode, en: null };
   return {
@@ -90,7 +97,7 @@ export function cleanSectionLabel(label: string): { ja: string; en: string | nul
   };
 }
 
-type Recorded = {
+export type Recorded = {
   type: ParsedQuestion['type'];
   title: string;
   help: string | null;
@@ -100,7 +107,16 @@ type Recorded = {
   required: boolean;
   order: number;
   section?: string | null;
+  /** A page break: the page this item sits on (itself for a page break). */
+  page?: Recorded | null;
+  /** showOtherOption(true): a free-text "Other" after the choices. */
+  allowOther?: boolean;
+  /** Choices that jump to a page: createChoice(label, page). */
+  choiceTargets?: Array<{ label: string; page: Recorded | null }>;
 };
+
+/** Lets createChoice(label, page) find the recorded page behind a stub. */
+const RECORDED = Symbol('recorded');
 
 export function parseAppsScript(source: string): {
   title: string | null;
@@ -110,6 +126,7 @@ export function parseAppsScript(source: string): {
   let order = 0;
   let formTitle: string | null = null;
   let currentSection: string | null = null;
+  const pageBreaks = new Set<Recorded>();
 
   const makeItem = (type: ParsedQuestion['type']): Recorded & Record<string, unknown> => {
     const rec: Recorded = {
@@ -143,18 +160,26 @@ export function parseAppsScript(source: string): {
         return api;
       },
       setChoices(v: unknown[]) {
-        // Choices built with createChoice() carry their own label.
-        rec.options = (v || []).map((c) =>
+        // Choices built with createChoice() carry their own label, and may
+        // jump to a page (branching).
+        const choices = (v || []).map((c) =>
           typeof c === 'object' && c !== null && 'label' in c
-            ? String((c as { label: unknown }).label)
-            : String(c),
+            ? (c as { label: string; page: Recorded | null })
+            : { label: String(c), page: null },
         );
+        rec.options = choices.map((c) => String(c.label));
+        rec.choiceTargets = choices.filter((c) => c.page);
         return api;
       },
-      createChoice(label: string, _pageOrValue?: unknown) {
-        return { label: String(label) };
+      createChoice(label: string, pageOrValue?: unknown) {
+        const page =
+          pageOrValue && typeof pageOrValue === 'object' && RECORDED in pageOrValue
+            ? ((pageOrValue as Record<symbol, Recorded>)[RECORDED] ?? null)
+            : null;
+        return { label: String(label), page };
       },
-      showOtherOption(_v: boolean) {
+      showOtherOption(v: boolean) {
+        rec.allowOther = Boolean(v);
         return api;
       },
       setRows(v: string[]) {
@@ -175,6 +200,7 @@ export function parseAppsScript(source: string): {
       getTitle() {
         return rec.title;
       },
+      [RECORDED]: rec,
     };
     return api as Recorded & Record<string, unknown>;
   };
@@ -205,6 +231,7 @@ export function parseAppsScript(source: string): {
     addSectionHeaderItem: () => makeItem('UNKNOWN'),
     addPageBreakItem: () => {
       const api = makeItem('UNKNOWN');
+      pageBreaks.add(items[items.length - 1]!);
       const original = api.setTitle as (v: string) => unknown;
       (api as Record<string, unknown>).setTitle = (v: string) => {
         currentSection = String(v);
@@ -242,13 +269,17 @@ export function parseAppsScript(source: string): {
   }
   (entry as () => void)();
 
-  // Assign the section label that was in effect when each item was created.
+  // Assign the section label, and the page, in effect when each item was
+  // created. Only page breaks start a page; a section header item does not.
   let section: string | null = null;
+  let page: Recorded | null = null;
   for (const item of items) {
+    if (pageBreaks.has(item)) page = item;
     if (item.type === 'UNKNOWN' && item.options.length === 0 && item.title) {
       section = item.title;
     }
     item.section = section;
+    item.page = page;
   }
 
   return { title: formTitle, items };

@@ -32,14 +32,15 @@ async function readFile(formData: FormData) {
   return { fileName: file.name, buffer: await file.arrayBuffer() };
 }
 
-async function activeRevisionId(): Promise<string> {
-  const revision = await prisma.formRevision.findFirst({ where: { isActive: true } });
-  if (!revision) {
+/** Answer files go into the default question set (the latest .gs upload). */
+async function defaultSetId(): Promise<string> {
+  const set = await prisma.questionSet.findFirst({ where: { isDefault: true } });
+  if (!set) {
     throw new Error(
-      '有効なフォーム改訂が登録されていない。`npm run form:parse` と `npm run db:seed` を先に実行すること',
+      '取り込み先の質問セットがありません。先に「設問マスタ」画面でGoogleフォームのスクリプトを取り込んでください。',
     );
   }
-  return revision.id;
+  return set.id;
 }
 
 export async function previewImportAction(
@@ -52,7 +53,7 @@ export async function previewImportAction(
     const { preview } = await previewImport({
       fileName,
       buffer,
-      formRevisionId: await activeRevisionId(),
+      setId: await defaultSetId(),
     });
     return { step: 'preview', preview };
   } catch (error) {
@@ -72,7 +73,7 @@ export async function runImportAction(
     const outcome = await runImport({
       fileName,
       buffer,
-      formRevisionId: await activeRevisionId(),
+      setId: await defaultSetId(),
       source: /\.xlsx?$/i.test(fileName) ? 'XLSX' : 'CSV',
       userId: user.id,
       generateOnFirstImport: generate,

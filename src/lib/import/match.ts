@@ -41,7 +41,7 @@ export function splitGridSuffix(header: string): { base: string; row: string | n
   return { base: m[1].trim(), row: m[2].trim() };
 }
 
-const CODE_RE = /^([A-Z]-\d+-\d+(?:\([A-Z]\)|[A-Z])?)\s*[.．]/;
+const CODE_RE = /^([A-Z]-\d+(?:-\d+)+(?:\([A-Z]\)|[A-Z])?)\s*[.．]/;
 
 export function matchColumns(
   headers: string[],

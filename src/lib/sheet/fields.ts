@@ -20,6 +20,7 @@ import { loadGlossary } from '@/lib/glossary';
 import { processField, type FieldDefinition } from '@/lib/processing/pipeline';
 import { normaliseJapanese } from '@/lib/style/text';
 import { selectPrimaryResult, type JlptScores } from '@/lib/rules/jlpt';
+import { latestAnswerMap } from '@/lib/items/answers';
 
 /** Processing types that the AI may regenerate (§7.2). */
 const AI_REGENERATABLE = new Set(['GENERATE', 'TRANSLATE']);
@@ -29,12 +30,9 @@ export function isRegeneratable(processing: string): boolean {
 }
 
 export async function getPersonContext(personId: string) {
-  const [person, response, jlptResults] = await Promise.all([
+  const [person, latest, jlptResults] = await Promise.all([
     prisma.person.findUniqueOrThrow({ where: { id: personId } }),
-    prisma.formResponse.findFirst({
-      where: { personId },
-      orderBy: { createdAt: 'desc' },
-    }),
+    latestAnswerMap(personId),
     prisma.jlptResult.findMany({ where: { personId } }),
   ]);
 
@@ -53,7 +51,7 @@ export async function getPersonContext(personId: string) {
 
   return {
     person,
-    answers: (response?.answers as Record<string, unknown> | undefined) ?? {},
+    answers: latest.answers,
     jlpt,
   };
 }
