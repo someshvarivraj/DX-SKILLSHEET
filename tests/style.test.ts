@@ -6,6 +6,7 @@ import {
   cleanGrid,
   isNoneOption,
   japaneseSideOfOption,
+  splitListText,
   stripLeadingMarker,
 } from '../src/lib/style/choice';
 
@@ -182,5 +183,23 @@ describe('line structure on the printed sheet (禁則処理)', () => {
 
   it('trims trailing spaces before a line break', () => {
     expect(normaliseJapanese('一行目　\n二行目')).toBe('一行目\n二行目');
+  });
+});
+
+describe('lists on the sheet — one separator, 「、」', () => {
+  it('splits answers that carry semicolons', () => {
+    expect(cleanChoiceList(['SQL;MySQL;PostgreSQL', 'Git／GitHub', 'Jupyter Notebook'])).toEqual([
+      'SQL',
+      'MySQL',
+      'PostgreSQL',
+      'Git／GitHub',
+      'Jupyter Notebook',
+    ]);
+    expect(cleanChoiceList('SQL;MySQL、GIS, QGIS').join('、')).toBe('SQL、MySQL、GIS、QGIS');
+  });
+
+  it('keeps commas inside brackets', () => {
+    expect(splitListText('Linux（Ubuntu, CentOS など）, macOS')).toEqual(['Linux（Ubuntu, CentOS など）', 'macOS']);
+    expect(splitListText('Visual Studio Code（VSCode）;  PyTorch')).toEqual(['Visual Studio Code（VSCode）', 'PyTorch']);
   });
 });

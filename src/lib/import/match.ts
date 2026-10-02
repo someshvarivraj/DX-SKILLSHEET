@@ -151,7 +151,8 @@ export function splitMultiSelect(raw: string): string[] {
   for (const ch of raw) {
     if (ch === '（' || ch === '(') depth++;
     if (ch === '）' || ch === ')') depth = Math.max(0, depth - 1);
-    if (ch === ',' && depth === 0) {
+    // Google joins answers with ", "; some exports use ";" instead.
+    if ((ch === ',' || ch === ';' || ch === '；') && depth === 0) {
       out.push(current.trim());
       current = '';
       continue;
