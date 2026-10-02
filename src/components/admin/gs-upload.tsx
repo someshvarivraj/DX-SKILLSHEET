@@ -5,6 +5,7 @@ import { FileCode2, UploadCloud, X } from 'lucide-react';
 import { startTransition, useActionState, useRef, useState } from 'react';
 import { importGsAction, previewGsAction, type GsUploadState } from '@/app/(app)/admin/items/actions';
 import { groupNameKey } from '@/lib/items/group-name';
+import { Select } from '@/components/ui/select';
 
 const initial: GsUploadState = { step: 'idle' };
 
@@ -140,17 +141,20 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
         </div>
 
         <div className="grid content-start gap-2 md:w-72">
-          <label className="field-label">
-            {t('グループ')}
-            <select className="input mt-1" value={groupTypeId} onChange={(e) => setGroupTypeId(e.target.value)}>
-              {groupTypes.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nameJa}
-                </option>
-              ))}
-              <option value="__new">{t('新しいグループ…')}</option>
-            </select>
-          </label>
+          <div>
+            <span className="field-label">{t('グループ')}</span>
+            <Select
+              className="mt-1"
+              ariaLabel={t('グループ')}
+              value={groupTypeId}
+              searchFrom={1}
+              onChange={setGroupTypeId}
+              options={[
+                ...groupTypes.map((g) => ({ value: g.id, label: g.nameJa })),
+                { value: '__new', label: t('新しいグループ…'), hint: t('一覧にない候補者の種類を追加します') },
+              ]}
+            />
+          </div>
           {groupTypeId === '__new' ? (
             <>
               <input

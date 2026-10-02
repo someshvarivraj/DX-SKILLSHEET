@@ -2389,8 +2389,7 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-ink-500);
 }
 .im-filter-select {
-  width: auto;
-  min-width: 15rem;
+  width: 16rem;
 }
 
 /* Other question sets: collapsed until opened */
