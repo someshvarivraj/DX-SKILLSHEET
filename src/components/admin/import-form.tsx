@@ -196,7 +196,7 @@ export function ImportForm() {
         {[previewState.error, importState.error].filter(Boolean).map((error, i) => (
           <div
             key={i}
-            className="mt-3 flex items-center gap-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]"
+            className="mt-3 flex items-center gap-3 border border-accent-500/35 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]"
             role="alert"
           >
             <MoraBot mood="trouble" size={44} title="" />
@@ -204,10 +204,10 @@ export function ImportForm() {
           </div>
         ))}
         {importState.message ? (
-          <div className="mt-3 flex gap-3 rounded-lg border border-final-line bg-final-bg px-3 py-2.5 text-sm text-final-ink">
+          <div className="mt-3 flex gap-3 border border-final-line bg-final-bg px-3 py-2.5 text-sm text-final-ink">
             <MoraBot mood="happy" size={52} title="" />
             <div className="min-w-0">
-              <p className="font-semibold">{t(importState.message)}</p>
+              <p className="font-medium">{t(importState.message)}</p>
               {importState.generationQueued ? (
                 <p className="mt-1">
                   {t(
@@ -241,7 +241,7 @@ export function ImportForm() {
       {preview ? (
         <div className="space-y-3">
           <div className="card p-4">
-            <h2 className="text-sm font-semibold text-ink-900">
+            <h2 className="text-sm font-medium text-ink-900">
               {t('確認結果: {file}（{n}行）', { file: preview.fileName, n: preview.totalRows })}
             </h2>
             <p className="field-hint">
@@ -249,7 +249,7 @@ export function ImportForm() {
             </p>
 
             {preview.unmapped.length > 0 ? (
-              <div className="mt-3 rounded-lg border border-draft-line bg-draft-bg p-3">
+              <div className="mt-3 border border-draft-line bg-draft-bg p-3">
                 <p className="text-xs font-medium text-draft-ink">
                   {t('未割当の列（{n}件）', { n: preview.unmapped.length })}
                 </p>
@@ -265,7 +265,7 @@ export function ImportForm() {
                 </ul>
               </div>
             ) : (
-              <p className="mt-3 rounded-lg border border-final-line bg-final-bg p-3 text-xs text-final-ink">
+              <p className="mt-3 border border-final-line bg-final-bg p-3 text-xs text-final-ink">
                 {t('すべての列が設問と対応しました。')}
               </p>
             )}

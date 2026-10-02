@@ -40,7 +40,7 @@ export function TemplatePreviewOverlay({
     <div className="def-preview-overlay" onClick={onClose}>
       <div className="def-preview-modal" onClick={(e) => e.stopPropagation()}>
         <div className="def-preview-modal-bar">
-          <span className="text-sm font-semibold text-ink-900">{title}</span>
+          <span className="text-sm font-medium text-ink-900">{title}</span>
           <span className="flex-1" />
           <button
             type="button"

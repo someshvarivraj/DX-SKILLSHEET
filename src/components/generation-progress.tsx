@@ -134,7 +134,7 @@ export function GenerationBanner() {
       ) : (
         <div className="flex items-center gap-3">
           <MoraBot mood="happy" size={48} title="" />
-          <p className="font-bold text-ink-900">{t('AIによる文章の作成が完了しました')}</p>
+          <p className="font-semibold text-ink-900">{t('AIによる文章の作成が完了しました')}</p>
         </div>
       )}
       <ul className="mt-3 space-y-1.5">
@@ -142,7 +142,7 @@ export function GenerationBanner() {
           <li key={job.personId} className="flex flex-wrap items-center gap-3 text-sm">
             <Link
               href={`/people/${job.personId}`}
-              className="min-w-[10rem] font-semibold text-ink-900 hover:text-brand-500"
+              className="min-w-[10rem] font-medium text-ink-900 hover:text-brand-500"
             >
               {job.name}
             </Link>

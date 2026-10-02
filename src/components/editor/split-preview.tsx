@@ -121,7 +121,7 @@ export function SplitPreview({
       <div className={mode === 'max' ? 'hidden' : 'split-preview-editor'}>{children}</div>
       <div className="split-preview-panel">
         <div className="split-preview-panel-bar">
-          <span className="text-xs font-semibold text-ink-700">{t('プレビュー')}</span>
+          <span className="text-xs font-medium text-ink-700">{t('プレビュー')}</span>
           <span className="flex-1" />
           <button
             type="button"

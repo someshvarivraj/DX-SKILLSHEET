@@ -94,7 +94,7 @@ export function GlossaryManager({ entries }: { entries: GlossaryRow[] }) {
       </div>
 
       {notice ? (
-        <p className="rounded-md bg-final-bg px-3 py-1.5 text-xs text-final-ink">{t(notice)}</p>
+        <p className=" bg-final-bg px-3 py-1.5 text-xs text-final-ink">{t(notice)}</p>
       ) : null}
 
       {editing ? (

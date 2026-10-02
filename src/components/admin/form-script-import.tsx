@@ -77,7 +77,7 @@ export function FormScriptImport() {
     <div className="card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink-900">
+          <h2 className="text-sm font-medium text-ink-900">
             {t('Googleフォームのスクリプトを取り込む')}
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-500">
@@ -184,19 +184,19 @@ export function FormScriptImport() {
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
+        <p className="mt-3 border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">
           {t(error)}
         </p>
       ) : null}
 
       {importState.step === 'done' && importState.message ? (
-        <p className="mt-3 rounded-lg border border-final-line bg-final-bg px-3 py-2 text-xs text-final-ink">
+        <p className="mt-3 border border-final-line bg-final-bg px-3 py-2 text-xs text-final-ink">
           {t(importState.message)}
         </p>
       ) : null}
 
       {preview?.catalogue ? (
-        <div className="mt-3 rounded-lg border border-draft-line bg-draft-bg p-3">
+        <div className="mt-3 border border-draft-line bg-draft-bg p-3">
           <p className="text-xs font-medium text-draft-ink">
             {t('確認結果: {name}（設問{n}件）', {
               name: preview.catalogue.title ?? preview.catalogue.sourceFile,

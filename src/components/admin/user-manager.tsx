@@ -63,7 +63,7 @@ export function UserManager({
         // A failed save must not look like a successful one.
         <p
           role={notice.ok ? 'status' : 'alert'}
-          className={`rounded-lg border px-4 py-2.5 text-sm ${
+          className={` border px-4 py-2.5 text-sm ${
             notice.ok
               ? 'border-final-line bg-final-bg text-final-ink'
               : 'border-accent-500/40 bg-accent-50 text-[#b03a22]'

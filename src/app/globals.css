@@ -6,11 +6,15 @@
    Redesigned 2026-09-29 after Sano-san found the previous screens too busy.
    Direction: a quiet white workspace in the style of Japanese business SaaS
    (kintone, SmartHR) — a fixed left menu, white cards on a very light grey
-   page, one navy accent, and no decorative colour.
+   page, one accent colour, and no decorative colour.
 
-     navy      #1F4E8C  primary buttons, the current menu item, links.
+   2026-10-02: the accent changed from navy to orange, every corner is
+   square, and the type is lighter and one step smaller (Sano-san's team
+   found the previous look too heavy).
+
+     orange    #C2410C  primary buttons, the current menu item, links.
      greys     #F7F8FA page, #E3E6EA rules, #1E2530 text.
-     red       #D93D2B  必須 and destructive actions only.
+     red       #B42318  必須 and destructive actions only.
 
    The token names (brand / sand / ink) are kept from the earlier palettes so
    every screen picks the change up without being rewritten. The per-section
@@ -22,7 +26,7 @@
   /* "system-ui" is deliberately not first: on Japanese Windows it resolves to
      Yu Gothic, which is thin and hard to read at small sizes. Name the faces we
      actually want, in the order Japanese sites normally list them. */
-  --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
+  --font-sans: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
     'Yu Gothic', YuGothic, Meiryo, system-ui, sans-serif;
 
   /* The type scale is raised one step across the board. Japanese needs more
@@ -31,27 +35,27 @@
      read all day by operators. Line heights follow the 1.7–2.0 band that
      Japanese body text conventionally uses rather than Tailwind's tighter
      Latin defaults. */
-  --text-xs: 0.8125rem; /* 13px, was 12px */
-  --text-xs--line-height: 1.7;
-  --text-sm: 0.9375rem; /* 15px, was 14px */
-  --text-sm--line-height: 1.75;
-  --text-base: 1.0625rem; /* 17px, was 16px */
-  --text-base--line-height: 1.8;
-  --text-lg: 1.1875rem;
-  --text-lg--line-height: 1.7;
-  --text-xl: 1.375rem;
-  --text-xl--line-height: 1.6;
-  --text-2xl: 1.75rem;
-  --text-2xl--line-height: 1.5;
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs--line-height: 1.6;
+  --text-sm: 0.875rem; /* 14px */
+  --text-sm--line-height: 1.7;
+  --text-base: 0.9375rem; /* 15px */
+  --text-base--line-height: 1.75;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.1875rem;
+  --text-xl--line-height: 1.5;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 1.45;
 
-  /* Brand — navy */
-  --color-brand-50: #eef3fa;
-  --color-brand-100: #dce6f4;
-  --color-brand-200: #bccde6;
-  --color-brand-300: #8aa7d1;
-  --color-brand-400: #2f6bb3; /* focus rings, switches, active marks */
-  --color-brand-500: #1f4e8c; /* primary buttons, current menu item */
-  --color-brand-600: #173d6e; /* hover on primary */
+  /* Brand — orange. 500 carries white text at 5.2:1 (WCAG AA). */
+  --color-brand-50: #fff5ed;
+  --color-brand-100: #ffe8d6;
+  --color-brand-200: #fdd0ad;
+  --color-brand-300: #f9a873;
+  --color-brand-400: #ea6a1f; /* focus rings, switches, active marks */
+  --color-brand-500: #c2410c; /* primary buttons, current menu item */
+  --color-brand-600: #9a3412; /* hover on primary */
   --color-brand-700: #1e2530;
 
   /* Page greys */
@@ -70,8 +74,8 @@
   --color-ink-100: #e3e6ea;
 
   /* Red: 必須 and destructive actions. */
-  --color-accent-500: #d93d2b;
-  --color-accent-50: #fdeeec;
+  --color-accent-500: #b42318;
+  --color-accent-50: #fdecea;
 
   /* Workflow status. Semantic, not decorative: an operator learns these three
      colours once and reads them everywhere. */
@@ -81,17 +85,26 @@
   /* Warnings (style issues, 未確認) — kept distinct from 下書き grey. */
   --color-warn-bg: #fdf6e7;
   --color-warn-ink: #7a5610;
-  --color-review-bg: #e8f0fd;
-  --color-review-line: #b6cdf1;
-  --color-review-ink: #0a4183;
+  --color-review-bg: #fff5ed;
+  --color-review-line: #fdd0ad;
+  --color-review-ink: #9a3412;
   --color-final-bg: #e6f4ea;
   --color-final-line: #aed7bb;
   --color-final-ink: #1f6135;
 
-  --radius-card: 10px;
+  --radius-card: 0;
 
   --shadow-card: 0 1px 2px rgba(30, 37, 48, 0.04);
   --shadow-lift: 0 6px 16px rgba(30, 37, 48, 0.1), 0 2px 4px rgba(30, 37, 48, 0.05);
+}
+
+/* Square corners everywhere (2026-10-02) — buttons, inputs, cards, badges,
+   menus. Unlayered on purpose, so it also wins over Tailwind's rounded-*
+   utilities and the browser's own rounded inputs. */
+*,
+*::before,
+*::after {
+  border-radius: 0;
 }
 
 :root {
@@ -114,8 +127,8 @@ body {
   background: var(--color-sand-100);
   color: var(--color-ink-900);
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.8;
+  font-size: 0.875rem;
+  line-height: 1.7;
   /* 禁則処理 — a line must never begin with 、。）」 or end with （「. */
   line-break: strict;
   /* Break inside a long unbroken Latin run (an email, a URL, a question code)
@@ -128,7 +141,7 @@ body {
 /* Japanese sets emphasis with weight; italic kana and kanji are not used. */
 :is(em, i, cite, dfn, address) {
   font-style: normal;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Headings use proportional kerning, the way Japanese sites tighten full-width
@@ -209,8 +222,8 @@ body {
   align-items: center;
   gap: 0.6rem;
   padding: 1.1rem 1.1rem 1rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.35;
   color: var(--color-ink-900);
 }
@@ -220,11 +233,11 @@ body {
   place-items: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--color-brand-500);
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -242,7 +255,7 @@ body {
   width: 2rem;
   height: 2rem;
   border: 0;
-  border-radius: 7px;
+  border-radius: 0;
   background: transparent;
   color: var(--color-ink-400);
   cursor: pointer;
@@ -308,10 +321,10 @@ body {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 0.6rem 0.75rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-ink-700);
   transition:
     color 0.12s ease,
@@ -340,7 +353,7 @@ body {
 }
 .sidebar-user-name {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink-900);
 }
 .sidebar-user-role {
@@ -350,7 +363,7 @@ body {
 /* "AIは未接続" — a quiet note in the menu, not a banner over every screen. */
 .sidebar-note {
   margin-bottom: 0.75rem;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--color-warn-bg);
   padding: 0.35rem 0.55rem;
   font-size: 0.75rem;
@@ -425,7 +438,7 @@ html[data-split] .page {
 .card {
   background: #fff;
   border: 1px solid var(--color-ink-100);
-  border-radius: var(--radius-card);
+  border-radius: 0;
   box-shadow: var(--shadow-card);
 }
 /* For a card that is itself a link or a button. */
@@ -449,8 +462,8 @@ html[data-split] .page {
   padding: 0.9rem 1.25rem;
 }
 .panel-head .panel-title {
-  font-size: 1.0625rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--color-ink-900);
 }
 .panel-head .panel-title-en {
@@ -473,8 +486,8 @@ html[data-split] .page {
   margin-bottom: 1.25rem;
 }
 .page-title {
-  font-size: 1.375rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   line-height: 1.4;
   color: var(--color-ink-900);
 }
@@ -488,11 +501,11 @@ html[data-split] .page {
 .tag {
   display: inline-flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--color-sand-200);
   padding: 0 0.4rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.7;
   color: var(--color-ink-500);
   white-space: nowrap;
@@ -537,13 +550,13 @@ html[data-split] .page {
   flex: none;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: transparent;
   padding: 0.5rem 0.7rem;
   text-align: left;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.45;
   color: var(--color-ink-700);
   cursor: pointer;
@@ -576,12 +589,12 @@ html[data-split] .page {
 .section-nav-count {
   flex: none;
   min-width: 1.4rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-warn-bg);
   padding: 0 0.4rem;
   text-align: center;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-warn-ink);
 }
 .section-nav-done {
@@ -604,8 +617,8 @@ html[data-split] .page {
   margin-bottom: 0.4rem;
 }
 .field-name {
-  font-size: 0.9375rem;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-ink-900);
 }
 .field-help-btn {
@@ -613,11 +626,11 @@ html[data-split] .page {
   place-items: center;
   width: 1.15rem;
   height: 1.15rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--color-ink-200);
   background: #fff;
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink-500);
   cursor: pointer;
 }
@@ -628,7 +641,7 @@ html[data-split] .page {
 }
 .field-help {
   margin-bottom: 0.5rem;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--color-sand-100);
   padding: 0.45rem 0.7rem;
   font-size: 0.8125rem;
@@ -640,7 +653,7 @@ html[data-split] .page {
   color: var(--color-ink-400);
 }
 .field-count-over {
-  font-weight: 700;
+  font-weight: 600;
   color: #b03a22;
 }
 /* The per-field 確認 checkbox: a real button-sized hit target. */
@@ -648,12 +661,12 @@ html[data-split] .page {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border-radius: 6px;
+  border-radius: 0;
   border: 1px solid var(--color-ink-200);
   background: #fff;
   padding: 0.15rem 0.55rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-700);
   cursor: pointer;
 }
@@ -690,7 +703,7 @@ html[data-split] .page {
 }
 .field-extra {
   margin-top: 0.6rem;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--color-ink-100);
   background: var(--color-sand-50);
   padding: 0.6rem 0.75rem;
@@ -709,7 +722,7 @@ html[data-split] .page {
 }
 .grid-input-label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-700);
 }
 @media (max-width: 640px) {
@@ -730,7 +743,7 @@ html[data-split] .page {
   z-index: 25;
   min-width: 12rem;
   border: 1px solid var(--color-ink-100);
-  border-radius: 10px;
+  border-radius: 0;
   background: #fff;
   padding: 0.3rem;
   box-shadow: var(--shadow-lift);
@@ -741,7 +754,7 @@ html[data-split] .page {
   align-items: center;
   gap: 0.5rem;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   padding: 0.45rem 0.65rem;
   text-align: left;
@@ -787,11 +800,11 @@ html[data-split] .sheet-toolbar .btn {
   align-items: center;
   gap: 0.45rem;
   border: 1px solid var(--color-ink-200);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fff;
   padding: 0.35rem 0.6rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-700);
   cursor: pointer;
 }
@@ -826,14 +839,14 @@ html[data-split] .sheet-toolbar .btn {
   flex: none;
   width: 0.75rem;
   height: 0.75rem;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .colour-swatch {
   position: relative;
   width: 2rem;
   height: 2rem;
   border: 2px solid #fff;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 0 0 1px var(--color-ink-200);
   cursor: pointer;
 }
@@ -842,17 +855,17 @@ html[data-split] .sheet-toolbar .btn {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.9) 45%, rgba(255, 255, 255, 0.9) 55%, transparent 55%);
 }
 .colour-auto {
   height: 2rem;
   border: 1px solid var(--color-ink-200);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fff;
   padding: 0 0.75rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-700);
   cursor: pointer;
 }
@@ -881,7 +894,7 @@ html[data-split] .sheet-toolbar .btn {
   max-width: 34rem;
   max-height: 85vh;
   overflow-y: auto;
-  border-radius: 12px;
+  border-radius: 0;
   background: #fff;
   padding: 1.5rem;
   box-shadow: var(--shadow-lift);
@@ -891,7 +904,7 @@ html[data-split] .sheet-toolbar .btn {
   max-height: 14rem;
   overflow-y: auto;
   border: 1px solid var(--color-ink-100);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--color-sand-50);
   padding: 0.6rem 0.85rem;
   font-size: 0.875rem;
@@ -903,13 +916,13 @@ html[data-split] .sheet-toolbar .btn {
   height: 6px;
   width: 8rem;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-sand-200);
 }
 .progress > span {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-final-ink);
 }
 
@@ -919,7 +932,7 @@ html[data-split] .sheet-toolbar .btn {
   flex: none;
   width: 1rem;
   height: 1rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 2px solid var(--color-brand-100);
   border-top-color: var(--color-brand-500);
   animation: ai-spin 0.8s linear infinite;
@@ -993,18 +1006,18 @@ html[data-split] .sheet-toolbar .btn {
   margin-top: 44px;
   margin-right: 20px;
   margin-left: 20px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-sand-200);
 }
 .morabot-bar {
   position: relative;
   height: 100%;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .morabot-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 0;
   background: linear-gradient(90deg, var(--color-brand-400), var(--color-brand-500));
   transition: width 0.6s ease;
 }
@@ -1057,8 +1070,8 @@ html[data-split] .sheet-toolbar .btn {
   margin-bottom: -1px;
   border-bottom: 2px solid transparent;
   padding: 0.55rem 0.85rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-ink-500);
 }
 .filter-tab:hover {
@@ -1069,7 +1082,7 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-brand-500);
 }
 .filter-tab-count {
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-sand-200);
   padding: 0 0.45rem;
   font-size: 0.75rem;
@@ -1085,13 +1098,13 @@ html[data-split] .sheet-toolbar .btn {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  border-radius: 7px;
+  border-radius: 0;
   /* A comfortable hit target: 36px tall, which is the minimum that stays
      easy to click through a long editing session. */
   min-height: 2.25rem;
   padding: 0.45rem 0.95rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
   border: 1px solid transparent;
@@ -1126,11 +1139,11 @@ html[data-split] .sheet-toolbar .btn {
 .btn-primary {
   background: var(--color-brand-500);
   color: #fff;
-  box-shadow: 0 1px 2px rgba(31, 78, 140, 0.25);
+  box-shadow: 0 1px 2px rgba(194, 65, 12, 0.25);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--color-brand-600);
-  box-shadow: 0 2px 6px rgba(31, 78, 140, 0.25);
+  box-shadow: 0 2px 6px rgba(194, 65, 12, 0.25);
 }
 .btn-secondary {
   background: #fff;
@@ -1158,7 +1171,7 @@ html[data-split] .sheet-toolbar .btn {
      bordered secondary button, so it keeps a faint one and full label weight. */
   border-color: transparent;
   color: var(--color-brand-500);
-  font-weight: 600;
+  font-weight: 500;
 }
 .btn-quiet:hover:not(:disabled) {
   background: var(--color-brand-50);
@@ -1170,9 +1183,9 @@ html[data-split] .sheet-toolbar .btn {
 .select {
   width: 100%;
   border: 1px solid var(--color-ink-200);
-  border-radius: 7px;
+  border-radius: 0;
   padding: 0.5rem 0.65rem;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   line-height: 1.7;
   background: #fff;
   color: var(--color-ink-900);
@@ -1183,7 +1196,7 @@ html[data-split] .sheet-toolbar .btn {
 }
 .input::placeholder,
 .textarea::placeholder {
-  color: #a7b3c5;
+  color: #a3abb5;
 }
 .input:hover:not(:disabled),
 .textarea:hover:not(:disabled),
@@ -1215,7 +1228,7 @@ html[data-split] .sheet-toolbar .btn {
   justify-content: center;
   gap: 0.35rem;
   border: 2px dashed var(--color-ink-200);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--color-sand-50);
   padding: 1.25rem;
   text-align: center;
@@ -1234,8 +1247,8 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-brand-400);
 }
 .dropzone-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-ink-900);
 }
 .dropzone-hint {
@@ -1246,7 +1259,7 @@ html[data-split] .sheet-toolbar .btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 9px;
+  border-radius: 0;
   background: #fff;
   border: 1px solid var(--color-brand-200);
   padding: 0.4rem 0.7rem;
@@ -1260,7 +1273,7 @@ html[data-split] .sheet-toolbar .btn {
 .field-label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-700);
   margin-bottom: 0.25rem;
 }
@@ -1279,7 +1292,7 @@ html[data-split] .sheet-toolbar .btn {
   background: var(--color-brand-50);
   border: 1px solid var(--color-brand-100);
   border-left: 3px solid var(--color-brand-400);
-  border-radius: 0 7px 7px 0;
+  border-radius: 0;
   padding: 0.6rem 0.85rem;
 }
 
@@ -1292,11 +1305,11 @@ html[data-split] .sheet-toolbar .btn {
 }
 .next-step-label {
   flex: none;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-brand-500);
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.05rem 0.6rem;
 }
 
@@ -1317,11 +1330,11 @@ html[data-split] .sheet-toolbar .btn {
   min-height: 2.5rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--color-ink-200);
-  border-radius: 7px;
+  border-radius: 0;
   background: #fff;
   color: var(--color-ink-900);
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   text-align: left;
   cursor: pointer;
@@ -1353,7 +1366,7 @@ html[data-split] .sheet-toolbar .btn {
   white-space: nowrap;
 }
 .select-placeholder {
-  color: #a7b3c5;
+  color: #a3abb5;
 }
 /* The trigger's own second line: what distinguishes this choice from a
    similarly-named one. */
@@ -1372,7 +1385,7 @@ html[data-split] .sheet-toolbar .btn {
   flex: none;
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--color-brand-50);
   color: var(--color-brand-500);
   transition: transform 0.15s ease;
@@ -1389,7 +1402,7 @@ html[data-split] .sheet-toolbar .btn {
   right: 0;
   background: #fff;
   border: 1px solid var(--color-ink-100);
-  border-radius: 10px;
+  border-radius: 0;
   box-shadow: var(--shadow-lift);
   overflow: hidden;
   animation: select-in 0.12s ease-out;
@@ -1422,7 +1435,7 @@ html[data-split] .sheet-toolbar .btn {
 .select-group {
   padding: 0.4rem 0.6rem 0.2rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink-400);
 }
 .select-option {
@@ -1430,8 +1443,8 @@ html[data-split] .sheet-toolbar .btn {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.9375rem;
+  border-radius: 0;
+  font-size: 0.875rem;
   line-height: 1.6;
   cursor: pointer;
 }
@@ -1442,7 +1455,7 @@ html[data-split] .sheet-toolbar .btn {
 }
 .select-option[aria-selected='true'] {
   color: var(--color-brand-500);
-  font-weight: 600;
+  font-weight: 500;
 }
 .select-option[aria-disabled='true'] {
   color: var(--color-ink-400);
@@ -1480,7 +1493,7 @@ html[data-split] .sheet-toolbar .btn {
   place-items: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 7px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: transparent;
   color: var(--color-brand-500);
@@ -1533,7 +1546,7 @@ html[data-split] .sheet-toolbar .btn {
   width: 3rem;
   height: 1.75rem;
   flex: none;
-  border-radius: 999px;
+  border-radius: 0;
   border: 0;
   padding: 0;
   background: #c3ccd4;
@@ -1549,7 +1562,7 @@ html[data-split] .sheet-toolbar .btn {
   left: 0.1875rem;
   width: 1.375rem;
   height: 1.375rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.15s ease;
@@ -1573,7 +1586,7 @@ html[data-split] .sheet-toolbar .btn {
 .def-table {
   background: #fff;
   border: 1px solid var(--color-ink-100);
-  border-radius: var(--radius-card);
+  border-radius: 0;
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -1588,8 +1601,8 @@ html[data-split] .sheet-toolbar .btn {
   padding: 0.8rem 1rem;
 }
 .def-bar-title {
-  font-size: 1.0625rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
 }
 .def-bar-meta {
   font-size: 0.8125rem;
@@ -1603,11 +1616,11 @@ html[data-split] .sheet-toolbar .btn {
   gap: 0.3rem;
   align-self: center;
   border: 1px solid var(--color-brand-500);
-  border-radius: 7px;
+  border-radius: 0;
   background: var(--color-brand-500);
   padding: 0.35rem 0.8rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
   cursor: pointer;
   transition: background-color 0.12s ease;
@@ -1639,7 +1652,7 @@ html[data-split] .sheet-toolbar .btn {
   padding-bottom: 0.45rem;
   background: var(--color-sand-50);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink-500);
 }
 .def-head:hover {
@@ -1661,7 +1674,7 @@ html[data-split] .sheet-toolbar .btn {
   place-items: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 6px;
+  border-radius: 0;
   color: #9aa6b1;
   cursor: grab;
 }
@@ -1706,8 +1719,8 @@ html[data-split] .sheet-toolbar .btn {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-ink-900);
 }
 .def-name:hover .def-name-ja {
@@ -1729,10 +1742,10 @@ html[data-split] .sheet-toolbar .btn {
 .def-tag {
   display: inline-flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0 0.4rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   background: var(--color-sand-200);
   color: var(--color-ink-700);
 }
@@ -1744,10 +1757,10 @@ html[data-split] .sheet-toolbar .btn {
 .def-required {
   display: inline-flex;
   align-items: center;
-  border-radius: 3px;
+  border-radius: 0;
   padding: 0 0.3rem;
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   background: var(--color-accent-500);
   color: #fff;
 }
@@ -1777,7 +1790,7 @@ html[data-split] .sheet-toolbar .btn {
 .def-settings {
   margin-bottom: 0.75rem;
   border: 1px solid var(--color-ink-100);
-  border-radius: 10px;
+  border-radius: 0;
   background: #fff;
   padding: 0.6rem 0.9rem;
 }
@@ -1789,13 +1802,13 @@ html[data-split] .sheet-toolbar .btn {
   border: 0;
   padding: 0;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-brand-600);
   cursor: pointer;
 }
 .def-fields {
   border: 1px solid var(--color-ink-100);
-  border-radius: 10px;
+  border-radius: 0;
   background: #fff;
   overflow: hidden;
 }
@@ -1822,6 +1835,41 @@ html[data-split] .sheet-toolbar .btn {
 .def-confirm p {
   min-width: 14rem;
 }
+.def-confirm-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+.def-confirm-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+.def-confirm-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.def-confirm-people li {
+  border: 1px solid #f4bfb4;
+  background: #fff;
+  padding: 0 0.5rem;
+}
+.def-confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.def-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
 .def-notice {
   border-top: 1px solid var(--color-ink-100);
   padding: 0.4rem 1rem;
@@ -1844,11 +1892,11 @@ html[data-split] .sheet-toolbar .btn {
   justify-content: center;
   gap: 0.35rem;
   border: 1px dashed var(--color-brand-300);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fff;
   padding: 0.55rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-brand-600);
   cursor: pointer;
 }
@@ -1900,10 +1948,10 @@ html[data-split] .sheet-toolbar .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.15rem 0.6rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.6;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -1914,7 +1962,7 @@ html[data-split] .sheet-toolbar .btn {
   content: '';
   width: 0.4rem;
   height: 0.4rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: currentColor;
   flex: none;
 }
@@ -1962,7 +2010,7 @@ html[data-split] .sheet-toolbar .btn {
   min-width: 62rem;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 .data-table > thead > tr > th {
   position: sticky;
@@ -1973,7 +2021,7 @@ html[data-split] .sheet-toolbar .btn {
   padding: 0.6rem 1rem;
   text-align: left;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-500);
   white-space: nowrap;
 }
@@ -1981,7 +2029,7 @@ html[data-split] .sheet-toolbar .btn {
   /* A long Latin token (an employee number, an address) may break; a word in
      the middle of a sentence should not. */
   overflow-wrap: break-word;
-  border-bottom: 1px solid #f0f3f8;
+  border-bottom: 1px solid #eef0f3;
   padding: 0.65rem 1rem;
   vertical-align: middle;
 }
@@ -2047,13 +2095,13 @@ html[data-split] .sheet-toolbar .btn {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--color-brand-200);
   background: #fff;
   box-shadow: var(--shadow-card);
   padding: 0.6rem 1rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-brand-600);
   cursor: pointer;
 }
@@ -2080,7 +2128,7 @@ html[data-split] .sheet-toolbar .btn {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-ink-100);
-  border-radius: var(--radius-card);
+  border-radius: 0;
   box-shadow: var(--shadow-card);
   overflow: hidden;
   background: #fff;
@@ -2143,7 +2191,7 @@ html[data-split] .sheet-toolbar .btn {
   width: 100%;
   max-width: 900px;
   height: 100%;
-  border-radius: var(--radius-card);
+  border-radius: 0;
   overflow: hidden;
   background: #fff;
   box-shadow: var(--shadow-card);

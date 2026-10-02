@@ -47,7 +47,7 @@ export default async function AuditPage({
       <h1 className="page-title">操作ログ</h1>
 
       <section className="card overflow-hidden">
-        <h2 className="border-b border-ink-100 bg-sand-50 px-4 py-2 text-sm font-semibold">
+        <h2 className="border-b border-ink-100 bg-sand-50 px-4 py-2 text-sm font-medium">
           PDF出力履歴
         </h2>
         {exports.length === 0 ? (
@@ -92,7 +92,7 @@ export default async function AuditPage({
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="border-b border-ink-100 bg-sand-50 px-4 py-2 text-sm font-semibold">
+        <h2 className="border-b border-ink-100 bg-sand-50 px-4 py-2 text-sm font-medium">
           すべての操作（{total}件）
         </h2>
         <table className="w-full text-sm">

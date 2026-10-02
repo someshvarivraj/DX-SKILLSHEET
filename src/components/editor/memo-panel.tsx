@@ -44,7 +44,7 @@ export function MemoPanel({
   return (
     <div className="card px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-ink-900">{t('営業メモ')}</h2>
+        <h2 className="text-sm font-medium text-ink-900">{t('営業メモ')}</h2>
         <span className="badge badge-warn" title={t('スキルシートには出力されない。')}>
           {t('補足資料のみ')}
         </span>
