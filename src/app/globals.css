@@ -2731,3 +2731,362 @@ html[data-split] .sheet-toolbar .btn {
   font-size: 0.8125rem;
   color: var(--color-ink-500);
 }
+
+/* ===========================================================================
+   Candidate answer screen (/answer/<token>) — phase 3. No app menu; one
+   centred column that works on a phone. English first, Japanese beneath.
+   =========================================================================== */
+.af {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
+}
+.af-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 -1rem 1rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: #fff;
+  padding: 0.75rem 1rem 0;
+}
+.af-head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.af-set {
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.af-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+.af-meta {
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.af-save {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-400);
+}
+@media (max-width: 640px) {
+  /* On a phone only the progress and the section chips stay pinned. */
+  .af-head {
+    position: static;
+  }
+  .af-steps {
+    position: sticky;
+    top: 0;
+  }
+  .af-title {
+    font-size: 1rem;
+  }
+  .af-page {
+    padding: 1rem;
+  }
+  .af-q-error {
+    margin-left: -1rem;
+    padding-left: calc(1rem - 3px);
+  }
+}
+.af-save-saved {
+  color: var(--color-final-ink);
+}
+.af-save-error {
+  color: #b03a22;
+}
+.af-progress {
+  height: 3px;
+  margin-top: 0.6rem;
+  background: var(--color-ink-100);
+}
+.af-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--color-brand-500);
+  transition: width 0.25s ease;
+}
+.af-steps {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  scrollbar-width: thin;
+}
+.af-step {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--color-ink-100);
+  background: #fff;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+  white-space: nowrap;
+}
+.af-step > span {
+  font-weight: 600;
+}
+.af-step[data-done='true'] {
+  color: var(--color-final-ink);
+}
+.af-step[aria-current='true'] {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-500);
+  color: #fff;
+}
+.af-page {
+  border: 1px solid var(--color-ink-100);
+  background: #fff;
+  padding: 1.25rem;
+}
+.af-page-title {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+.af-ja {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-ink-400);
+}
+.af-q {
+  border-top: 1px solid var(--color-ink-100);
+  padding: 1rem 0;
+}
+.af-q:first-of-type {
+  border-top: 0;
+}
+.af-q-error {
+  border-left: 3px solid #b03a22;
+  margin-left: -1.25rem;
+  padding-left: calc(1.25rem - 3px);
+}
+.af-q-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-ink-900);
+}
+.af-req {
+  margin-left: 0.5rem;
+  background: var(--color-accent-500);
+  padding: 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #fff;
+  vertical-align: 0.1em;
+}
+.af-help-text,
+.af-help p {
+  margin-bottom: 0.5rem;
+  white-space: pre-wrap;
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.af-help summary,
+.af-example summary {
+  cursor: pointer;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--color-brand-600);
+}
+.af-example {
+  margin-bottom: 1rem;
+  border: 1px dashed var(--color-brand-200);
+  background: var(--color-brand-50);
+  padding: 0.6rem 0.8rem;
+}
+.af-example pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+.af-ja-block {
+  margin-top: 0.5rem;
+  color: var(--color-ink-500) !important;
+}
+.af-textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+.af-date {
+  max-width: 14rem;
+}
+.af-options {
+  display: grid;
+  gap: 0.35rem;
+}
+.af-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid var(--color-ink-100);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+  cursor: pointer;
+}
+.af-option:hover {
+  border-color: var(--color-brand-300);
+}
+.af-option:has(input:checked) {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+}
+.af-option input[type='radio'],
+.af-option input[type='checkbox'] {
+  margin-top: 0.2rem;
+  accent-color: var(--color-brand-500);
+}
+.af-option-other {
+  align-items: center;
+}
+.af-option-other .input {
+  flex: 1;
+}
+.af-grid-wrap {
+  overflow-x: auto;
+}
+.af-grid {
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.af-grid th,
+.af-grid td {
+  border: 1px solid var(--color-ink-100);
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+.af-grid tbody th {
+  text-align: left;
+  font-weight: 400;
+}
+.af-grid input {
+  accent-color: var(--color-brand-500);
+}
+.af-error {
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  color: #b03a22;
+}
+.af-error-note {
+  margin-top: 1rem;
+  border: 1px solid #f4bfb4;
+  background: var(--color-accent-50);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.8125rem;
+  color: #b03a22;
+}
+.af-hint {
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.af-entry {
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-ink-200);
+  padding: 0 1rem;
+}
+.af-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -1rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-sand-100);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.af-entry .af-q-error {
+  margin-left: -1rem;
+  padding-left: calc(1rem - 3px);
+}
+.af-entry-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #b03a22;
+}
+.af-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px dashed var(--color-brand-300);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--color-brand-600);
+}
+.af-add:hover {
+  background: var(--color-brand-50);
+}
+.af-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-ink-100);
+  padding-top: 1rem;
+}
+.af-review {
+  border: 1px solid var(--color-ink-100);
+}
+.af-review li + li {
+  border-top: 1px solid var(--color-ink-100);
+}
+.af-review button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+.af-review button:hover {
+  background: var(--color-sand-50);
+}
+.af-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-final-ink);
+}
+.af-todo {
+  color: #b03a22;
+}
+.af-closed {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  max-width: 32rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+.af-closed-title {
+  margin-top: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-900);
+}
+.af-closed-ja {
+  font-size: 0.875rem;
+  color: var(--color-ink-500);
+}
+.af-closed-sub {
+  font-size: 0.8125rem;
+  color: var(--color-ink-400);
+}
