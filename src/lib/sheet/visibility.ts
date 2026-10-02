@@ -18,6 +18,10 @@
  * field, so it can still be filled in later and will then print.
  *
  * `includeInPdf` and the per-recipient preset still apply to every field.
+ *
+ * Not asked (2026-10-06): a field built only from questions the person's
+ * question set did not ask (JLPT for a Japanese candidate) does not print,
+ * even when it is required — unless someone has typed a value into it.
  */
 
 export type PrintableField = {
@@ -26,6 +30,7 @@ export type PrintableField = {
   isDisplayed: boolean;
   isRequired: boolean;
   valueJa: string;
+  notAsked?: boolean;
 };
 
 export type PrintOptions = {
@@ -38,6 +43,7 @@ export type PrintOptions = {
 export function isFieldPrintable(field: PrintableField, opts: PrintOptions): boolean {
   if (opts.forPdf && !field.includeInPdf) return false;
   if (opts.hiddenFieldCodes.has(field.code)) return false;
+  if (field.notAsked && field.valueJa.trim() === '') return false;
   if (field.isRequired) return true;
   return field.isDisplayed && field.valueJa.trim() !== '';
 }

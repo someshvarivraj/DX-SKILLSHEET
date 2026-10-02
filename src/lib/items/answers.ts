@@ -122,3 +122,18 @@ export async function latestAnswerMap(personId: string): Promise<{
     answers: toAnswerMap(response.answers.map((a) => ({ key: a.item.key, entry: a.entry, value: a.value }))),
   };
 }
+
+/**
+ * The item keys the person's question set asks (the set of their latest
+ * submitted response), or null when they have no response — then nothing is
+ * treated as "not asked".
+ */
+export async function askedItemKeys(personId: string): Promise<Set<string> | null> {
+  const response = await prisma.response.findFirst({
+    where: { personId, status: 'SUBMITTED' },
+    orderBy: { createdAt: 'desc' },
+    select: { set: { select: { items: { select: { item: { select: { key: true } } } } } } },
+  });
+  if (!response) return null;
+  return new Set(response.set.items.map((i) => i.item.key));
+}

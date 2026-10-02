@@ -3,9 +3,11 @@
  * .gs", 2026-10-02):
  *   - items not in the master are added;
  *   - items already in the master are kept as they are, never removed — the
- *     new set keeps its own copy of the wording and options it asks with
- *     (QuestionSetItem.wording), so another group's form or a later year's
- *     rewording never changes what the master or an earlier set says;
+ *     new set keeps the wording and options it asks with, where they differ
+ *     from the master (QuestionSetItem.wording), so another group's form or a
+ *     later year's rewording never changes what the master or an earlier set
+ *     says — while a fix made to the master on screen still reaches every set
+ *     that asks in the master's words;
  *   - a new question set is created for the upload;
  *   - items not in the script are simply not in that set.
  *
@@ -205,6 +207,7 @@ export async function applyGsPlan(params: {
       let catOrder = lastCat?.order ?? 0;
 
       const subIdByKey = new Map<string, string>();
+      const wordingByPlanKey = new Map<string, Record<string, unknown>>();
       const itemIdByPlanKey = new Map<string, string>();
 
       for (const cat of params.plan.categories) {
@@ -264,6 +267,10 @@ export async function applyGsPlan(params: {
               createdItems++;
             }
             itemIdByPlanKey.set(item.key, id);
+            if (stored) {
+              const diff = wordingDiff(stored, item);
+              if (diff) wordingByPlanKey.set(item.key, diff);
+            }
             await tx.itemGroupType.upsert({
               where: { itemId_groupTypeId: { itemId: id, groupTypeId } },
               create: { itemId: id, groupTypeId },
@@ -304,7 +311,7 @@ export async function applyGsPlan(params: {
           showIf: (remapShowIf(item.showIf) ?? undefined) as never,
           formCodes: item.formCodes,
           formHeaders: item.formHeaders,
-          wording: { ...itemContent(item), help: item.help } as never,
+          wording: (wordingByPlanKey.get(item.key) ?? undefined) as never,
         })),
       });
 
@@ -340,6 +347,22 @@ async function resolveGroup(tx: Tx, groupTypeId?: string | null, newGroupName?: 
   const existing = groupTypeId ? await tx.groupType.findUnique({ where: { id: groupTypeId } }) : null;
   if (!existing) throw new Error('グループを選んでください');
   return existing.id;
+}
+
+/** What this form asks differently from the stored item, or null when nothing. */
+function wordingDiff(
+  stored: { titleJa: string; titleEn: string | null; helpJa: string | null; options: string[]; allowOther: boolean; gridRows: string[]; gridColumns: string[] },
+  item: PlannedItem,
+): Record<string, unknown> | null {
+  const diff: Record<string, unknown> = {};
+  if (stored.titleJa !== item.titleJa) diff.titleJa = item.titleJa;
+  if ((stored.titleEn ?? null) !== (item.titleEn ?? null)) diff.titleEn = item.titleEn;
+  if ((stored.helpJa ?? null) !== (item.help ?? null)) diff.help = item.help;
+  if (JSON.stringify(stored.options) !== JSON.stringify(item.options)) diff.options = item.options;
+  if (stored.allowOther !== item.allowOther) diff.allowOther = item.allowOther;
+  if (JSON.stringify(stored.gridRows) !== JSON.stringify(item.gridRows)) diff.gridRows = item.gridRows;
+  if (JSON.stringify(stored.gridColumns) !== JSON.stringify(item.gridColumns)) diff.gridColumns = item.gridColumns;
+  return Object.keys(diff).length > 0 ? diff : null;
 }
 
 function itemContent(item: PlannedItem) {

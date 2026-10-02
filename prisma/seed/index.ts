@@ -13,6 +13,7 @@ import { SECTIONS } from './sheet-definition';
 import { hashPassword } from '../../src/lib/auth/crypto';
 import { planFromGs } from '../../src/lib/items/gs-plan';
 import { applyGsPlan } from '../../src/lib/items/gs-apply';
+import { repairItemMaster } from '../../src/lib/items/repair';
 
 const prisma = new PrismaClient();
 
@@ -303,6 +304,10 @@ async function seedUsers() {
 async function main() {
   console.log('初期データを投入する...');
   await seedItemMaster();
+  const repaired = await repairItemMaster();
+  if (repaired.titles || repaired.wordings) {
+    console.log(`  設問マスタを修正した（タイトル${repaired.titles}件、質問セットの文言${repaired.wordings}件）`);
+  }
   await seedDefinition();
   await seedGlossary();
   await seedUsers();

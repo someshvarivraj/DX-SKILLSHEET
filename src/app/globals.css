@@ -2544,3 +2544,190 @@ html[data-split] .sheet-toolbar .btn {
   font-size: 0.75rem;
   color: var(--color-ink-400);
 }
+
+/* 設問マスタ — editing (phase 2) */
+.im-dialog {
+  width: min(46rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+.im-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.im-form label > .field-label,
+.im-form div > .field-label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.im-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+.im-form-row-4 {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  align-items: end;
+}
+.im-textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.6;
+}
+.im-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  border: 1px dashed var(--color-ink-200);
+  background: transparent;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--color-brand-600);
+}
+.im-add:hover {
+  border-color: var(--color-brand-400);
+  background: var(--color-brand-50);
+}
+.im-inline-icon {
+  width: 1.6rem;
+  height: 1.6rem;
+  opacity: 0.6;
+}
+.im-inline-icon:hover {
+  opacity: 1;
+}
+.im-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.im-group-lg {
+  gap: 0.4rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.6rem;
+  font-size: 0.8125rem;
+}
+.im-group-count {
+  font-weight: 400;
+  opacity: 0.75;
+}
+.im-groups .im-add {
+  margin-top: 0;
+}
+.im-item-off .im-item-title {
+  color: var(--color-ink-400);
+}
+.im-ask {
+  display: flex;
+  align-items: center;
+  padding-right: 0.25rem;
+}
+.im-ask input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-brand-500);
+}
+.im-cond {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+  border-left: 2px solid var(--color-brand-400);
+  background: var(--color-brand-50);
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-brand-600);
+}
+
+/* Item picker (項目定義: a field's source questions, chosen by name) */
+.ip {
+  position: relative;
+}
+.ip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.ip-chip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  border: 1px solid var(--color-brand-200);
+  background: var(--color-brand-50);
+  padding: 0.2rem 0.3rem 0.2rem 0.55rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-900);
+}
+.ip-chip-groups {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--color-ink-500);
+}
+.ip-chip-x {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--color-ink-500);
+}
+.ip-chip-x:hover {
+  color: var(--color-accent-500);
+}
+.ip-pop {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  width: min(32rem, 100%);
+  border: 1px solid var(--color-ink-200);
+  background: #fff;
+  box-shadow: var(--shadow-lift);
+}
+.ip-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  padding: 0.45rem 0.6rem;
+  color: var(--color-ink-400);
+}
+.ip-search-input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+}
+.ip-list {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.ip-option {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+.ip-option:hover,
+.ip-option:focus-visible {
+  background: var(--color-brand-50);
+  outline: none;
+}
+.ip-option-title {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+}
+.ip-option-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-ink-400);
+}
+.ip-empty {
+  padding: 0.7rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}

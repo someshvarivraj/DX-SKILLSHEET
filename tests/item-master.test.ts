@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { planFromGs } from '@/lib/items/gs-plan';
 import { answerKey, toAnswerMap, toItemAnswers, type SetCodeMap } from '@/lib/items/answers';
 import { classifyTitleChange, similarity } from '@/lib/items/gs-apply';
+import { splitTitle } from '@/lib/form/parse-apps-script';
 
 const gs2026 = readFileSync(resolve(__dirname, '../data/create_iit_form_2026.gs'), 'utf8');
 
@@ -97,5 +98,16 @@ describe('a code reused for another question', () => {
   it('scores identical strings 1 and unrelated ones low', () => {
     expect(similarity('abc', 'abc')).toBe(1);
     expect(similarity('Hometown', 'Nearest Station')).toBeLessThan(0.3);
+  });
+});
+
+describe('splitting "日本語／English"', () => {
+  it('splits at the solidus outside brackets', () => {
+    expect(splitTitle('C-1-4. 英語（TOEFL／IELTS）／English (TOEFL / IELTS)')).toEqual({
+      ja: '英語（TOEFL／IELTS）',
+      en: 'English (TOEFL / IELTS)',
+    });
+    expect(splitTitle('A-1-1. 氏名（英）／Full Name (English)')).toEqual({ ja: '氏名（英）', en: 'Full Name (English)' });
+    expect(splitTitle('A-1-1. 氏名だけ')).toEqual({ ja: '氏名だけ', en: null });
   });
 });

@@ -18,6 +18,7 @@ import { prisma } from '@/lib/db';
 import { resolveSectionColours, type SectionColour } from './section-colours';
 import { characterCount, checkStyle, type StyleIssue } from '@/lib/style/text';
 import { isFieldPrintable } from './visibility';
+import { askedItemKeys } from '@/lib/items/answers';
 
 export type FieldView = {
   id: string;
@@ -36,6 +37,12 @@ export type FieldView = {
   targetLengthMin: number | null;
   targetLengthMax: number | null;
   sourceCodes: string[];
+  /**
+   * The person's question set did not ask any of the questions this field is
+   * built from (a JLPT field for a Japanese candidate). It is not printed
+   * unless someone has typed a value in.
+   */
+  notAsked: boolean;
 
   valueId: string | null;
   valueJa: string;
@@ -173,6 +180,7 @@ function buildFieldView(
     sourceCodes: [...field.sources]
       .sort((a, b) => a.order - b.order)
       .map((s) => s.questionCode),
+    notAsked: false,
 
     valueId: value?.id ?? null,
     valueJa,
@@ -254,6 +262,12 @@ export async function loadSheetModel(
   const emptyFields: SheetModel['emptyFields'] = [];
   let unreviewedCount = 0;
 
+  // What this person was asked: null when unknown (no answers stored), in
+  // which case every field counts as asked, as before.
+  const asked = await askedItemKeys(personId);
+  const isNotAsked = (codes: string[]) =>
+    Boolean(asked) && codes.length > 0 && !codes.some((c) => asked!.has(c));
+
   const colours = resolveSectionColours(sections);
 
   const sectionViews: SectionView[] = sections.map((section) => {
@@ -263,11 +277,12 @@ export async function loadSheetModel(
       ? []
       : section.fields.map((f) => {
           const view = buildFieldView(f, valueByKey.get(`${f.id}::`));
+          view.notAsked = isNotAsked(view.sourceCodes);
           // プロフィール写真 holds no text: the photo is a file on the person,
           // uploaded from the editing screen. It is missing only when there
           // is no photo, not because its (unused) text value is blank.
           const isEmpty = f.code === 'photo' ? !sheet.person.photoKey : !view.valueJa;
-          if (isEmpty) {
+          if (isEmpty && !view.notAsked) {
             emptyFields.push({
               sectionName: section.nameJa,
               fieldName: f.nameJa,

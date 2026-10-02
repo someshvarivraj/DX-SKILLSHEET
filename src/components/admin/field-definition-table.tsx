@@ -17,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Select } from '@/components/ui/select';
+import { ItemPicker, SourceNames } from './item-picker';
 import type {
   Editing,
   GlossaryCategory,
@@ -1111,7 +1112,7 @@ function FieldItem({
         </button>
         <span className="def-col-meta def-meta">
           <span className="def-tag def-tag-blue">{processing}</span>
-          {field.sourceCodes.length > 0 ? field.sourceCodes.join(' + ') : t('取得元なし')}
+          <SourceNames codes={field.sourceCodes} />
         </span>
         <span className="grid place-items-center">
           <SavingSwitch
@@ -1239,13 +1240,8 @@ function AddFieldForm({
           }))}
         />
       </Labeled>
-      <Labeled label="取得元の設問ID（カンマ区切り）">
-        <input
-          className="input"
-          placeholder="A-1-1, A-1-2"
-          value={sources}
-          onChange={(e) => setSources(e.target.value)}
-        />
+      <Labeled label="取得元の設問（設問マスタから選ぶ）">
+        <ItemPicker value={sources.split(',').map((c) => c.trim()).filter(Boolean)} onChange={(codes) => setSources(codes.join(', '))} />
       </Labeled>
       <div className="flex items-end gap-2">
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
@@ -1340,12 +1336,12 @@ function FieldDetail({
       </Labeled>
 
       <div className="md:col-span-4">
-        <Labeled label="取得元の設問ID（カンマ区切り。繰り返し項目は E-x-6 のように x を使う）">
-          <input className="input" value={sources} onChange={(e) => setSources(e.target.value)} />
+        <Labeled label="取得元の設問（設問マスタから選ぶ。複数選ぶと、候補者の質問セットで聞いた設問が使われます）">
+          <ItemPicker value={sources.split(',').map((c) => c.trim()).filter(Boolean)} onChange={(codes) => setSources(codes.join(', '))} />
         </Labeled>
         {unknownSources.length > 0 ? (
           <p className="mt-1 text-xs text-draft-ink">
-            ⚠ {t('現在のフォームに存在しない設問ID')}: {unknownSources.join('、')}
+            ⚠ {t('設問マスタにない設問が選ばれています')}: {unknownSources.join('、')}
           </p>
         ) : null}
       </div>

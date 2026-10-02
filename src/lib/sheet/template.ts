@@ -54,6 +54,7 @@ function buildTemplateFieldView(field: {
     targetLengthMin: field.targetLengthMin,
     targetLengthMax: field.targetLengthMax,
     sourceCodes: [],
+    notAsked: false,
 
     valueId: null,
     valueJa,

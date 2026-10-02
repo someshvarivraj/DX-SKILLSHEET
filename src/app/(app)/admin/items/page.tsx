@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { ItemType } from '@prisma/client';
-import { ChevronRight, FileCode2, Inbox, Layers, ListChecks, Repeat, Users } from 'lucide-react';
+import { ChevronRight, FileCode2, Inbox, Layers, ListChecks, Pencil, Repeat, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
@@ -8,6 +8,9 @@ import { PageHeader } from '@/components/page-header';
 import { GsUpload } from '@/components/admin/gs-upload';
 import { SetDefaultButton } from '@/components/admin/set-default-button';
 import { GroupFilter } from '@/components/admin/group-filter';
+import { ItemEditButton, ItemMasterProvider, type EditableItem } from '@/components/admin/item-editor';
+import { NameEditButton, NewSetButton } from '@/components/admin/item-master-tools';
+import Link from 'next/link';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
 import { SECTION_PALETTE } from '@/lib/sheet/section-colours';
@@ -90,12 +93,39 @@ export default async function ItemMasterPage({
             ? sub.items.filter((item) => item.groupTypes.some((g) => g.groupTypeId === activeGroup.id))
             : sub.items,
         }))
-        .filter((sub) => sub.items.length > 0),
+        .filter((sub) => !activeGroup || sub.items.length > 0),
     }))
-    .filter((category) => category.subcategories.length > 0);
+    .filter((category) => !activeGroup || category.subcategories.length > 0);
 
   const totalItems = categories.reduce((n, c) => n + c.subcategories.reduce((m, s) => m + s.items.length, 0), 0);
   const shownItems = tree.reduce((n, c) => n + c.subcategories.reduce((m, s) => m + s.items.length, 0), 0);
+
+  const groupOptions = groupTypes.map((g) => ({ id: g.id, name: pickName(lang, g.nameJa, g.nameEn) }));
+  const allActive = categories.flatMap((c) =>
+    c.subcategories.flatMap((s) =>
+      s.items
+        .filter((i) => i.status === 'ACTIVE')
+        .map((i) => ({ id: i.id, label: `${c.nameJa} › ${i.titleJa}${i.titleEn ? `／${i.titleEn}` : ''}` })),
+    ),
+  );
+  const editable = (item: (typeof categories)[number]['subcategories'][number]['items'][number]): EditableItem => ({
+    id: item.id,
+    titleJa: item.titleJa,
+    titleEn: item.titleEn,
+    helpJa: item.helpJa,
+    helpEn: item.helpEn,
+    exampleJa: item.exampleJa,
+    exampleEn: item.exampleEn,
+    type: item.type,
+    options: item.options,
+    allowOther: item.allowOther,
+    gridRows: item.gridRows,
+    gridColumns: item.gridColumns,
+    validation: (item.validation as EditableItem['validation']) ?? null,
+    groupTypeIds: item.groupTypes.map((g) => g.groupTypeId),
+    status: item.status,
+    answerCount: item._count.answers,
+  });
 
   const stats = [
     { icon: ListChecks, label: t('設問'), value: totalItems },
@@ -105,6 +135,7 @@ export default async function ItemMasterPage({
   ];
 
   return (
+    <ItemMasterProvider value={{ groups: groupOptions, items: allActive }}>
     <div className="space-y-6">
       <PageHeader
         title={t('設問マスタ')}
@@ -130,7 +161,10 @@ export default async function ItemMasterPage({
           stands alone and large; the rest are a plain list, and changing the
           target asks for confirmation (Sano-san's review, 2026-10-05). */}
       <section>
-        <h2 className="im-section-title">{t('質問セット')}</h2>
+        <div className="im-master-head">
+          <h2 className="im-section-title !mb-0">{t('質問セット')}</h2>
+          <NewSetButton groups={groupOptions} sets={sets.map((s) => ({ id: s.id, name: s.name }))} />
+        </div>
         {sets.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-ink-500">
             {t('質問セットはまだありません。上からGoogleフォームのスクリプト（.gs）を取り込んでください。')}
@@ -157,6 +191,11 @@ export default async function ItemMasterPage({
                     </div>
                   </div>
                   <dl className="im-set-figures">
+                    <div className="self-end">
+                      <Link href={`/admin/items/sets/${target.id}`} className="btn btn-secondary btn-sm">
+                        <Pencil size={14} aria-hidden /> {t('設問を選ぶ・編集')}
+                      </Link>
+                    </div>
                     <div>
                       <dt>{t('設問')}</dt>
                       <dd>{target._count.items}</dd>
@@ -209,7 +248,10 @@ export default async function ItemMasterPage({
                           </td>
                           <td>{set._count.items}</td>
                           <td>{set._count.responses}</td>
-                          <td className="text-right">
+                          <td className="text-right whitespace-nowrap">
+                            <Link href={`/admin/items/sets/${set.id}`} className="btn btn-secondary btn-sm mr-2">
+                              <Pencil size={14} aria-hidden /> {t('編集')}
+                            </Link>
                             <SetDefaultButton setId={set.id} setName={set.name} currentName={target?.name ?? null} />
                           </td>
                         </tr>
@@ -221,6 +263,21 @@ export default async function ItemMasterPage({
             ) : null}
           </div>
         )}
+      </section>
+
+      {/* ---- Groups ------------------------------------------------------ */}
+      <section>
+        <h2 className="im-section-title">{t('グループ')}</h2>
+        <div className="im-groups">
+          {groupTypes.map((g) => (
+            <span key={g.id} className="im-group im-group-lg" data-tone={toneOf.get(g.id) ?? 0}>
+              {pickName(lang, g.nameJa, g.nameEn)}
+              <span className="im-group-count">{t('{n}件', { n: g._count.items })}</span>
+              <NameEditButton kind="group" id={g.id} nameJa={g.nameJa} nameEn={g.nameEn} />
+            </span>
+          ))}
+          <NameEditButton kind="group" label={t('グループを追加')} />
+        </div>
       </section>
 
       {/* ---- Item master ---------------------------------------------------- */}
@@ -259,6 +316,7 @@ export default async function ItemMasterPage({
                       {pickName(lang, category.nameJa, category.nameEn)}
                       {lang !== 'en' && category.nameEn ? <span className="im-sub-en">{category.nameEn}</span> : null}
                     </span>
+                    <NameEditButton kind="category" id={category.id} nameJa={category.nameJa} nameEn={category.nameEn} />
                     <span className="im-pill">{t('{n}件', { n: count })}</span>
                   </summary>
 
@@ -272,6 +330,14 @@ export default async function ItemMasterPage({
                               <Repeat size={12} aria-hidden /> {t('繰り返し（最大{n}件）', { n: sub.maxEntries })}
                             </span>
                           ) : null}
+                          <NameEditButton
+                            kind="subcategory"
+                            id={sub.id}
+                            nameJa={sub.nameJa}
+                            nameEn={sub.nameEn}
+                            isRepeating={sub.isRepeating}
+                            maxEntries={sub.maxEntries}
+                          />
                         </p>
                         <ul className="im-items">
                           {sub.items.map((item) => (
@@ -291,19 +357,24 @@ export default async function ItemMasterPage({
                                   <span className="im-type">{t(item.status === 'HIDDEN' ? '非表示' : '置き換え済み')}</span>
                                 ) : null}
                                 <span className="im-answers">{t('回答{n}件', { n: item._count.answers })}</span>
+                                <ItemEditButton item={editable(item)} />
                               </div>
                             </li>
                           ))}
                         </ul>
+                        <ItemEditButton subcategoryId={sub.id} />
                       </div>
                     ))}
+                    <NameEditButton kind="subcategory" parentId={category.id} label={t('サブカテゴリを追加')} />
                   </div>
                 </details>
               );
             })}
+            {activeGroup ? null : <NameEditButton kind="category" label={t('カテゴリを追加')} />}
           </div>
         )}
       </section>
     </div>
+    </ItemMasterProvider>
   );
 }
