@@ -2371,19 +2371,8 @@ html[data-split] .sheet-toolbar .btn {
 .im-group[data-tone='3'] { border-color: #a9c6e6; background: #e5eff9; color: #2f6ba8; }
 .im-group[data-tone='4'] { border-color: #e3b2c6; background: #f8e9f0; color: #9e4468; }
 .im-group[data-tone='5'] { border-color: #b5cf9c; background: #f0f3e6; color: #6b7a3e; }
-.im-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  flex: none;
-}
-.im-dot[data-tone='0'] { background: #c2410c; }
-.im-dot[data-tone='1'] { background: #2e6f66; }
-.im-dot[data-tone='2'] { background: #67589b; }
-.im-dot[data-tone='3'] { background: #2f6ba8; }
-.im-dot[data-tone='4'] { background: #9e4468; }
-.im-dot[data-tone='5'] { background: #6b7a3e; }
 
-/* Filter by group */
+/* Filter by group: one dropdown, however many groups there are */
 .im-master-head {
   display: flex;
   flex-wrap: wrap;
@@ -2394,30 +2383,40 @@ html[data-split] .sheet-toolbar .btn {
 }
 .im-filter {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-.im-filter-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--color-ink-200);
-  background: #fff;
-  padding: 0.25rem 0.7rem;
+  gap: 0.5rem;
   font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.im-filter-select {
+  width: auto;
+  min-width: 15rem;
+}
+
+/* Other question sets: collapsed until opened */
+.im-others-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-ink-700);
+  --im-accent: var(--color-ink-500);
 }
-.im-filter-chip:hover {
-  border-color: var(--color-brand-300);
+.im-others-head::-webkit-details-marker {
+  display: none;
 }
-.im-filter-chip[aria-current='true'] {
-  border-color: var(--color-brand-500);
-  background: var(--color-brand-500);
-  color: #fff;
+.im-others-head:hover {
+  background: var(--color-sand-50);
 }
-.im-filter-count {
-  font-size: 0.75rem;
-  opacity: 0.7;
+.im-others[open] > .im-others-head {
+  border-bottom: 1px solid var(--color-ink-100);
+}
+.im-others[open] .im-chevron {
+  transform: rotate(90deg);
 }
 
 /* Category tree */

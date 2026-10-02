@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ItemType } from '@prisma/client';
 import { ChevronRight, FileCode2, Inbox, Layers, ListChecks, Repeat, Users } from 'lucide-react';
@@ -8,6 +7,7 @@ import { can } from '@/lib/auth/permissions';
 import { PageHeader } from '@/components/page-header';
 import { GsUpload } from '@/components/admin/gs-upload';
 import { SetDefaultButton } from '@/components/admin/set-default-button';
+import { GroupFilter } from '@/components/admin/group-filter';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
 import { SECTION_PALETTE } from '@/lib/sheet/section-colours';
@@ -178,8 +178,12 @@ export default async function ItemMasterPage({
             )}
 
             {others.length > 0 ? (
-              <div className="card overflow-hidden">
-                <p className="panel-head panel-head-meta">{t('その他の質問セット')}</p>
+              <details className="card im-others">
+                <summary className="im-others-head">
+                  <ChevronRight size={16} aria-hidden className="im-chevron" />
+                  {t('その他の質問セット')}
+                  <span className="im-count">{t('{n}件', { n: others.length })}</span>
+                </summary>
                 <div className="table-scroll">
                   <table className="data-table !min-w-[40rem]">
                     <thead>
@@ -213,7 +217,7 @@ export default async function ItemMasterPage({
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </details>
             ) : null}
           </div>
         )}
@@ -229,23 +233,11 @@ export default async function ItemMasterPage({
             </span>
           </h2>
           {groupTypes.length > 0 ? (
-            <nav className="im-filter" aria-label={t('グループで絞り込む')}>
-              <Link href="/admin/items" className="im-filter-chip" aria-current={!activeGroup}>
-                {t('すべて')}
-              </Link>
-              {groupTypes.map((g) => (
-                <Link
-                  key={g.id}
-                  href={`/admin/items?group=${g.id}`}
-                  className="im-filter-chip"
-                  aria-current={activeGroup?.id === g.id}
-                >
-                  <span className="im-dot" data-tone={toneOf.get(g.id)} />
-                  {pickName(lang, g.nameJa, g.nameEn)}
-                  <span className="im-filter-count">{g._count.items}</span>
-                </Link>
-              ))}
-            </nav>
+            <GroupFilter
+              groups={groupTypes.map((g) => ({ id: g.id, name: pickName(lang, g.nameJa, g.nameEn), count: g._count.items }))}
+              current={activeGroup?.id ?? null}
+              total={totalItems}
+            />
           ) : null}
         </div>
 

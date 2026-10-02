@@ -4,6 +4,7 @@ import { useT } from '@/lib/i18n/client';
 import { FileCode2, UploadCloud, X } from 'lucide-react';
 import { startTransition, useActionState, useRef, useState } from 'react';
 import { importGsAction, previewGsAction, type GsUploadState } from '@/app/(app)/admin/items/actions';
+import { groupNameKey } from '@/lib/items/group-name';
 
 const initial: GsUploadState = { step: 'idle' };
 
@@ -31,6 +32,10 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
   const preview = previewState.step === 'preview' ? previewState.preview : undefined;
   const previewIsStale = Boolean(preview && file && previewState.fileName !== file.name);
   const error = lastAction === 'import' ? importState.error : previewState.error;
+  const sameGroup =
+    groupTypeId === '__new' && newGroupName.trim()
+      ? groupTypes.find((g) => groupNameKey(g.nameJa) === groupNameKey(newGroupName))
+      : undefined;
   const undecided = preview?.needsDecision.filter((c) => !decisions[c.key]).length ?? 0;
   const groupName =
     groupTypeId === '__new' ? newGroupName : (groupTypes.find((g) => g.id === groupTypeId)?.nameJa ?? '');
@@ -147,13 +152,23 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
             </select>
           </label>
           {groupTypeId === '__new' ? (
-            <input
-              className="input"
-              placeholder={t('例：日本人中途')}
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-            />
+            <>
+              <input
+                className="input"
+                placeholder={t('例：日本人中途')}
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+              />
+              {sameGroup ? (
+                <p className="text-xs text-warn-ink">
+                  {t('「{name}」は既にあります。新しく作らず、このグループを使います。', { name: sameGroup.nameJa })}
+                </p>
+              ) : null}
+            </>
           ) : null}
+          <p className="text-xs text-ink-500">
+            {t('グループは候補者の種類です（例：インド新卒、日本人新卒、ミャンマー）。年度はグループに入れず、質問セットの名前に入れてください。')}
+          </p>
           <label className="field-label">
             {t('質問セットの名前')}
             <input

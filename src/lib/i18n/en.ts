@@ -667,6 +667,11 @@ export const EN: Record<string, string> = {
   "この質問セットを「回答ファイルの取り込み先」にする": "Make this question set the import target for answer files",
   "チェックしなければ、取り込み先は今のまま変わりません（取り込み先がまだない場合は、この質問セットが取り込み先になります）。": "If unticked, the import target stays as it is (if there is none yet, this set becomes the target).",
 
+  "すべてのグループ（{n}件）": "All groups ({n})",
+  "{name}（{n}件）": "{name} ({n})",
+  "「{name}」は既にあります。新しく作らず、このグループを使います。": "“{name}” already exists. It will be used instead of creating a new group.",
+  "グループは候補者の種類です（例：インド新卒、日本人新卒、ミャンマー）。年度はグループに入れず、質問セットの名前に入れてください。": "A group is a kind of candidate (e.g. Indian new graduate, Japanese new graduate, Myanmar). Put the year in the question set name, not in the group.",
+
   // @@END
 };
 

@@ -18,6 +18,7 @@
 import { prisma } from '@/lib/db';
 import { recordAudit } from '@/lib/audit';
 import type { GsPlan, PlannedItem, ShowIf } from './gs-plan';
+import { groupNameKey } from './group-name';
 
 export type ItemChange = {
   key: string;
@@ -151,7 +152,14 @@ async function freshKey(base: string, taken: Set<string>): Promise<string> {
 export async function applyGsPlan(params: {
   plan: GsPlan;
   setName: string;
-  groupTypeId: string;
+  /** An existing group, or `newGroupName` to create one in the same transaction. */
+  groupTypeId?: string | null;
+  /**
+   * A new group's name. Created inside the import's transaction, so a failed
+   * import leaves no group behind; a name that already exists (ignoring case
+   * and spaces) is reused instead of duplicated.
+   */
+  newGroupName?: string | null;
   sourceFile: string;
   userId: string | null;
   /**
@@ -190,6 +198,7 @@ export async function applyGsPlan(params: {
   return prisma.$transaction(
     async (tx) => {
       let createdItems = 0;
+      const groupTypeId = await resolveGroup(tx, params.groupTypeId, params.newGroupName);
       let keptItems = 0;
 
       const lastCat = await tx.itemCategory.findFirst({ orderBy: { order: 'desc' } });
@@ -256,8 +265,8 @@ export async function applyGsPlan(params: {
             }
             itemIdByPlanKey.set(item.key, id);
             await tx.itemGroupType.upsert({
-              where: { itemId_groupTypeId: { itemId: id, groupTypeId: params.groupTypeId } },
-              create: { itemId: id, groupTypeId: params.groupTypeId },
+              where: { itemId_groupTypeId: { itemId: id, groupTypeId } },
+              create: { itemId: id, groupTypeId },
               update: {},
             });
           }
@@ -272,7 +281,7 @@ export async function applyGsPlan(params: {
       const set = await tx.questionSet.create({
         data: {
           name: params.setName,
-          groupTypeId: params.groupTypeId,
+          groupTypeId,
           sourceFile: params.sourceFile,
           isDefault: makeDefault,
         },
@@ -311,6 +320,26 @@ export async function applyGsPlan(params: {
     },
     { timeout: 120_000, maxWait: 10_000 },
   );
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function resolveGroup(tx: Tx, groupTypeId?: string | null, newGroupName?: string | null): Promise<string> {
+  const name = newGroupName?.trim();
+  if (name) {
+    const groups = await tx.groupType.findMany({ select: { id: true, nameJa: true, nameEn: true } });
+    const same = groups.find(
+      (g) => groupNameKey(g.nameJa) === groupNameKey(name) || (g.nameEn && groupNameKey(g.nameEn) === groupNameKey(name)),
+    );
+    if (same) return same.id;
+    const created = await tx.groupType.create({
+      data: { key: `group_${Date.now().toString(36)}`, nameJa: name, order: (groups.length + 1) * 10 },
+    });
+    return created.id;
+  }
+  const existing = groupTypeId ? await tx.groupType.findUnique({ where: { id: groupTypeId } }) : null;
+  if (!existing) throw new Error('グループを選んでください');
+  return existing.id;
 }
 
 function itemContent(item: PlannedItem) {
