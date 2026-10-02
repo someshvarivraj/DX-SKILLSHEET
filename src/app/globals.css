@@ -3090,3 +3090,82 @@ html[data-split] .sheet-toolbar .btn {
   font-size: 0.8125rem;
   color: var(--color-ink-400);
 }
+
+/* 設問マスタ — "what these words mean", and the create-set dialog */
+.im-explain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  border: 1px solid var(--color-brand-100);
+  background: var(--color-brand-50);
+  padding: 0.9rem 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-700);
+}
+.im-explain > div {
+  min-width: 11rem;
+  flex: 1;
+}
+.im-explain-term {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-brand-600);
+}
+.im-explain-eg {
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.im-explain-arrow {
+  flex: none;
+  color: var(--color-brand-400);
+}
+.im-wizard {
+  display: grid;
+  gap: 1rem;
+}
+.im-wizard-step {
+  display: flex;
+  gap: 0.75rem;
+}
+.im-wizard-no {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  background: var(--color-brand-500);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+}
+.im-wizard-q {
+  margin-bottom: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-ink-900);
+}
+.im-wizard-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.im-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid var(--color-ink-100);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-900);
+  cursor: pointer;
+}
+.im-choice:has(input:checked) {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+}
+.im-choice input {
+  margin-top: 0.25rem;
+  accent-color: var(--color-brand-500);
+}

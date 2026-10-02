@@ -5,11 +5,10 @@ import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { PageHeader } from '@/components/page-header';
-import { GsUpload } from '@/components/admin/gs-upload';
 import { SetDefaultButton } from '@/components/admin/set-default-button';
 import { GroupFilter } from '@/components/admin/group-filter';
 import { ItemEditButton, ItemMasterProvider, type EditableItem } from '@/components/admin/item-editor';
-import { NameEditButton, NewSetButton } from '@/components/admin/item-master-tools';
+import { CreateSetButton, NameEditButton } from '@/components/admin/item-master-tools';
 import Link from 'next/link';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
@@ -154,7 +153,26 @@ export default async function ItemMasterPage({
         ))}
       </div>
 
-      <GsUpload groupTypes={groupTypes.map((g) => ({ id: g.id, nameJa: g.nameJa }))} />
+      {/* What the three words on this screen mean — the screen was confusing without it. */}
+      <div className="im-explain">
+        <div>
+          <p className="im-explain-term">{t('グループ')}</p>
+          <p>{t('誰に聞くか')}</p>
+          <p className="im-explain-eg">{t('例：インド新卒、ミャンマー、日本人新卒')}</p>
+        </div>
+        <ChevronRight size={18} aria-hidden className="im-explain-arrow" />
+        <div>
+          <p className="im-explain-term">{t('質問セット')}</p>
+          <p>{t('そのグループに送るアンケート（毎年1つ）')}</p>
+          <p className="im-explain-eg">{t('例：2027 ミャンマー')}</p>
+        </div>
+        <ChevronRight size={18} aria-hidden className="im-explain-arrow" />
+        <div>
+          <p className="im-explain-term">{t('候補者')}</p>
+          <p>{t('質問セットの画面で追加し、回答リンクを送る')}</p>
+          <p className="im-explain-eg">{t('締め切りまで回答できる')}</p>
+        </div>
+      </div>
 
       {/* ---- Question sets ------------------------------------------------
           The import target is the one set that matters day to day, so it
@@ -163,7 +181,10 @@ export default async function ItemMasterPage({
       <section>
         <div className="im-master-head">
           <h2 className="im-section-title !mb-0">{t('質問セット')}</h2>
-          <NewSetButton groups={groupOptions} sets={sets.map((s) => ({ id: s.id, name: s.name }))} />
+          <CreateSetButton
+            groups={groupOptions}
+            sets={sets.map((s) => ({ id: s.id, name: s.name, groupTypeId: s.groupTypeId }))}
+          />
         </div>
         {sets.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-ink-500">
@@ -266,9 +287,13 @@ export default async function ItemMasterPage({
       </section>
 
       {/* ---- Groups ------------------------------------------------------ */}
-      <section>
-        <h2 className="im-section-title">{t('グループ')}</h2>
-        <div className="im-groups">
+      <details className="card im-others">
+        <summary className="im-others-head">
+          <ChevronRight size={16} aria-hidden className="im-chevron" />
+          {t('グループの管理（名前の変更・削除）')}
+          <span className="im-count">{t('{n}件', { n: groupTypes.length })}</span>
+        </summary>
+        <div className="im-groups p-4">
           {groupTypes.map((g) => (
             <span key={g.id} className="im-group im-group-lg" data-tone={toneOf.get(g.id) ?? 0}>
               {pickName(lang, g.nameJa, g.nameEn)}
@@ -278,7 +303,7 @@ export default async function ItemMasterPage({
           ))}
           <NameEditButton kind="group" label={t('グループを追加')} />
         </div>
-      </section>
+      </details>
 
       {/* ---- Item master ---------------------------------------------------- */}
       <section>

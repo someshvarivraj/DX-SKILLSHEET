@@ -801,6 +801,29 @@ export const EN: Record<string, string> = {
 
   "回答待ち": "Awaiting answers",
 
+  "誰に聞くか": "Who you ask",
+  "例：インド新卒、ミャンマー、日本人新卒": "e.g. Indian new graduate, Myanmar, Japanese new graduate",
+  "そのグループに送るアンケート（毎年1つ）": "The questionnaire sent to that group (one a year)",
+  "例：2027 ミャンマー": "e.g. 2027 Myanmar",
+  "質問セットの画面で追加し、回答リンクを送る": "Added on the question set's page, then sent an answer link",
+  "締め切りまで回答できる": "They can answer until the deadline",
+  "グループの管理（名前の変更・削除）": "Manage groups (rename, delete)",
+  "質問セットを作る": "Create question set",
+  "誰に聞きますか？（グループ）": "Who is it for? (group)",
+  "例：ミャンマー、日本人新卒": "e.g. Myanmar, Japanese new graduate",
+  "グループは「誰に聞くか」です（インド新卒、ミャンマー、日本人新卒など）。年度は入れません。": "A group is who you ask (Indian new graduate, Myanmar, Japanese new graduate…). Don't put the year in it.",
+  "何から作りますか？": "Start from what?",
+  "前の質問セットをコピーする": "Copy an earlier question set",
+  "いちばん簡単です。去年のセットをコピーして、変わった所だけ直します。": "The easiest way: copy last year's set and change only what's different.",
+  "コピーする質問セットを選ぶ": "Choose the set to copy",
+  "コピーする質問セット": "Set to copy",
+  "Googleフォームのスクリプト（.gs）から": "From a Google Form script (.gs)",
+  "AIなどで作った .gs ファイルを読み込みます。": "Reads a .gs file (for example one written with AI).",
+  "このグループの設問をすべて使う": "All of this group's questions",
+  "設問マスタで、このグループに付いている設問を全部選んだ状態で作ります。": "Starts with every question the item master has for this group.",
+  "次へ（.gs を選ぶ）": "Next (choose the .gs)",
+  "作る質問セット: {name}": "Creating question set: {name}",
+
   // @@END
 };
 
