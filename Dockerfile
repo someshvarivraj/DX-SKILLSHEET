@@ -15,7 +15,10 @@ RUN npm ci --ignore-scripts && npx prisma generate
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate && npm run build
+# One build ID for the whole build: next build reads next.config in several
+# worker processes, so a value computed inside the config differed between the
+# browser bundle and the server, and every page reported a "new version".
+RUN npx prisma generate && NEXT_PUBLIC_BUILD_ID="$(date +%s)" npm run build
 
 # ---------------------------------------------------------------------------
 FROM base AS runner
