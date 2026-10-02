@@ -406,21 +406,43 @@ export async function setSectionFieldsRequiredAction(
 }
 
 /**
- * Deleting a field also deletes what has been entered in it for every person,
- * so the screen asks for confirmation and states how many people that affects
- * before calling this. Hiding (the switch) is the reversible alternative.
+ * Deleting a field also deletes what has been entered in it for every person.
+ * The screen names those people and offers 「不要にする」 (hide from the sheet,
+ * data kept) as the safe choice; deleting anyway must be confirmed explicitly,
+ * and is refused here without that confirmation. The database refuses too
+ * (field_values -> sheet_fields is ON DELETE RESTRICT), so the values are
+ * deleted on purpose first, in the same transaction.
  */
-export async function deleteFieldAction(id: string): Promise<SaveResult> {
+export async function deleteFieldAction(
+  id: string,
+  options: { confirmDataLoss?: boolean } = {},
+): Promise<SaveResult> {
   const user = await guard();
-  const field = await prisma.sheetField.findUnique({ where: { id } });
+  const field = await prisma.sheetField.findUnique({
+    where: { id },
+    include: { _count: { select: { values: true } } },
+  });
   if (!field) return { ok: false, message: 'その項目はすでに削除されています' };
-  await prisma.sheetField.delete({ where: { id } });
+  const valueCount = field._count.values;
+  if (valueCount > 0 && !options.confirmDataLoss) {
+    return {
+      ok: false,
+      message: `「${field.nameJa}」には候補者のデータがあるため削除しませんでした。シートに出さないだけなら「不要にする」を使ってください。`,
+    };
+  }
+  await prisma.$transaction([
+    prisma.fieldValue.deleteMany({ where: { fieldId: id } }),
+    prisma.sheetField.delete({ where: { id } }),
+  ]);
   await recordAudit({
     userId: user.id,
     action: 'definition.update',
     entityType: 'SheetField',
     entityId: id,
-    summary: `項目「${field.nameJa}」（${field.code}）を削除した`,
+    summary:
+      valueCount > 0
+        ? `項目「${field.nameJa}」（${field.code}）を削除した（入力データ${valueCount}件も削除）`
+        : `項目「${field.nameJa}」（${field.code}）を削除した`,
   });
   refresh();
   return { ok: true, message: `「${field.nameJa}」を削除しました` };

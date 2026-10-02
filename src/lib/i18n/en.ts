@@ -587,6 +587,17 @@ export const EN: Record<string, string> = {
   "すべて必須：空欄でもシートに表示する（押すとすべて任意に）": "All required: shown even when empty (click to make all optional)",
   "押すとこのセクションの項目をすべて必須（空欄でもシートに表示）にする": "Click to make every field in this section required (shown even when empty)",
 
+  "「{name}」には、次の候補者{n}人のデータがあります。": "“{name}” holds data for these {n} candidates.",
+  "ほか{n}人": "and {n} more",
+  "削除すると、これらのデータも消え、元に戻せません。": "Deleting it also deletes this data, and it can't be undone. ",
+  "スキルシートに出したくないだけなら「不要にする」を使ってください。データは残り、シートには表示されません。後から元に戻せます。": "If you only want it off the skill sheet, use “Not needed” instead: the data is kept, it no longer appears on the sheet, and you can bring it back later.",
+  "この項目はすでに「不要」（シートに表示しない）になっています。データを残すなら、削除せずにこのままにしてください。": "This field is already set to “Not needed” (not shown on the sheet). To keep the data, leave it as it is instead of deleting it.",
+  "データが消えることを理解したうえで削除する": "I understand this data will be deleted",
+  "それでも削除する": "Delete anyway",
+  "不要にする": "Not needed",
+  "「{name}」を不要にしました（データは残っています）": "“{name}” is now marked not needed (the data is kept)",
+  "「{name}」には項目が{n}件あり、候補者のデータが入っている可能性があるため、このままでは削除できません。スキルシートに出したくないだけなら「不要にする」を使ってください。データは残り、後から元に戻せます。": "“{name}” has {n} fields that may hold candidates' data, so it can't be deleted as it is. If you only want it off the skill sheet, use “Not needed”: the data is kept and you can bring it back later.",
+
   // @@END
 };
 
@@ -638,6 +649,10 @@ export const EN_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [
     /^「(.+)」はこの分類にすでに登録されている（現在の訳: (.+?)(／無効化済み)?）。既存の行を編集すること。$/,
     (m) => `“${m[1]}” is already registered in this category (current translation: ${m[2]}${m[3] ? ', deactivated' : ''}). Edit the existing row instead.`,
+  ],
+  [
+    /^「(.+)」には候補者のデータがあるため削除しませんでした。シートに出さないだけなら「不要にする」を使ってください。$/,
+    (m) => `“${m[1]}” holds candidates' data, so it was not deleted. To keep it off the sheet, use “Not needed” instead.`,
   ],
   // @@PATTERNS_END
 ];
