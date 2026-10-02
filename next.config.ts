@@ -8,6 +8,10 @@ const config: NextConfig = {
   // build time, so this must be present when `docker build` / `next build`
   // runs, not only at container start.
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  // Identifies this build. A page left open across a deployment compares it
+  // with the server's and asks to reload (components/new-version-notice.tsx),
+  // because its server-action references no longer exist after a rebuild.
+  env: { NEXT_PUBLIC_BUILD_ID: process.env.NEXT_PUBLIC_BUILD_ID || String(Date.now()) },
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',

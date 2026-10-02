@@ -3197,3 +3197,21 @@ html[data-split] .sheet-toolbar .btn {
   max-height: calc(100vh - 1rem);
   overflow-y: auto;
 }
+/* Shown when the server was redeployed after this page was opened. */
+.new-version {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+  border: 1px solid var(--color-brand-300);
+  background: #fff;
+  padding: 0.6rem 0.75rem 0.6rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-900);
+  box-shadow: var(--shadow-lift);
+}

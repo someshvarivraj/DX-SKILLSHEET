@@ -1,3 +1,4 @@
+import { NewVersionNotice } from '@/components/new-version-notice';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <HeaderOffset />
+      <NewVersionNotice />
       <AppShell
         items={links.filter((l) => l.show).map(({ show: _show, ...item }) => item)}
         userName={user.displayName}
