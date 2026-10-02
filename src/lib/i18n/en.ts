@@ -672,6 +672,9 @@ export const EN: Record<string, string> = {
   "「{name}」は既にあります。新しく作らず、このグループを使います。": "“{name}” already exists. It will be used instead of creating a new group.",
   "グループは候補者の種類です（例：インド新卒、日本人新卒、ミャンマー）。年度はグループに入れず、質問セットの名前に入れてください。": "A group is a kind of candidate (e.g. Indian new graduate, Japanese new graduate, Myanmar). Put the year in the question set name, not in the group.",
 
+  "すべてのグループ": "All groups",
+  "一覧にない候補者の種類を追加します": "Add a kind of candidate not in the list",
+
   // @@END
 };
 
