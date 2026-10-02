@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { loadAnswerForm } from '@/lib/items/candidate';
 import { AnswerForm } from '@/components/answer/answer-form';
 import { MoraBot } from '@/components/morabot';
+import { NewVersionNotice } from '@/components/new-version-notice';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,8 @@ export default async function AnswerPage({ params }: { params: Promise<{ token: 
   }
 
   return (
+    <>
+    <NewVersionNotice />
     <AnswerForm
       token={form.token}
       setName={form.setName}
@@ -45,5 +48,6 @@ export default async function AnswerPage({ params }: { params: Promise<{ token: 
       pages={form.pages}
       initialAnswers={form.answers}
     />
+    </>
   );
 }

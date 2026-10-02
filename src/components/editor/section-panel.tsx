@@ -63,6 +63,12 @@ export function SectionPanel({
       setWarnings([]);
       try {
         const result = await fn();
+        // No result at all: the page predates the latest deployment and its
+        // action no longer exists on the server.
+        if (!result) {
+          setNotice('画面が古くなっています（新しいバージョンに更新されました）。ページを再読み込みしてから、もう一度操作してください。');
+          return;
+        }
         if (result.message) setNotice(result.message);
         if (result.warnings?.length) setWarnings(result.warnings);
       } catch (error) {

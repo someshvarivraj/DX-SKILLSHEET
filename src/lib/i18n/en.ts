@@ -831,6 +831,11 @@ export const EN: Record<string, string> = {
   "まだ受付を開始していないため、候補者はこのリンクで回答できません。それでもコピーしますか？": "This set isn't open yet, so the candidate can't answer with this link. Copy it anyway?",
   "まだ受付を開始していないため、候補者はこのリンクで回答できません。それでも送りますか？": "This set isn't open yet, so the candidate can't answer with this link. Send it anyway?",
 
+  "新しいバージョンに更新されました。保存していない入力があればコピーしてから、再読み込みしてください。": "A new version is available. Copy anything you haven't saved, then reload.",
+  "再読み込み": "Reload",
+  "画面が古くなっています（新しいバージョンに更新されました）。ページを再読み込みしてから、もう一度操作してください。": "This page is out of date (a new version was released). Reload the page and try again.",
+  "画面が古くなっています（新しいバージョンに更新されました）。この欄の内容をコピーしてから、ページを再読み込みしてください。": "This page is out of date (a new version was released). Copy this field's text, then reload the page.",
+
   // @@END
 };
 
