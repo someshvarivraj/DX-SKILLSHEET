@@ -3,6 +3,12 @@
 # main への push をトリガーに、GitHub Actions が AWS に一時的な認証情報で
 # ログインし（OIDC。長期のアクセスキーはどこにも保存しない）、SSM 経由で
 # EC2 上のインスタンスに「git pull して再ビルド」を指示するだけである。
+#
+# 2026-10-07: デプロイのたびにDBマイグレーションも実行する（実行し忘れで
+# 「列がない」エラーが何度か出たため）。新しいアプリを起動する前に実行する。
+# あわせて古いビルドキャッシュと使われていないイメージを消し、ディスクが
+# 一杯にならないようにする（20GBが97%まで埋まりビルドが失敗した）。
+# db:seed は自動では実行しない（画面で追加した項目を消すことがあるため）。
 # S3は使わない — インスタンス自身がGitHubから直接 `git fetch` する
 # （リポジトリはprivateなので、インスタンス側にread-onlyのデプロイキーが
 # 必要。docs/ci-cd/README.md 参照）。
@@ -52,8 +58,12 @@ jobs:
               "cd ${DEPLOY_DIR}",
               "git fetch origin ${SHA}",
               "git reset --hard ${SHA}",
-              "docker compose -f docker-compose.prod.yml --env-file .env build app",
+              "docker builder prune -af --filter until=24h || true",
+              "docker compose -f docker-compose.prod.yml --env-file .env build app tools",
+              "docker compose -f docker-compose.prod.yml --env-file .env run --rm tools npx prisma migrate deploy",
               "docker compose -f docker-compose.prod.yml --env-file .env up -d app",
+              "docker image prune -af || true",
+              "df -h / | tail -1",
               "echo DEPLOY_DONE"
             ]
           }
@@ -64,7 +74,8 @@ jobs:
             --parameters file:///tmp/commands.json \
             --query 'Command.CommandId' --output text)
           echo "SSM command: $CMD_ID"
-          for i in $(seq 1 30); do
+          # A build plus migrations can take several minutes on the instance.
+          for i in $(seq 1 60); do
             STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query 'Status' --output text 2>/dev/null || echo "Pending")
             echo "status: $STATUS"
             case "$STATUS" in

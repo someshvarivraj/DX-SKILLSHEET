@@ -799,6 +799,8 @@ export const EN: Record<string, string> = {
   "メールアドレスが登録されていません": "No email address is registered",
   "提出済みの回答は削除できません": "A submitted response can't be deleted",
 
+  "回答待ち": "Awaiting answers",
+
   // @@END
 };
 
