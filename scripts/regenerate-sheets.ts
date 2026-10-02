@@ -7,7 +7,7 @@
  * For when the working layer has been lost but the import layer has not —
  * e.g. the item definitions were deleted and re-created (deleting a section
  * deletes every value written into its fields), so the sheets are empty while
- * `form_responses` still holds each person's answers. Re-uploading the answer
+ * the stored answers (`responses`) are intact. Re-uploading the answer
  * file does not help there: a person who already has answers is treated as a
  * re-import and only gets a difference review, not a fresh generation.
  *
@@ -31,7 +31,7 @@ async function main() {
   if (!admin) throw new Error('有効な管理者ユーザーがいない');
 
   const people = await prisma.person.findMany({
-    where: { responses: { some: {} }, ...(ids.length > 0 ? { id: { in: ids } } : {}) },
+    where: { itemResponses: { some: { status: 'SUBMITTED' } }, ...(ids.length > 0 ? { id: { in: ids } } : {}) },
     orderBy: { createdAt: 'asc' },
     select: { id: true, fullNameEnglish: true },
   });

@@ -15,8 +15,8 @@ export default async function ImportPage() {
   const t = await getT();
   if (!can(user, 'import.run')) notFound();
 
-  const [revision, batches] = await Promise.all([
-    prisma.formRevision.findFirst({ where: { isActive: true } }),
+  const [set, batches] = await Promise.all([
+    prisma.questionSet.findFirst({ where: { isDefault: true } }),
     prisma.importBatch.findMany({
       orderBy: { createdAt: 'desc' },
       take: 10,
@@ -33,9 +33,13 @@ export default async function ImportPage() {
         title={t('回答の取り込み')}
         lead={t('Googleフォームの回答（CSVまたはExcel）を取り込みます。2回目以降は、変わった部分だけを確認してから反映できます。')}
       />
-      {revision ? null : (
+      {set ? (
+        <p className="text-sm text-ink-500">
+          {t('取り込み先の質問セット: {name}', { name: set.name })}
+        </p>
+      ) : (
         <p className=" border border-accent-500/40 bg-accent-50 px-4 py-3 text-sm text-[#b03a22]">
-          {t('取り込み先のフォームがまだ登録されていません。先に「項目定義」画面でGoogleフォームのスクリプトを取り込んでください。')}
+          {t('取り込み先の質問セットがまだありません。先に「設問マスタ」画面でGoogleフォームのスクリプトを取り込んでください。')}
         </p>
       )}
 

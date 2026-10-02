@@ -8,92 +8,46 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { PrismaClient, type GlossaryCategory, type QuestionType } from '@prisma/client';
+import { PrismaClient, type GlossaryCategory } from '@prisma/client';
 import { SECTIONS } from './sheet-definition';
 import { hashPassword } from '../../src/lib/auth/crypto';
+import { planFromGs } from '../../src/lib/items/gs-plan';
+import { applyGsPlan } from '../../src/lib/items/gs-apply';
 
 const prisma = new PrismaClient();
 
-type QuestionJson = {
-  revisionCode: string;
-  sourceFile: string;
-  questions: Array<{
-    code: string;
-    titleJa: string;
-    titleEn: string | null;
-    fullTitle: string;
-    helpText: string | null;
-    type: string;
-    sectionLabel: string | null;
-    options: string[];
-    gridRows: string[];
-    gridColumns: string[];
-    isRequired: boolean;
-    order: number;
-  }>;
-};
-
-async function seedFormRevision() {
-  const path = resolve(process.cwd(), 'prisma/seed/form-questions-2026.json');
+/**
+ * The item master and the first question set, built from the 2026 form's .gs
+ * exactly as an upload on the 設問マスタ screen would build them. Skipped once
+ * any question set exists: after that the master is maintained on screen.
+ */
+async function seedItemMaster() {
+  if ((await prisma.questionSet.count()) > 0) {
+    console.log('  質問セットが既にあるため、設問マスタの初期登録は行わない');
+    return;
+  }
+  const path = resolve(process.cwd(), 'data/create_iit_form_2026.gs');
   if (!existsSync(path)) {
-    console.warn(
-      '! form-questions-2026.json が見つからない。`npm run form:parse -- data/create_iit_form_2026.gs` を先に実行すること',
-    );
-    return null;
+    console.warn('! data/create_iit_form_2026.gs が見つからないため、設問マスタを登録していない');
+    return;
   }
-
-  const data = JSON.parse(readFileSync(path, 'utf8')) as QuestionJson;
-
-  const revision = await prisma.formRevision.upsert({
-    where: { code: data.revisionCode },
-    create: {
-      code: data.revisionCode,
-      name: `${data.revisionCode}年度 IITアンケート`,
-      sourceFile: data.sourceFile,
-      isActive: true,
-    },
-    update: { sourceFile: data.sourceFile, isActive: true },
+  const group = await prisma.groupType.upsert({
+    where: { key: 'india_new_grad' },
+    create: { key: 'india_new_grad', nameJa: 'インド新卒', nameEn: 'Indian new graduate', order: 10 },
+    update: {},
   });
-
-  for (const q of data.questions) {
-    await prisma.formQuestion.upsert({
-      where: { formRevisionId_code: { formRevisionId: revision.id, code: q.code } },
-      create: {
-        formRevisionId: revision.id,
-        code: q.code,
-        titleJa: q.titleJa,
-        titleEn: q.titleEn,
-        helpText: q.helpText,
-        type: q.type as QuestionType,
-        sectionLabel: q.sectionLabel,
-        options: q.options,
-        gridRows: q.gridRows,
-        gridColumns: q.gridColumns,
-        responseHeader: q.fullTitle,
-        isRequired: q.isRequired,
-        order: q.order,
-      },
-      update: {
-        titleJa: q.titleJa,
-        titleEn: q.titleEn,
-        helpText: q.helpText,
-        type: q.type as QuestionType,
-        sectionLabel: q.sectionLabel,
-        options: q.options,
-        gridRows: q.gridRows,
-        gridColumns: q.gridColumns,
-        responseHeader: q.fullTitle,
-        isRequired: q.isRequired,
-        order: q.order,
-      },
-    });
-  }
-
-  console.log(`  設問 ${data.questions.length} 件を登録した（${data.revisionCode}年度）`);
-  return revision;
+  const plan = planFromGs(readFileSync(path, 'utf8'));
+  const result = await applyGsPlan({
+    plan,
+    setName: '2026 インド新卒',
+    groupTypeId: group.id,
+    sourceFile: 'create_iit_form_2026.gs',
+    userId: null,
+  });
+  console.log(`  設問マスタに ${result.createdItems} 件を登録し、質問セット「2026 インド新卒」を作成した`);
 }
 
-async function seedDefinition(formRevisionId: string | null) {
+async function seedDefinition() {
   for (const section of SECTIONS) {
     const created = await prisma.sheetSection.upsert({
       where: { code: section.code },
@@ -155,24 +109,14 @@ async function seedDefinition(formRevisionId: string | null) {
         },
       });
 
+      // Sources name items by key ("A-1-7", "E-x-6"), never by a form's code.
       for (const [index, code] of (field.sources ?? []).entries()) {
-        const question = formRevisionId
-          ? await prisma.formQuestion.findUnique({
-              where: { formRevisionId_code: { formRevisionId, code } },
-            })
-          : null;
-
         await prisma.sheetFieldSource.upsert({
           where: {
             fieldId_questionCode: { fieldId: savedField.id, questionCode: code },
           },
-          create: {
-            fieldId: savedField.id,
-            questionCode: code,
-            questionId: question?.id ?? null,
-            order: index,
-          },
-          update: { questionId: question?.id ?? null, order: index },
+          create: { fieldId: savedField.id, questionCode: code, order: index },
+          update: { order: index },
         });
       }
     }
@@ -358,8 +302,8 @@ async function seedUsers() {
 
 async function main() {
   console.log('初期データを投入する...');
-  const revision = await seedFormRevision();
-  await seedDefinition(revision?.id ?? null);
+  await seedItemMaster();
+  await seedDefinition();
   await seedGlossary();
   await seedUsers();
   console.log('完了。');

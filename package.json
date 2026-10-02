@@ -30,6 +30,7 @@
     "sample:sheet": "TSX_TSCONFIG_PATH=./tsconfig.scripts.json tsx scripts/make-sample-sheet.tsx && node scripts/render-sample-sheet.mjs",
     "ai:measure": "tsx scripts/measure-ai-usage.ts",
     "sheets:regenerate": "tsx scripts/regenerate-sheets.ts",
+    "items:convert-legacy": "tsx scripts/convert-legacy-answers.ts",
     "ui:preview": "tailwindcss -i src/app/globals.css -o scripts/ui-preview.css --content \"scripts/ui-preview*.html,src/**/*.tsx\"",
     "ai:report": "tsx scripts/measure-ai-usage.ts && tsx scripts/make-ai-cost-report.ts && node scripts/render-ai-cost.mjs"
   },

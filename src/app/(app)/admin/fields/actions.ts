@@ -143,15 +143,7 @@ export async function updateFieldAction(input: {
   // and because the action threw, the screen showed no error either.
   // Duplicates are dropped first; the same code twice would violate the unique
   // constraint, and pasting a repeated code is an easy mistake to make.
-  const revision = await prisma.formRevision.findFirst({ where: { isActive: true } });
   const codes = [...new Set(input.sourceCodes.map((c) => c.trim()).filter(Boolean))];
-  const questions = revision
-    ? await prisma.formQuestion.findMany({
-        where: { formRevisionId: revision.id, code: { in: codes } },
-        select: { id: true, code: true },
-      })
-    : [];
-  const questionByCode = new Map(questions.map((q) => [q.code, q.id]));
 
   await prisma.$transaction([
     prisma.sheetFieldSource.deleteMany({ where: { fieldId: input.id } }),
@@ -160,7 +152,6 @@ export async function updateFieldAction(input: {
         data: {
           fieldId: input.id,
           questionCode: code,
-          questionId: questionByCode.get(code) ?? null,
           order: index,
         },
       }),

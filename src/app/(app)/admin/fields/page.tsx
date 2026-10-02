@@ -3,8 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
-import { FormScriptImport } from '@/components/admin/form-script-import';
-import { expandSourceCodes } from '@/lib/sheet/question-coverage';
+import Link from 'next/link';
 import { resolveSectionColours } from '@/lib/sheet/section-colours';
 import { PageHeader } from '@/components/page-header';
 import { getT } from '@/lib/i18n/server';
@@ -22,7 +21,7 @@ export default async function FieldDefinitionPage() {
   const t = await getT();
   if (!can(user, 'definition.manage')) notFound();
 
-  const [sections, revision] = await Promise.all([
+  const [sections, items] = await Promise.all([
     prisma.sheetSection.findMany({
       orderBy: { order: 'asc' },
       include: {
@@ -32,7 +31,12 @@ export default async function FieldDefinitionPage() {
         },
       },
     }),
-    prisma.formRevision.findFirst({ where: { isActive: true } }),
+    // Every item still asked somewhere; hidden and replaced ones are left out.
+    prisma.item.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ subcategory: { category: { order: 'asc' } } }, { subcategory: { order: 'asc' } }, { order: 'asc' }],
+      select: { id: true, key: true, titleJa: true },
+    }),
   ]);
 
   // Who has something entered in each field (in their current version), so
@@ -54,21 +58,12 @@ export default async function FieldDefinitionPage() {
   }
   for (const names of filledByField.values()) names.sort((a, b) => a.localeCompare(b));
 
-  const questions = revision
-    ? await prisma.formQuestion.findMany({
-        where: { formRevisionId: revision.id },
-        orderBy: { order: 'asc' },
-      })
-    : [];
-
-  const usedCodes = new Set(
+  // Field sources name items by key ("E-x-6" included), so an item is in use
+  // when some field lists its key.
+  const usedKeys = new Set(
     sections.flatMap((s) => s.fields.flatMap((f) => f.sources.map((src) => src.questionCode))),
   );
-
-  // "E-x-6" covers E-1-6 and E-2-6: expand the placeholders before comparing.
-  const expanded = expandSourceCodes(usedCodes);
-
-  const unassigned = questions.filter((q) => !expanded.has(q.code));
+  const unassigned = items.filter((item) => !usedKeys.has(item.key));
 
   const colours = resolveSectionColours(sections);
 
@@ -122,7 +117,12 @@ export default async function FieldDefinitionPage() {
         }
       />
 
-      <FormScriptImport />
+      <p className="text-sm text-ink-500">
+        {t('設問の追加や、Googleフォームのスクリプト（.gs）の取り込みは「設問マスタ」で行います。')}{' '}
+        <Link href="/admin/items" className="font-medium text-brand-500 hover:underline">
+          {t('設問マスタを開く')}
+        </Link>
+      </p>
 
       {unassigned.length > 0 ? (
         // Collapsed: most days nobody needs this list. It matters after a
@@ -141,7 +141,7 @@ export default async function FieldDefinitionPage() {
 
       <FieldDefinitionTable
         sections={rows}
-        questionCodes={questions.map((q) => q.code)}
+        questionCodes={items.map((item) => item.key)}
       />
     </div>
   );
