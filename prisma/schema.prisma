@@ -387,6 +387,11 @@ model QuestionSetItem {
   formCodes   String[]    @default([])
   /// The column header each code had in the answer file, same order.
   formHeaders String[]    @default([])
+  /// The question as this set asks it: { titleJa, titleEn, help, options,
+  /// allowOther, gridRows, gridColumns }. Another group's form may word the
+  /// same item differently or offer other options (a Myanmar university list);
+  /// that is kept here so it never overwrites the master or another set.
+  wording     Json?
 
   @@id([setId, itemId])
   @@index([setId, order])

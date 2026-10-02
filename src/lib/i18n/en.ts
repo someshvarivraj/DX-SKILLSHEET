@@ -608,7 +608,7 @@ export const EN: Record<string, string> = {
   "確認結果: {name}（設問{n}件）。まだ何も保存されていません。": "Preview: {name} ({n} questions). Nothing has been saved yet.",
   "設問マスタに追加: {n}件": "Added to the item master: {n}",
   "既にある設問をそのまま使う: {n}件": "Existing questions reused: {n}",
-  "うち文言が変わった設問: {n}件（同じ設問として扱います）": "Of these, reworded: {n} (treated as the same question)",
+  "うち文言・選択肢が変わった設問: {n}件（同じ設問として扱い、この質問セットでは新しい文言で聞きます）": "Of these, reworded: {n} (the same question, asked in the new words in this set)",
   "この質問セットでは聞かない既存の設問: {n}件（削除はしません）": "Existing questions not asked in this set: {n} (not deleted)",
   "番号は同じでも、内容がはっきり変わった設問があります。同じ設問か、別の設問かを選んでください。": "Some questions keep their number but clearly changed. Choose whether each is the same question or a different one.",
   "これまで": "Before",

@@ -132,6 +132,7 @@ CREATE TABLE "question_set_items" (
     "showIf" JSONB,
     "formCodes" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "formHeaders" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "wording" JSONB,
 
     CONSTRAINT "question_set_items_pkey" PRIMARY KEY ("setId","itemId")
 );
