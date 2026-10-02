@@ -20,6 +20,7 @@ import {
   deleteItem,
   deleteSet,
   deleteSubcategory,
+  findOrCreateGroup,
   moveSetItem,
   renameCategory,
   renameGroup,
@@ -229,10 +230,20 @@ export async function deleteGroupAction(id: string) {
   return run('グループを削除した', () => deleteGroup(id), '削除しました');
 }
 
-export async function createSetAction(input: { name: string; groupTypeId: string; copyFromId?: string | null }) {
+export async function createSetAction(input: {
+  name: string;
+  groupTypeId: string | null;
+  /** A new group's name, created (or found, if it exists) in the same step. */
+  newGroupName?: string | null;
+  copyFromId?: string | null;
+}) {
   return run(
     `質問セット「${input.name}」を作成した`,
-    () => (input.copyFromId ? copySet(input.copyFromId, input.name) : createSetForGroup(input.name, input.groupTypeId)),
+    async () => {
+      const groupTypeId = input.newGroupName?.trim() ? await findOrCreateGroup(input.newGroupName) : input.groupTypeId;
+      if (!groupTypeId) throw new Error('グループを選んでください');
+      return input.copyFromId ? copySet(input.copyFromId, input.name, groupTypeId) : createSetForGroup(input.name, groupTypeId);
+    },
     '質問セットを作成しました',
   );
 }

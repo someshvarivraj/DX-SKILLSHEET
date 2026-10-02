@@ -14,16 +14,26 @@ const initial: GsUploadState = { step: 'idle' };
  * set; no Google Form is created. Nothing is saved until the preview has been
  * checked and confirmed.
  */
-export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJa: string }> }) {
+export function GsUpload({
+  groupTypes,
+  preset,
+}: {
+  groupTypes: Array<{ id: string; nameJa: string }>;
+  /**
+   * Inside the 「質問セットを作る」 dialog: the group and the name were already
+   * chosen there, so only the file and the preview are shown here.
+   */
+  preset?: { groupTypeId: string; newGroupName: string; setName: string; onClose: () => void };
+}) {
   const t = useT();
   const [previewState, previewAction, previewPending] = useActionState(previewGsAction, initial);
   const [importState, importAction, importPending] = useActionState(importGsAction, initial);
   const [file, setFile] = useState<File | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(preset));
   const [dragActive, setDragActive] = useState(false);
-  const [groupTypeId, setGroupTypeId] = useState(groupTypes[0]?.id ?? '__new');
-  const [newGroupName, setNewGroupName] = useState('');
-  const [setName, setSetName] = useState('');
+  const [groupTypeId, setGroupTypeId] = useState(preset?.groupTypeId ?? groupTypes[0]?.id ?? '__new');
+  const [newGroupName, setNewGroupName] = useState(preset?.newGroupName ?? '');
+  const [setName, setSetName] = useState(preset?.setName ?? '');
   const [decisions, setDecisions] = useState<Record<string, 'same' | 'different'>>({});
   const [makeDefault, setMakeDefault] = useState(false);
   const [lastAction, setLastAction] = useState<'preview' | 'import' | null>(null);
@@ -70,7 +80,7 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
   }
 
   return (
-    <div className="card p-4">
+    <div className={preset ? '' : 'card p-4'}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-medium text-ink-900">{t('Googleフォームのスクリプト（.gs）を取り込む')}</h2>
@@ -78,7 +88,13 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
             {t('.gs を読み込み、新しい質問セットを作ります。設問マスタにない設問は追加し、既にある設問はそのまま使います（削除はしません）。Googleフォームは作成しません。確認画面を見てから取り込みます。')}
           </p>
         </div>
-        <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label={t('閉じる')} title={t('閉じる')}>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => (preset ? preset.onClose() : setOpen(false))}
+          aria-label={t('閉じる')}
+          title={t('閉じる')}
+        >
           <X size={18} aria-hidden />
         </button>
       </div>
@@ -141,6 +157,12 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
         </div>
 
         <div className="grid content-start gap-2 md:w-72">
+          {preset ? (
+            <p className="text-sm text-ink-700">
+              {t('作る質問セット: {name}', { name: setName })}
+            </p>
+          ) : (
+          <>
           <div>
             <span className="field-label">{t('グループ')}</span>
             <Select
@@ -182,6 +204,8 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
               onChange={(e) => setSetName(e.target.value)}
             />
           </label>
+          </>
+          )}
           <button type="button" className="btn btn-secondary" disabled={busy || !file} onClick={() => submit('preview')}>
             {previewPending ? t('確認中…') : t('内容を確認する')}
           </button>

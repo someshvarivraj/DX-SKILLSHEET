@@ -297,8 +297,18 @@ export async function createSetForGroup(name: string, groupTypeId: string) {
   });
 }
 
-/** "Copy set": same items, order, required flags, conditions and wording. */
-export async function copySet(setId: string, name: string) {
+/** An existing group with this name (loosely compared), or a new one. */
+export async function findOrCreateGroup(name: string): Promise<string> {
+  const clean = name.trim();
+  if (!clean) throw new Error('グループの名前を入力してください');
+  const all = await prisma.groupType.findMany();
+  const same = all.find((g) => groupNameKey(g.nameJa) === groupNameKey(clean) || (g.nameEn && groupNameKey(g.nameEn) === groupNameKey(clean)));
+  if (same) return same.id;
+  return (await createGroup(clean)).id;
+}
+
+/** "Copy set": same items, order, required flags, conditions and wording — optionally for another group. */
+export async function copySet(setId: string, name: string, groupTypeId?: string) {
   if (!name.trim()) throw new Error('質問セットの名前を入力してください');
   const source = await prisma.questionSet.findUniqueOrThrow({
     where: { id: setId },
@@ -306,7 +316,7 @@ export async function copySet(setId: string, name: string) {
   });
   return prisma.$transaction(async (tx) => {
     const set = await tx.questionSet.create({
-      data: { name: name.trim(), groupTypeId: source.groupTypeId, copiedFromId: source.id, deadline: source.deadline },
+      data: { name: name.trim(), groupTypeId: groupTypeId ?? source.groupTypeId, copiedFromId: source.id },
     });
     await tx.questionSetSubcategory.createMany({
       data: source.subcategories.map((s) => ({
