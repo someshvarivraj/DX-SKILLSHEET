@@ -2,8 +2,10 @@
  * Compare a .gs plan with the item master, and write it (design §"Uploading a
  * .gs", 2026-10-02):
  *   - items not in the master are added;
- *   - items already in the master are kept (their wording, options and help
- *     text are updated to the script's), never removed;
+ *   - items already in the master are kept as they are, never removed — the
+ *     new set keeps its own copy of the wording and options it asks with
+ *     (QuestionSetItem.wording), so another group's form or a later year's
+ *     rewording never changes what the master or an earlier set says;
  *   - a new question set is created for the upload;
  *   - items not in the script are simply not in that set.
  *
@@ -30,7 +32,7 @@ export type GsPreview = {
   newSubcategories: string[];
   newItems: Array<{ key: string; title: string; subcategory: string }>;
   keptCount: number;
-  /** Reworded (one language unchanged, or close): kept as the same item. */
+  /** Reworded (one language unchanged, or close): the same item, asked in the new words. */
   reworded: ItemChange[];
   /** Clearly different under the same code: the operator decides. */
   needsDecision: ItemChange[];
@@ -228,20 +230,20 @@ export async function applyGsPlan(params: {
           let itemOrder = lastItem?.order ?? 0;
           for (const item of sub.items) {
             const key = keyFor.get(item.key)!;
-            const content = itemContent(item);
             const stored = await tx.item.findUnique({ where: { key } });
             let id: string;
             if (stored) {
-              await tx.item.update({
-                where: { id: stored.id },
-                data: { ...content, status: stored.status === 'HIDDEN' ? 'ACTIVE' : stored.status },
-              });
+              // Asked again, so a hidden item comes back; its content is left
+              // alone (the set carries its own wording).
+              if (stored.status === 'HIDDEN') {
+                await tx.item.update({ where: { id: stored.id }, data: { status: 'ACTIVE' } });
+              }
               id = stored.id;
               keptItems++;
             } else {
               itemOrder += 10;
               const created = await tx.item.create({
-                data: { ...content, key, subcategoryId: subcategory.id, type: item.type, order: itemOrder },
+                data: { ...itemContent(item), helpJa: item.help, key, subcategoryId: subcategory.id, type: item.type, order: itemOrder },
               });
               id = created.id;
               createdItems++;
@@ -283,6 +285,7 @@ export async function applyGsPlan(params: {
           showIf: (remapShowIf(item.showIf) ?? undefined) as never,
           formCodes: item.formCodes,
           formHeaders: item.formHeaders,
+          wording: { ...itemContent(item), help: item.help } as never,
         })),
       });
 
@@ -304,7 +307,6 @@ function itemContent(item: PlannedItem) {
   return {
     titleJa: item.titleJa,
     titleEn: item.titleEn,
-    helpJa: item.help,
     options: item.options,
     allowOther: item.allowOther,
     gridRows: item.gridRows,

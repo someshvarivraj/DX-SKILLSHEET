@@ -186,7 +186,7 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
             <li>{t('設問マスタに追加: {n}件', { n: preview.newItems.length })}</li>
             <li>{t('既にある設問をそのまま使う: {n}件', { n: preview.keptCount })}</li>
             {preview.reworded.length > 0 ? (
-              <li>{t('うち文言が変わった設問: {n}件（同じ設問として扱います）', { n: preview.reworded.length })}</li>
+              <li>{t('うち文言・選択肢が変わった設問: {n}件（同じ設問として扱い、この質問セットでは新しい文言で聞きます）', { n: preview.reworded.length })}</li>
             ) : null}
             <li>{t('この質問セットでは聞かない既存の設問: {n}件（削除はしません）', { n: preview.notAsked.length })}</li>
           </ul>
