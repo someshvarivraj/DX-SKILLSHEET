@@ -71,13 +71,41 @@ export function isNoneOption(option: string): boolean {
  * Convert a raw multi-select answer into the list printed on the sheet.
  * Filters "none" markers and de-duplicates while preserving order.
  */
+/**
+ * Split a list typed or exported as one string — "SQL;MySQL、Git, Python" —
+ * at , 、 ; ； and line breaks, but never inside brackets: option labels such
+ * as "Linux（Ubuntu, CentOS など）" keep their own commas.
+ */
+export function splitListText(text: string, separators = ',、;；\n'): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of text) {
+    if ('（(「【'.includes(ch)) depth++;
+    else if ('）)」】'.includes(ch)) depth = Math.max(0, depth - 1);
+    if (depth === 0 && separators.includes(ch)) {
+      out.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  out.push(current);
+  return out.map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+/**
+ * A multi-select answer as Japanese items, ready to join with 「、」. Each
+ * chosen option is one item, but an option's own text (an "Other" answer, or
+ * an export that joined with semicolons) may hold several: "SQL;MySQL;GIS"
+ * becomes three, so the sheet never shows a 「;」 between items (Sano-san's
+ * review, 2026-10-08).
+ */
 export function cleanChoiceList(raw: string[] | string | null | undefined): string[] {
   if (raw === null || raw === undefined) return [];
   const list = Array.isArray(raw)
-    ? raw
-    : String(raw)
-        .split(/[,、]\s*(?![^（]*）)/)
-        .map((s) => s.trim());
+    ? raw.flatMap((item) => splitListText(String(item), ';；\n'))
+    : splitListText(String(raw));
 
   const out: string[] = [];
   for (const item of list) {
