@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ItemType } from '@prisma/client';
-import { ChevronRight, FileCode2, Layers, ListChecks, Repeat, Users } from 'lucide-react';
+import { ChevronRight, FileCode2, Inbox, Layers, ListChecks, Repeat, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
@@ -75,6 +75,8 @@ export default async function ItemMasterPage({
     return g ? pickName(lang, g.nameJa, g.nameEn) : '';
   };
   const activeGroup = groupTypes.find((g) => g.id === groupFilter) ?? null;
+  const target = sets.find((set) => set.isDefault) ?? null;
+  const others = sets.filter((set) => !set.isDefault);
 
   // The tree as shown: filtered to one group when a chip is picked.
   const tree = categories
@@ -123,7 +125,10 @@ export default async function ItemMasterPage({
 
       <GsUpload groupTypes={groupTypes.map((g) => ({ id: g.id, nameJa: g.nameJa }))} />
 
-      {/* ---- Question sets ------------------------------------------------ */}
+      {/* ---- Question sets ------------------------------------------------
+          The import target is the one set that matters day to day, so it
+          stands alone and large; the rest are a plain list, and changing the
+          target asks for confirmation (Sano-san's review, 2026-10-05). */}
       <section>
         <h2 className="im-section-title">{t('質問セット')}</h2>
         {sets.length === 0 ? (
@@ -131,39 +136,85 @@ export default async function ItemMasterPage({
             {t('質問セットはまだありません。上からGoogleフォームのスクリプト（.gs）を取り込んでください。')}
           </p>
         ) : (
-          <div className="im-sets">
-            {sets.map((set) => (
-              <article key={set.id} className={`im-set ${set.isDefault ? 'im-set-default' : ''}`}>
-                <div className="im-set-head">
-                  <h3 className="im-set-name">{set.name}</h3>
-                  <span className="im-group" data-tone={toneOf.get(set.groupTypeId) ?? 0}>
-                    {groupName(set.groupTypeId)}
-                  </span>
+          <div className="space-y-3">
+            {target ? (
+              <div className="im-target-panel">
+                <div className="im-target-tag">
+                  <Inbox size={14} aria-hidden /> {t('回答ファイルの取り込み先')}
                 </div>
-                {set.sourceFile ? (
-                  <p className="im-set-file">
-                    <FileCode2 size={13} aria-hidden /> {set.sourceFile}
-                  </p>
-                ) : null}
-                <dl className="im-set-figures">
-                  <div>
-                    <dt>{t('設問')}</dt>
-                    <dd>{set._count.items}</dd>
+                <div className="im-target-main">
+                  <div className="min-w-0">
+                    <h3 className="im-target-name">{target.name}</h3>
+                    <div className="im-target-sub">
+                      <span className="im-group" data-tone={toneOf.get(target.groupTypeId) ?? 0}>
+                        {groupName(target.groupTypeId)}
+                      </span>
+                      {target.sourceFile ? (
+                        <span className="im-set-file">
+                          <FileCode2 size={13} aria-hidden /> {target.sourceFile}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div>
-                    <dt>{t('回答')}</dt>
-                    <dd>{set._count.responses}</dd>
-                  </div>
-                </dl>
-                <div className="im-set-foot">
-                  {set.isDefault ? (
-                    <span className="im-target">{t('回答ファイルの取り込み先')}</span>
-                  ) : (
-                    <SetDefaultButton setId={set.id} />
-                  )}
+                  <dl className="im-set-figures">
+                    <div>
+                      <dt>{t('設問')}</dt>
+                      <dd>{target._count.items}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('回答')}</dt>
+                      <dd>{target._count.responses}</dd>
+                    </div>
+                  </dl>
                 </div>
-              </article>
-            ))}
+                <p className="im-target-note">
+                  {t('「回答の取り込み」で読み込む回答ファイルは、この質問セットの設問として読み込まれます。')}
+                </p>
+              </div>
+            ) : (
+              <p className="border border-accent-500/40 bg-accent-50 px-4 py-3 text-sm text-[#b03a22]">
+                {t('回答ファイルの取り込み先が決まっていません。下の一覧から選んでください。')}
+              </p>
+            )}
+
+            {others.length > 0 ? (
+              <div className="card overflow-hidden">
+                <p className="panel-head panel-head-meta">{t('その他の質問セット')}</p>
+                <div className="table-scroll">
+                  <table className="data-table !min-w-[40rem]">
+                    <thead>
+                      <tr>
+                        <th>{t('名前')}</th>
+                        <th>{t('グループ')}</th>
+                        <th>{t('設問数')}</th>
+                        <th>{t('回答数')}</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {others.map((set) => (
+                        <tr key={set.id}>
+                          <td>
+                            {set.name}
+                            {set.sourceFile ? <div className="text-xs text-ink-400">{set.sourceFile}</div> : null}
+                          </td>
+                          <td>
+                            <span className="im-group" data-tone={toneOf.get(set.groupTypeId) ?? 0}>
+                              {groupName(set.groupTypeId)}
+                            </span>
+                          </td>
+                          <td>{set._count.items}</td>
+                          <td>{set._count.responses}</td>
+                          <td className="text-right">
+                            <SetDefaultButton setId={set.id} setName={set.name} currentName={target?.name ?? null} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </section>

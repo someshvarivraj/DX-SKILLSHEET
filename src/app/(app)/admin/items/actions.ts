@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
+import { recordAudit } from '@/lib/audit';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { planFromGs } from '@/lib/items/gs-plan';
@@ -75,7 +76,16 @@ export async function importGsAction(_prev: GsUploadState, formData: FormData): 
       if (value === 'same' || value === 'different') decisions[name.slice('decision:'.length)] = value;
     }
 
-    const result = await applyGsPlan({ plan, setName, groupTypeId, sourceFile: fileName, userId: user.id, decisions });
+    const makeDefault = formData.get('makeDefault') === 'on';
+    const result = await applyGsPlan({
+      plan,
+      setName,
+      groupTypeId,
+      sourceFile: fileName,
+      userId: user.id,
+      decisions,
+      makeDefault,
+    });
     refresh();
     return {
       step: 'done',
@@ -89,11 +99,19 @@ export async function importGsAction(_prev: GsUploadState, formData: FormData): 
 
 /** Answer files are imported into the default set. */
 export async function setDefaultSetAction(setId: string): Promise<{ ok: boolean; message: string }> {
-  await guard();
-  await prisma.$transaction([
+  const user = await guard();
+  const previous = await prisma.questionSet.findFirst({ where: { isDefault: true }, select: { name: true } });
+  const [, next] = await prisma.$transaction([
     prisma.questionSet.updateMany({ where: { isDefault: true }, data: { isDefault: false } }),
     prisma.questionSet.update({ where: { id: setId }, data: { isDefault: true } }),
   ]);
+  await recordAudit({
+    userId: user.id,
+    action: 'definition.update',
+    entityType: 'QuestionSet',
+    entityId: setId,
+    summary: `回答ファイルの取り込み先を「${previous?.name ?? 'なし'}」から「${next.name}」に変更した`,
+  });
   refresh();
   return { ok: true, message: '回答ファイルの取り込み先を変更しました' };
 }

@@ -23,6 +23,7 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
   const [newGroupName, setNewGroupName] = useState('');
   const [setName, setSetName] = useState('');
   const [decisions, setDecisions] = useState<Record<string, 'same' | 'different'>>({});
+  const [makeDefault, setMakeDefault] = useState(false);
   const [lastAction, setLastAction] = useState<'preview' | 'import' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +50,7 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
     data.set('setName', setName.trim());
     data.set('groupTypeId', groupTypeId);
     data.set('newGroupName', newGroupName.trim());
+    if (makeDefault) data.set('makeDefault', 'on');
     for (const [key, value] of Object.entries(decisions)) data.set(`decision:${key}`, value);
     startTransition(() => (kind === 'preview' ? previewAction(data) : importAction(data)));
   };
@@ -236,6 +238,21 @@ export function GsUpload({ groupTypes }: { groupTypes: Array<{ id: string; nameJ
               </ul>
             </details>
           ) : null}
+
+          <label className="flex items-start gap-2 border border-ink-200 bg-white p-2 text-ink-700">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={makeDefault}
+              onChange={(e) => setMakeDefault(e.target.checked)}
+            />
+            <span>
+              {t('この質問セットを「回答ファイルの取り込み先」にする')}
+              <span className="block text-ink-500">
+                {t('チェックしなければ、取り込み先は今のまま変わりません（取り込み先がまだない場合は、この質問セットが取り込み先になります）。')}
+              </span>
+            </span>
+          </label>
 
           {previewIsStale ? (
             <p className="text-[#b03a22]">

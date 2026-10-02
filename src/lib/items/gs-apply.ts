@@ -154,6 +154,12 @@ export async function applyGsPlan(params: {
   groupTypeId: string;
   sourceFile: string;
   userId: string | null;
+  /**
+   * Make the new set the one answer files are imported into. Only on request
+   * (or when there is none yet): switching it silently would file the next
+   * answer file under the wrong questions.
+   */
+  makeDefault?: boolean;
   /** For each item in preview.needsDecision; a missing decision refuses the import. */
   decisions?: Record<string, ItemDecision>;
 }): Promise<{ setId: string; createdItems: number; keptItems: number }> {
@@ -258,13 +264,17 @@ export async function applyGsPlan(params: {
         }
       }
 
-      await tx.questionSet.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
+      const hasDefault = (await tx.questionSet.count({ where: { isDefault: true } })) > 0;
+      const makeDefault = Boolean(params.makeDefault) || !hasDefault;
+      if (makeDefault) {
+        await tx.questionSet.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
+      }
       const set = await tx.questionSet.create({
         data: {
           name: params.setName,
           groupTypeId: params.groupTypeId,
           sourceFile: params.sourceFile,
-          isDefault: true,
+          isDefault: makeDefault,
         },
       });
 
