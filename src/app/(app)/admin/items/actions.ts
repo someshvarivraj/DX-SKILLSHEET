@@ -56,19 +56,9 @@ export async function importGsAction(_prev: GsUploadState, formData: FormData): 
     const setName = String(formData.get('setName') ?? '').trim();
     if (!setName) throw new Error('質問セットの名前を入力してください');
 
-    let groupTypeId = String(formData.get('groupTypeId') ?? '');
+    const groupTypeId = String(formData.get('groupTypeId') ?? '');
     const newGroup = String(formData.get('newGroupName') ?? '').trim();
-    if (groupTypeId === '__new') {
-      if (!newGroup) throw new Error('新しいグループの名前を入力してください');
-      const count = await prisma.groupType.count();
-      const created = await prisma.groupType.create({
-        data: { key: `group_${Date.now().toString(36)}`, nameJa: newGroup, order: (count + 1) * 10 },
-      });
-      groupTypeId = created.id;
-    }
-    if (!(await prisma.groupType.findUnique({ where: { id: groupTypeId } }))) {
-      throw new Error('グループを選んでください');
-    }
+    if (groupTypeId === '__new' && !newGroup) throw new Error('新しいグループの名前を入力してください');
 
     const decisions: Record<string, ItemDecision> = {};
     for (const [name, value] of formData.entries()) {
@@ -80,7 +70,8 @@ export async function importGsAction(_prev: GsUploadState, formData: FormData): 
     const result = await applyGsPlan({
       plan,
       setName,
-      groupTypeId,
+      groupTypeId: groupTypeId === '__new' ? null : groupTypeId,
+      newGroupName: groupTypeId === '__new' ? newGroup : null,
       sourceFile: fileName,
       userId: user.id,
       decisions,
