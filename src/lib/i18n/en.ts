@@ -656,6 +656,17 @@ export const EN: Record<string, string> = {
   "グループで絞り込む": "Filter by group",
   "{a} / {b}件": "{a} / {b}",
 
+  "回答ファイルの取り込み先を変更しますか？": "Change where answer files are imported?",
+  "これ以降に「回答の取り込み」で読み込む回答ファイルは、すべて変更後の質問セットの設問として読み込まれます。ファイルと質問セットが合っていないと、回答が正しい設問に入りません。": "From now on, every answer file read on “Import answers” is read as the new question set's questions. If a file does not match its question set, answers will not land in the right questions.",
+  "現在": "Current",
+  "変更後": "New",
+  "取り込み先を変更する": "Change import target",
+  "「回答の取り込み」で読み込む回答ファイルは、この質問セットの設問として読み込まれます。": "Answer files read on “Import answers” are read as this question set's questions.",
+  "回答ファイルの取り込み先が決まっていません。下の一覧から選んでください。": "No import target is set. Choose one from the list below.",
+  "その他の質問セット": "Other question sets",
+  "この質問セットを「回答ファイルの取り込み先」にする": "Make this question set the import target for answer files",
+  "チェックしなければ、取り込み先は今のまま変わりません（取り込み先がまだない場合は、この質問セットが取り込み先になります）。": "If unticked, the import target stays as it is (if there is none yet, this set becomes the target).",
+
   // @@END
 };
 
@@ -719,6 +730,10 @@ export const EN_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [
     /^番号は同じでも内容が変わった設問がある。同じ設問か別の設問かを選んでください: (.+)$/,
     (m) => `Some questions keep their number but changed. Choose same or different for: ${m[1]}`,
+  ],
+  [
+    /^回答ファイルの取り込み先を「(.+)」から「(.+)」に変更した$/,
+    (m) => `Changed the answer-file import target from “${m[1]}” to “${m[2]}”`,
   ],
   // @@PATTERNS_END
 ];

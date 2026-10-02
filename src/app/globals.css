@@ -2259,39 +2259,53 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-ink-400);
 }
 
-/* Question sets */
-.im-sets {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: 0.75rem;
-}
-.im-set {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  border: 1px solid var(--color-ink-100);
-  border-top: 3px solid var(--color-ink-200);
-  background: #fff;
-  padding: 0.9rem 1rem;
+/* Question sets: the import target large and alone, the rest as a list */
+.im-target-panel {
+  border: 2px solid var(--color-brand-500);
+  background: linear-gradient(var(--color-brand-50), #fff 5rem);
+  padding: 0 1.25rem 1rem;
   box-shadow: var(--shadow-card);
 }
-.im-set-default {
-  border-top-color: var(--color-brand-500);
-  background: linear-gradient(var(--color-brand-50), #fff 3.5rem);
+.im-target-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  background: var(--color-brand-500);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #fff;
 }
-.im-set-head {
+.im-target-main {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem 2rem;
 }
-.im-set-name {
-  font-size: 0.9375rem;
+.im-target-name {
+  font-size: 1.375rem;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--color-ink-900);
 }
-.im-set-file {
+.im-target-sub {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.35rem;
+}
+.im-target-note {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--color-brand-100);
+  padding-top: 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.im-set-file {
+  display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.75rem;
@@ -2300,30 +2314,44 @@ html[data-split] .sheet-toolbar .btn {
 }
 .im-set-figures {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 .im-set-figures dt {
   font-size: 0.75rem;
   color: var(--color-ink-500);
 }
 .im-set-figures dd {
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--color-ink-900);
 }
-.im-set-foot {
-  margin-top: auto;
-  padding-top: 0.25rem;
-}
-.im-target {
-  display: inline-flex;
+/* The confirmation when the import target changes: current -> new */
+.im-switch {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  background: var(--color-brand-500);
-  padding: 0.3rem 0.7rem;
+  gap: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--color-ink-100);
+  background: var(--color-sand-50);
+  padding: 0.75rem 1rem;
+}
+.im-switch > div {
+  min-width: 0;
+  flex: 1;
+}
+.im-switch-label {
   font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.im-switch-name {
+  font-size: 0.9375rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--color-ink-700);
+  overflow-wrap: anywhere;
+}
+.im-switch-new {
+  color: var(--color-brand-600);
 }
 
 /* Group chips: six tones, cycled by group order */
