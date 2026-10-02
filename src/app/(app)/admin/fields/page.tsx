@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { FieldDefinitionTable } from '@/components/admin/field-definition-table';
 import Link from 'next/link';
+import { PickableItemsProvider } from '@/components/admin/item-picker';
 import { resolveSectionColours } from '@/lib/sheet/section-colours';
 import { PageHeader } from '@/components/page-header';
 import { getT } from '@/lib/i18n/server';
@@ -35,7 +36,14 @@ export default async function FieldDefinitionPage() {
     prisma.item.findMany({
       where: { status: 'ACTIVE' },
       orderBy: [{ subcategory: { category: { order: 'asc' } } }, { subcategory: { order: 'asc' } }, { order: 'asc' }],
-      select: { id: true, key: true, titleJa: true },
+      select: {
+        id: true,
+        key: true,
+        titleJa: true,
+        titleEn: true,
+        subcategory: { select: { category: { select: { nameJa: true } } } },
+        groupTypes: { select: { groupType: { select: { nameJa: true } } } },
+      },
     }),
   ]);
 
@@ -139,10 +147,17 @@ export default async function FieldDefinitionPage() {
         </details>
       ) : null}
 
-      <FieldDefinitionTable
-        sections={rows}
-        questionCodes={items.map((item) => item.key)}
-      />
+      <PickableItemsProvider
+        items={items.map((item) => ({
+          key: item.key,
+          title: item.titleJa,
+          titleEn: item.titleEn,
+          category: item.subcategory.category.nameJa,
+          groups: item.groupTypes.map((g) => g.groupType.nameJa),
+        }))}
+      >
+        <FieldDefinitionTable sections={rows} questionCodes={items.map((item) => item.key)} />
+      </PickableItemsProvider>
     </div>
   );
 }

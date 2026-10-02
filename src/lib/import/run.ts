@@ -374,19 +374,24 @@ async function upsertJlpt(personId: string, answers: Record<string, unknown>) {
  * Create one record per populated block in the form. Existing records with the
  * same prefix are reused, and manually added records are left untouched (§5.2).
  */
-async function ensureRecords(
+export async function ensureRecords(
   skillSheetId: string,
   answers: Record<string, unknown>,
   userId: string,
 ) {
+  // Education is three fixed blocks; internships and projects are repeating
+  // parts with up to ten entries (E-1 … E-10), so their blocks come from the
+  // entries the answers actually have.
+  const entryPrefixes = (letter: string) =>
+    [...new Set(Object.keys(answers).map((k) => k.match(new RegExp(`^(${letter}-\\d+)-`))?.[1]).filter(Boolean) as string[])].sort(
+      (a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]),
+    );
   const blocks: Array<{ prefix: string; kind: RecordKind }> = [
     { prefix: 'B-1', kind: 'EDUCATION' },
     { prefix: 'B-2', kind: 'EDUCATION' },
     { prefix: 'B-3', kind: 'EDUCATION' },
-    { prefix: 'E-1', kind: 'INTERNSHIP' },
-    { prefix: 'E-2', kind: 'INTERNSHIP' },
-    { prefix: 'F-1', kind: 'PROJECT' },
-    { prefix: 'F-2', kind: 'PROJECT' },
+    ...entryPrefixes('E').map((prefix) => ({ prefix, kind: 'INTERNSHIP' as RecordKind })),
+    ...entryPrefixes('F').map((prefix) => ({ prefix, kind: 'PROJECT' as RecordKind })),
   ];
 
   const sheet = await prisma.skillSheet.findUniqueOrThrow({

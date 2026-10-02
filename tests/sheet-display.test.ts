@@ -168,3 +168,18 @@ describe('toDisplayLines', () => {
     expect(toDisplayLines('一行目\n二行目')).toEqual(['一行目', '二行目']);
   });
 });
+
+describe('not asked — a field the candidate was never asked', () => {
+  const base = { code: 'jlpt', includeInPdf: true, isDisplayed: true, isRequired: true, valueJa: '' };
+  const opts = { forPdf: true, hiddenFieldCodes: new Set<string>() };
+  it('does not print, even when required', () => {
+    expect(isFieldPrintable({ ...base, notAsked: true }, opts)).toBe(false);
+  });
+  it('prints when someone typed a value in', () => {
+    expect(isFieldPrintable({ ...base, notAsked: true, valueJa: 'N2' }, opts)).toBe(true);
+  });
+  it('still prints a required empty field that was asked', () => {
+    expect(isFieldPrintable({ ...base, notAsked: false }, opts)).toBe(true);
+  });
+});
+

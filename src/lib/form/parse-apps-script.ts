@@ -67,15 +67,31 @@ export function extractCode(title: string): string | null {
   return m ? m[1] : null;
 }
 
+/**
+ * Where "日本語／English" divides: the first full-width solidus outside any
+ * brackets. "英語（TOEFL／IELTS）／English (TOEFL / IELTS)" divides at the
+ * second one — the first is part of the Japanese title.
+ */
+export function bilingualSplitIndex(text: string): number {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '（' || c === '(' || c === '「' || c === '【') depth++;
+    else if (c === '）' || c === ')' || c === '」' || c === '】') depth = Math.max(0, depth - 1);
+    else if (c === '／' && depth === 0) return i;
+  }
+  return -1;
+}
+
+function splitBilingual(text: string): { ja: string; en: string | null } {
+  const idx = bilingualSplitIndex(text);
+  if (idx === -1) return { ja: text, en: null };
+  return { ja: text.slice(0, idx).trim(), en: text.slice(idx + 1).trim() || null };
+}
+
 /** Split "日本語タイトル／English title" on the full-width solidus. */
 export function splitTitle(title: string): { ja: string; en: string | null } {
-  const withoutCode = title.trim().replace(CODE_PATTERN, '').trim();
-  const idx = withoutCode.indexOf('／');
-  if (idx === -1) return { ja: withoutCode, en: null };
-  return {
-    ja: withoutCode.slice(0, idx).trim(),
-    en: withoutCode.slice(idx + 1).trim() || null,
-  };
+  return splitBilingual(title.trim().replace(CODE_PATTERN, '').trim());
 }
 
 /**
@@ -89,12 +105,7 @@ export function splitTitle(title: string): { ja: string; en: string | null } {
  */
 export function cleanSectionLabel(label: string): { ja: string; en: string | null } {
   const withoutPrefix = label.replace(/^[A-Z](?:-\d+)?[.．]\s*/, '').trim();
-  const idx = withoutPrefix.indexOf('／');
-  if (idx === -1) return { ja: withoutPrefix, en: null };
-  return {
-    ja: withoutPrefix.slice(0, idx).trim(),
-    en: withoutPrefix.slice(idx + 1).trim() || null,
-  };
+  return splitBilingual(withoutPrefix);
 }
 
 export type Recorded = {
