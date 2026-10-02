@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 import { withBasePath } from '@/lib/base-path';
 
@@ -15,6 +15,7 @@ const MY_BUILD = process.env.NEXT_PUBLIC_BUILD_ID ?? '';
 export function NewVersionNotice() {
   const t = useT();
   const [stale, setStale] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (!MY_BUILD) return;
@@ -39,12 +40,15 @@ export function NewVersionNotice() {
     };
   }, []);
 
-  if (!stale) return null;
+  if (!stale || dismissed) return null;
   return (
     <div className="new-version" role="alert">
       <span>{t('新しいバージョンに更新されました。保存していない入力があればコピーしてから、再読み込みしてください。')}</span>
       <button type="button" className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>
         <RefreshCw size={14} aria-hidden /> {t('再読み込み')}
+      </button>
+      <button type="button" className="icon-btn" onClick={() => setDismissed(true)} aria-label={t('閉じる')} title={t('閉じる')}>
+        <X size={16} aria-hidden />
       </button>
     </div>
   );
