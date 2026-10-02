@@ -888,6 +888,12 @@ html[data-split] .sheet-toolbar .btn {
   justify-content: center;
   background: rgba(20, 24, 31, 0.45);
   padding: 1rem;
+  /* Never inherit a parent's text settings (a nowrap chip, a summary row). */
+  white-space: normal;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--color-ink-900);
 }
 .dialog {
   width: 100%;
