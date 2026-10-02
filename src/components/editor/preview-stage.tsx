@@ -134,7 +134,7 @@ export function PreviewStage({
           >
             −
           </button>
-          <span className="tabular w-11 text-center text-xs font-semibold text-ink-700">
+          <span className="tabular w-11 text-center text-xs font-medium text-ink-700">
             {Math.round(zoom * 100)}%
           </span>
           <button
@@ -200,7 +200,7 @@ export function PreviewStage({
           >
             −
           </button>
-          <span className="tabular w-14 text-center text-xs font-semibold">
+          <span className="tabular w-14 text-center text-xs font-medium">
             {Math.round(zoom * 100)}%
           </span>
           <button

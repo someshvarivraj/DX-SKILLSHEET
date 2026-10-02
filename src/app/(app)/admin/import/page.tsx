@@ -34,7 +34,7 @@ export default async function ImportPage() {
         lead={t('Googleフォームの回答（CSVまたはExcel）を取り込みます。2回目以降は、変わった部分だけを確認してから反映できます。')}
       />
       {revision ? null : (
-        <p className="rounded-lg border border-accent-500/40 bg-accent-50 px-4 py-3 text-sm text-[#b03a22]">
+        <p className=" border border-accent-500/40 bg-accent-50 px-4 py-3 text-sm text-[#b03a22]">
           {t('取り込み先のフォームがまだ登録されていません。先に「項目定義」画面でGoogleフォームのスクリプトを取り込んでください。')}
         </p>
       )}

@@ -425,7 +425,7 @@ export function FieldEditor({
             history.map((entry) => (
               <div key={entry.id} className="border-b border-ink-100 pb-2 last:border-0 last:pb-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
-                  <span className="font-semibold text-ink-700">
+                  <span className="font-medium text-ink-700">
                     {t(CHANGE_LABELS[entry.changeType] ?? entry.changeType)}
                   </span>
                   <span>{new Date(entry.createdAt).toLocaleString(t('ja-JP'))}</span>
@@ -434,7 +434,7 @@ export function FieldEditor({
                   {!readOnly ? (
                     <button
                       type="button"
-                      className="font-semibold text-brand-500 hover:underline"
+                      className="font-medium text-brand-500 hover:underline"
                       onClick={() =>
                         run(async () =>
                           revertFieldAction(personId, { historyId: entry.id, sectionCode }),

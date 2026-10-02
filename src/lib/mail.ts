@@ -90,15 +90,15 @@ function buildHtml(params: { paragraphs: string[]; button: string; link: string;
 <html><body style="margin:0;padding:0;background:#f7f8fa;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f8fa;padding:24px 12px;">
 <tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e3e6ea;border-radius:10px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e3e6ea;border-radius:0;">
 <tr><td style="padding:28px 28px 8px;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',Meiryo,Arial,sans-serif;">
 ${params.paragraphs.map(p).join('\n')}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0 24px;"><tr>
-<td style="background:#1f4e8c;border-radius:8px;">
-<a href="${link}" target="_blank" style="display:inline-block;padding:13px 28px;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;">${escapeHtml(params.button)}</a>
+<td style="background:#c2410c;border-radius:0;">
+<a href="${link}" target="_blank" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${escapeHtml(params.button)}</a>
 </td></tr></table>
 <p style="margin:0 0 6px;font-size:12px;color:#5b6573;">ボタンが押せない場合は、こちらのリンクを開いてください / If the button doesn't work, open this link:</p>
-<p style="margin:0 0 20px;font-size:12px;word-break:break-all;"><a href="${link}" target="_blank" style="color:#1f4e8c;">${link}</a></p>
+<p style="margin:0 0 20px;font-size:12px;word-break:break-all;"><a href="${link}" target="_blank" style="color:#c2410c;">${link}</a></p>
 ${params.footer.map((f) => `<p style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#636d7a;">${escapeHtml(f)}</p>`).join('\n')}
 </td></tr>
 <tr><td style="padding:0 28px 24px;"></td></tr>

@@ -26,13 +26,13 @@ export default function LoginPage() {
         <div className="mb-6 flex items-center justify-center gap-3">
           <MoraBot mood={linkState.message ? 'happy' : linkState.error ? 'trouble' : 'default'} size={76} />
           <div>
-            <p className="text-lg font-bold leading-tight text-ink-900">{t('スキルシート管理システム')}</p>
+            <p className="text-lg font-semibold leading-tight text-ink-900">{t('スキルシート管理システム')}</p>
             <p className="text-xs text-ink-500">{t('モラブ阪神工業株式会社')}</p>
           </div>
         </div>
 
         <div className="card px-7 py-8">
-          <h1 className="text-xl font-bold text-ink-900">{t('ログイン')}</h1>
+          <h1 className="text-xl font-semibold text-ink-900">{t('ログイン')}</h1>
           <p className="mt-1.5 text-sm text-ink-500">
             {t('メールアドレスを入力すると、ログイン用のリンクが届きます。パスワードは不要です。')}
           </p>
@@ -58,12 +58,12 @@ export default function LoginPage() {
               {linkPending ? t('送信中…') : t('ログインリンクを送る')}
             </button>
             {linkState.message ? (
-              <p className="rounded-lg border border-final-line bg-final-bg px-3 py-2 text-sm text-final-ink">
+              <p className=" border border-final-line bg-final-bg px-3 py-2 text-sm text-final-ink">
                 {t(linkState.message)}
               </p>
             ) : null}
             {linkState.error ? (
-              <p className="rounded-lg border border-accent-500/40 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]">
+              <p className=" border border-accent-500/40 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]">
                 {t(linkState.error)}
               </p>
             ) : null}
@@ -117,7 +117,7 @@ function DemoBlock({
           {pending ? t('確認中…') : t('デモアカウントで閲覧する')}
         </button>
         {state.error ? (
-          <p className="rounded-lg border border-accent-500/40 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]">
+          <p className=" border border-accent-500/40 bg-accent-50 px-3 py-2 text-sm text-[#b03a22]">
             {t(state.error)}
           </p>
         ) : null}

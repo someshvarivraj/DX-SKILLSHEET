@@ -35,18 +35,24 @@ export default async function FieldDefinitionPage() {
     prisma.formRevision.findFirst({ where: { isActive: true } }),
   ]);
 
-  // How many people have something entered in each field (in their current
-  // version), so deleting a field can say how much entered data goes with it.
-  // A repeating section holds one value per record, so values are grouped by
-  // field and version first and then counted per field.
-  const filledRows = await prisma.fieldValue.groupBy({
-    by: ['fieldId', 'versionId'],
+  // Who has something entered in each field (in their current version), so
+  // deleting a field can name the candidates whose data would go with it.
+  // A repeating section holds one value per record, hence `distinct`.
+  const filledRows = await prisma.fieldValue.findMany({
     where: { valueJa: { not: '' }, version: { currentFor: { isNot: null } } },
+    distinct: ['fieldId', 'versionId'],
+    select: {
+      fieldId: true,
+      version: { select: { skillSheet: { select: { person: { select: { fullNameEnglish: true } } } } } },
+    },
   });
-  const filledByField = new Map<string, number>();
+  const filledByField = new Map<string, string[]>();
   for (const row of filledRows) {
-    filledByField.set(row.fieldId, (filledByField.get(row.fieldId) ?? 0) + 1);
+    const names = filledByField.get(row.fieldId) ?? [];
+    names.push(row.version.skillSheet.person.fullNameEnglish);
+    filledByField.set(row.fieldId, names);
   }
+  for (const names of filledByField.values()) names.sort((a, b) => a.localeCompare(b));
 
   const questions = revision
     ? await prisma.formQuestion.findMany({
@@ -99,7 +105,7 @@ export default async function FieldDefinitionPage() {
       ruleKey: f.ruleKey,
       helpText: f.helpText,
       sourceCodes: f.sources.map((s) => s.questionCode),
-      filledCount: filledByField.get(f.id) ?? 0,
+      filledPeople: filledByField.get(f.id) ?? [],
     })),
   }));
 

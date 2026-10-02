@@ -6,10 +6,12 @@ import { SECTION_PALETTE, paletteColour } from '@/lib/sheet/section-colours';
 import { useRef, useState, useTransition } from 'react';
 import { TemplatePreviewOverlay } from './template-preview-overlay';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ChevronRight,
   Eye,
+  EyeOff,
   GripVertical,
   Plus,
   Trash2,
@@ -76,7 +78,8 @@ export type FieldRow = {
   helpText: string | null;
   sourceCodes: string[];
   /** How many people have something entered in this field. */
-  filledCount: number;
+  /** Candidates with data in this field — named before a delete. */
+  filledPeople: string[];
 };
 
 export type SectionRow = {
@@ -431,23 +434,109 @@ function DeleteConfirm({
   onConfirm,
   onCancel,
   pending,
+  confirmLabel,
+  confirmKind = 'delete',
 }: {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
   pending: boolean;
+  /** Overrides 「削除する」; null hides the button (nothing to confirm). */
+  confirmLabel?: string | null;
+  confirmKind?: 'delete' | 'primary';
 }) {
   const t = useT();
   return (
     <div className="def-confirm" role="alertdialog" aria-live="assertive">
-      <Trash2 size={16} aria-hidden className="flex-none text-[#b03a22]" />
+      <AlertTriangle size={16} aria-hidden className="flex-none" />
       <p className="flex-1">{message}</p>
       <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
         {t('キャンセル')}
       </button>
-      <button type="button" className="btn btn-delete" onClick={onConfirm} disabled={pending}>
-        {pending ? t('削除中…') : t('削除する')}
-      </button>
+      {confirmLabel === null ? null : (
+        <button
+          type="button"
+          className={`btn ${confirmKind === 'primary' ? 'btn-primary' : 'btn-delete'}`}
+          onClick={onConfirm}
+          disabled={pending}
+        >
+          {confirmLabel ?? (pending ? t('削除中…') : t('削除する'))}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Deleting a field that holds candidates' data. Hiding it (「不要にする」) is the
+ * first choice offered — the data stays and can be shown again — and deleting
+ * anyway needs an explicit tick, after the screen has said whose data goes.
+ */
+function FieldDeleteDialog({
+  field,
+  pending,
+  onHide,
+  onDelete,
+  onCancel,
+}: {
+  field: FieldRow;
+  pending: boolean;
+  onHide: () => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  const t = useT();
+  const [understood, setUnderstood] = useState(false);
+  const people = field.filledPeople;
+  const shown = people.slice(0, 12);
+  return (
+    <div className="def-confirm def-confirm-stack" role="alertdialog" aria-live="assertive">
+      <p className="def-confirm-title">
+        <AlertTriangle size={16} aria-hidden className="flex-none" />
+        {t('「{name}」には、次の候補者{n}人のデータがあります。', { name: field.nameJa, n: people.length })}
+      </p>
+      <ul className="def-confirm-people">
+        {shown.map((name) => (
+          <li key={name}>{name}</li>
+        ))}
+        {people.length > shown.length ? (
+          <li>{t('ほか{n}人', { n: people.length - shown.length })}</li>
+        ) : null}
+      </ul>
+      <p>
+        {t('削除すると、これらのデータも消え、元に戻せません。')}
+        {field.includeInPdf
+          ? t('スキルシートに出したくないだけなら「不要にする」を使ってください。データは残り、シートには表示されません。後から元に戻せます。')
+          : t('この項目はすでに「不要」（シートに表示しない）になっています。データを残すなら、削除せずにこのままにしてください。')}
+      </p>
+      <label className="def-confirm-check">
+        <input
+          type="checkbox"
+          checked={understood}
+          onChange={(e) => setUnderstood(e.target.checked)}
+          disabled={pending}
+        />
+        {t('データが消えることを理解したうえで削除する')}
+      </label>
+      <div className="def-confirm-actions">
+        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={pending}>
+          {t('キャンセル')}
+        </button>
+        <button
+          type="button"
+          className="btn btn-delete"
+          onClick={onDelete}
+          disabled={pending || !understood}
+        >
+          {pending ? t('削除中…') : t('それでも削除する')}
+        </button>
+        {field.includeInPdf ? (
+          <button type="button" className="btn btn-primary" onClick={onHide} disabled={pending}>
+            <EyeOff size={16} aria-hidden />
+            {t('不要にする')}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -660,15 +749,26 @@ function SectionItem({
           message={
             section.fields.length > 0
               ? t(
-                  '「{name}」には項目が{n}件あります。セクションを削除するには、先に中の項目を削除してください。一時的に出さないだけなら「表示」のスイッチを切ってください。',
+                  '「{name}」には項目が{n}件あり、候補者のデータが入っている可能性があるため、このままでは削除できません。スキルシートに出したくないだけなら「不要にする」を使ってください。データは残り、後から元に戻せます。',
                   { name: section.nameJa, n: section.fields.length },
                 )
               : t('「{name}」を削除します。元には戻せません。', { name: section.nameJa })
           }
           onCancel={() => setConfirming(false)}
+          confirmLabel={section.fields.length > 0 ? (section.isVisible ? t('不要にする') : null) : undefined}
+          confirmKind={section.fields.length > 0 ? 'primary' : 'delete'}
           onConfirm={() =>
             section.fields.length > 0
-              ? setConfirming(false)
+              ? startTransition(async () => {
+                  const result = await setSectionVisibleAction(section.id, false);
+                  onNotice({
+                    ok: result.ok,
+                    text: result.ok
+                      ? t('「{name}」を不要にしました（データは残っています）', { name: section.nameJa })
+                      : result.message,
+                  });
+                  setConfirming(false);
+                })
               : startTransition(async () => {
                   const result = await deleteSectionAction(section.id);
                   onNotice({ ok: result.ok, text: result.message });
@@ -1054,17 +1154,33 @@ function FieldItem({
         </span>
       </div>
 
-      {confirming ? (
+      {confirming && field.filledPeople.length > 0 ? (
+        <FieldDeleteDialog
+          field={field}
+          pending={pending}
+          onCancel={() => setConfirming(false)}
+          onHide={() =>
+            startTransition(async () => {
+              const result = await setFieldPrintedAction(field.id, false);
+              onNotice({
+                ok: result.ok,
+                text: result.ok ? t('「{name}」を不要にしました（データは残っています）', { name: field.nameJa }) : result.message,
+              });
+              setConfirming(false);
+            })
+          }
+          onDelete={() =>
+            startTransition(async () => {
+              const result = await deleteFieldAction(field.id, { confirmDataLoss: true });
+              onNotice({ ok: result.ok, text: result.message });
+              setConfirming(false);
+            })
+          }
+        />
+      ) : confirming ? (
         <DeleteConfirm
           pending={pending}
-          message={
-            field.filledCount > 0
-              ? t(
-                  '「{name}」を削除すると、{n}人分の入力内容も一緒に削除され、元に戻せません。一時的に出さないだけなら「表示」のスイッチを切ってください。',
-                  { name: field.nameJa, n: field.filledCount },
-                )
-              : t('「{name}」を削除します。元には戻せません。', { name: field.nameJa })
-          }
+          message={t('「{name}」を削除します。元には戻せません。', { name: field.nameJa })}
           onCancel={() => setConfirming(false)}
           onConfirm={() =>
             startTransition(async () => {
@@ -1337,7 +1453,7 @@ function FieldDetail({
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              const { order: _order, filledCount: _filled, ...rest } = draft;
+              const { order: _order, filledPeople: _filled, ...rest } = draft;
               const result = await updateFieldAction({
                 ...rest,
                 // The 表示 switch in the row saves itself; keep what it holds

@@ -122,7 +122,7 @@ export function SheetToolbar({
       <div className="card sticky-below-header sheet-toolbar px-5 py-3.5">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <div className="min-w-0">
-            <h1 className="text-lg font-bold leading-snug text-ink-900">
+            <h1 className="text-lg font-semibold leading-snug text-ink-900">
               {lang === 'en'
                 ? model.person.fullNameEnglish
                 : (model.person.fullNameKatakana ?? model.person.fullNameEnglish)}
@@ -284,7 +284,7 @@ function ConfirmFinaliseDialog({
         <div className="flex items-start gap-4">
           <MoraBot mood="trouble" size={72} title="" />
           <div className="min-w-0">
-            <h2 id="finalise-title" className="text-lg font-bold text-ink-900">
+            <h2 id="finalise-title" className="text-lg font-semibold text-ink-900">
               {t('未確認の項目が{n}件あります', { n: items.length })}
             </h2>
             <p className="mt-1 text-sm text-ink-700">
@@ -331,7 +331,7 @@ function ListCard({
   return (
     <div className="card px-5 py-3.5 text-sm text-ink-700">
       <div className="flex items-center gap-2">
-        <p className="font-bold text-ink-900">{title}</p>
+        <p className="font-semibold text-ink-900">{title}</p>
         <span className="flex-1" />
         <button type="button" className="btn btn-quiet" onClick={onClose}>
           {t('閉じる')}
@@ -342,7 +342,7 @@ function ListCard({
       ) : (
         <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, i) => (
-            <li key={i} className={item.strong ? 'font-bold text-[#b03a22]' : ''}>
+            <li key={i} className={item.strong ? 'font-semibold text-[#b03a22]' : ''}>
               <span className="text-ink-500">{item.section}／</span>
               {item.name}
               {item.strong ? t('（必須）') : ''}

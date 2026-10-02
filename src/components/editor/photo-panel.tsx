@@ -76,13 +76,13 @@ export function PhotoPanel({
     <div className="px-4 py-3" data-field-anchor="" id={`field-photo-${personId}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-ink-900">{t('写真')}</span>
-        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">{t('画像')}</span>
+        <span className=" bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">{t('画像')}</span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-start gap-4">
         {/* 30mm × 40mm, the proportion the printed sheet reserves. */}
         <div
-          className="grid w-[120px] shrink-0 place-items-center overflow-hidden rounded-md border border-dashed border-ink-200 bg-sand-50"
+          className="grid w-[120px] shrink-0 place-items-center overflow-hidden border border-dashed border-ink-200 bg-sand-50"
           style={{ aspectRatio: '3 / 4' }}
         >
           {shown ? (
@@ -143,12 +143,12 @@ export function PhotoPanel({
           )}
 
           {notice ? (
-            <p className="mt-2 rounded-lg border border-final-line bg-final-bg px-3 py-1.5 text-xs text-final-ink">
+            <p className="mt-2 border border-final-line bg-final-bg px-3 py-1.5 text-xs text-final-ink">
               {t(notice)}
             </p>
           ) : null}
           {error ? (
-            <p className="mt-2 rounded-lg border border-accent-500/35 bg-accent-50 px-3 py-1.5 text-xs text-[#b03a22]">
+            <p className="mt-2 border border-accent-500/35 bg-accent-50 px-3 py-1.5 text-xs text-[#b03a22]">
               {t(error)}
             </p>
           ) : null}

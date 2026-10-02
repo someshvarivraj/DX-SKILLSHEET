@@ -450,7 +450,11 @@ model FieldValue {
   versionId  String
   version    SheetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
   fieldId    String
-  field      SheetField   @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  /// Restrict, not Cascade (2026-10-02): deleting a field definition must never
+  /// silently take people's entered data with it — that is how a section reset
+  /// emptied every imported sheet. The admin screen deletes the values itself,
+  /// on purpose, after the operator has confirmed it (deleteFieldAction).
+  field      SheetField   @relation(fields: [fieldId], references: [id], onDelete: Restrict)
   /// Set when the value belongs to a repeating record (internship/project).
   recordId   String?
   record     SheetRecord? @relation(fields: [recordId], references: [id], onDelete: Cascade)

@@ -190,7 +190,7 @@ export function SectionPanel({
           section.records.map((record, index) => (
             <div key={record.id} className="border-b border-ink-100 last:border-0">
               <div className="flex flex-wrap items-center gap-3 bg-sand-50 px-5 py-2.5">
-                <span className="text-sm font-bold text-ink-900">
+                <span className="text-sm font-semibold text-ink-900">
                   {index + 1}. {record.label || sectionName}
                 </span>
                 <span className="flex-1" />

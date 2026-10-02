@@ -210,7 +210,7 @@ export function MoraBotProgress({
     >
       {label || detail ? (
         <div className="mb-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          {label ? <span className="text-sm font-bold text-ink-900">{label}</span> : null}
+          {label ? <span className="text-sm font-semibold text-ink-900">{label}</span> : null}
           {detail ? <span className="tabular text-sm text-ink-500">{detail}</span> : null}
         </div>
       ) : null}

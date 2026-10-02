@@ -111,7 +111,7 @@ export default async function PeoplePage({
       {people.length === 0 ? (
         <div className="card flex flex-col items-center p-12 text-center">
           <MoraBot mood="explain" size={110} title="" />
-          <p className="mt-4 font-bold text-ink-900">{t('まだ対象者がいません。')}</p>
+          <p className="mt-4 font-semibold text-ink-900">{t('まだ対象者がいません。')}</p>
           <p className="mt-1 text-sm text-ink-500">
             {t('Googleフォームの回答ファイルを取り込むと、ここに一覧で表示されます。')}
           </p>
@@ -193,7 +193,7 @@ export default async function PeoplePage({
                               below), so anywhere on the row opens the sheet. */}
                           <Link
                             href={`/people/${person.id}`}
-                            className="font-bold text-ink-900 after:absolute after:inset-0 hover:text-brand-500"
+                            className="font-semibold text-ink-900 after:absolute after:inset-0 hover:text-brand-500"
                           >
                             {lang === 'en' ? person.fullNameEnglish : (person.fullNameKatakana ?? person.fullNameEnglish)}
                           </Link>
