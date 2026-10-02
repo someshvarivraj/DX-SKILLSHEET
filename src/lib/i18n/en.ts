@@ -650,6 +650,12 @@ export const EN: Record<string, string> = {
   "設問が1件も見つかりませんでした。createForm() を定義した.gsファイルか確認してください。": "No questions were found. Check that the .gs file defines createForm().",
 
 
+  "設問": "Questions",
+  "カテゴリ": "Categories",
+  "回答": "Responses",
+  "グループで絞り込む": "Filter by group",
+  "{a} / {b}件": "{a} / {b}",
+
   // @@END
 };
 

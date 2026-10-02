@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ItemType } from '@prisma/client';
+import { ChevronRight, FileCode2, Layers, ListChecks, Repeat, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
@@ -8,6 +10,7 @@ import { GsUpload } from '@/components/admin/gs-upload';
 import { SetDefaultButton } from '@/components/admin/set-default-button';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
+import { SECTION_PALETTE } from '@/lib/sheet/section-colours';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,16 +25,24 @@ const TYPE_LABEL: Record<ItemType, string> = {
   NUMBER: '数値',
 };
 
+/** Group chips cycle through these tones (styled as .im-group[data-tone]). */
+const GROUP_TONES = 6;
+
 /**
  * 設問マスタ (design, 2026-10-02): every question ever asked, as Category ->
  * Subcategory -> Item, and the question sets that select from it. Item keys
  * are internal and never shown.
  */
-export default async function ItemMasterPage() {
+export default async function ItemMasterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
   const user = await requireUser();
   const t = await getT();
   const lang = await getLang();
   if (!can(user, 'definition.manage')) notFound();
+  const { group: groupFilter } = await searchParams;
 
   const [categories, sets, groupTypes] = await Promise.all([
     prisma.itemCategory.findMany({
@@ -42,122 +53,211 @@ export default async function ItemMasterPage() {
           include: {
             items: {
               orderBy: { order: 'asc' },
-              include: { groupTypes: { include: { groupType: true } }, _count: { select: { answers: true } } },
+              include: { groupTypes: true, _count: { select: { answers: true } } },
             },
           },
         },
       },
     }),
     prisma.questionSet.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
       include: { groupType: true, _count: { select: { items: true, responses: true } } },
     }),
-    prisma.groupType.findMany({ orderBy: { order: 'asc' }, select: { id: true, nameJa: true } }),
+    prisma.groupType.findMany({
+      orderBy: { order: 'asc' },
+      include: { _count: { select: { items: true } } },
+    }),
   ]);
 
-  const itemCount = categories.reduce(
-    (n, c) => n + c.subcategories.reduce((m, s) => m + s.items.length, 0),
-    0,
-  );
+  const toneOf = new Map(groupTypes.map((g, i) => [g.id, i % GROUP_TONES]));
+  const groupName = (id: string) => {
+    const g = groupTypes.find((x) => x.id === id);
+    return g ? pickName(lang, g.nameJa, g.nameEn) : '';
+  };
+  const activeGroup = groupTypes.find((g) => g.id === groupFilter) ?? null;
+
+  // The tree as shown: filtered to one group when a chip is picked.
+  const tree = categories
+    .map((category, index) => ({
+      ...category,
+      colour: SECTION_PALETTE[index % SECTION_PALETTE.length]!,
+      subcategories: category.subcategories
+        .map((sub) => ({
+          ...sub,
+          items: activeGroup
+            ? sub.items.filter((item) => item.groupTypes.some((g) => g.groupTypeId === activeGroup.id))
+            : sub.items,
+        }))
+        .filter((sub) => sub.items.length > 0),
+    }))
+    .filter((category) => category.subcategories.length > 0);
+
+  const totalItems = categories.reduce((n, c) => n + c.subcategories.reduce((m, s) => m + s.items.length, 0), 0);
+  const shownItems = tree.reduce((n, c) => n + c.subcategories.reduce((m, s) => m + s.items.length, 0), 0);
+
+  const stats = [
+    { icon: ListChecks, label: t('設問'), value: totalItems },
+    { icon: Layers, label: t('カテゴリ'), value: categories.length },
+    { icon: FileCode2, label: t('質問セット'), value: sets.length },
+    { icon: Users, label: t('グループ'), value: groupTypes.length },
+  ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title={t('設問マスタ')}
         lead={t('これまでに聞いたすべての設問を「カテゴリ › サブカテゴリ › 設問」で管理します。質問セットは、この中から聞く設問を選んだものです。')}
       />
 
-      <GsUpload groupTypes={groupTypes} />
+      <div className="im-stats">
+        {stats.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="im-stat">
+            <Icon size={18} aria-hidden className="im-stat-icon" />
+            <div>
+              <div className="im-stat-value">{value}</div>
+              <div className="im-stat-label">{label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <section className="card overflow-hidden">
-        <h2 className="panel-head panel-title">{t('質問セット')}</h2>
+      <GsUpload groupTypes={groupTypes.map((g) => ({ id: g.id, nameJa: g.nameJa }))} />
+
+      {/* ---- Question sets ------------------------------------------------ */}
+      <section>
+        <h2 className="im-section-title">{t('質問セット')}</h2>
         {sets.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-ink-500">
+          <p className="card px-4 py-6 text-sm text-ink-500">
             {t('質問セットはまだありません。上からGoogleフォームのスクリプト（.gs）を取り込んでください。')}
           </p>
         ) : (
-          <div className="table-scroll">
-            <table className="data-table !min-w-[40rem]">
-              <thead>
-                <tr>
-                  <th>{t('名前')}</th>
-                  <th>{t('グループ')}</th>
-                  <th>{t('設問数')}</th>
-                  <th>{t('回答数')}</th>
-                  <th>{t('回答ファイルの取り込み先')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sets.map((set) => (
-                  <tr key={set.id}>
-                    <td>
-                      {set.name}
-                      {set.sourceFile ? <div className="text-xs text-ink-400">{set.sourceFile}</div> : null}
-                    </td>
-                    <td>{pickName(lang, set.groupType.nameJa, set.groupType.nameEn)}</td>
-                    <td>{set._count.items}</td>
-                    <td>{set._count.responses}</td>
-                    <td>{set.isDefault ? <span className="badge">{t('取り込み先')}</span> : <SetDefaultButton setId={set.id} />}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="im-sets">
+            {sets.map((set) => (
+              <article key={set.id} className={`im-set ${set.isDefault ? 'im-set-default' : ''}`}>
+                <div className="im-set-head">
+                  <h3 className="im-set-name">{set.name}</h3>
+                  <span className="im-group" data-tone={toneOf.get(set.groupTypeId) ?? 0}>
+                    {groupName(set.groupTypeId)}
+                  </span>
+                </div>
+                {set.sourceFile ? (
+                  <p className="im-set-file">
+                    <FileCode2 size={13} aria-hidden /> {set.sourceFile}
+                  </p>
+                ) : null}
+                <dl className="im-set-figures">
+                  <div>
+                    <dt>{t('設問')}</dt>
+                    <dd>{set._count.items}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('回答')}</dt>
+                    <dd>{set._count.responses}</dd>
+                  </div>
+                </dl>
+                <div className="im-set-foot">
+                  {set.isDefault ? (
+                    <span className="im-target">{t('回答ファイルの取り込み先')}</span>
+                  ) : (
+                    <SetDefaultButton setId={set.id} />
+                  )}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
 
-      <section className="card overflow-hidden">
-        <h2 className="panel-head panel-title">
-          {t('設問マスタ')} <span className="text-xs font-normal text-ink-400">{t('{n}件', { n: itemCount })}</span>
-        </h2>
-        {categories.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-ink-500">{t('設問はまだありません。')}</p>
+      {/* ---- Item master ---------------------------------------------------- */}
+      <section>
+        <div className="im-master-head">
+          <h2 className="im-section-title !mb-0">
+            {t('設問マスタ')}
+            <span className="im-count">
+              {activeGroup ? t('{a} / {b}件', { a: shownItems, b: totalItems }) : t('{n}件', { n: totalItems })}
+            </span>
+          </h2>
+          {groupTypes.length > 0 ? (
+            <nav className="im-filter" aria-label={t('グループで絞り込む')}>
+              <Link href="/admin/items" className="im-filter-chip" aria-current={!activeGroup}>
+                {t('すべて')}
+              </Link>
+              {groupTypes.map((g) => (
+                <Link
+                  key={g.id}
+                  href={`/admin/items?group=${g.id}`}
+                  className="im-filter-chip"
+                  aria-current={activeGroup?.id === g.id}
+                >
+                  <span className="im-dot" data-tone={toneOf.get(g.id)} />
+                  {pickName(lang, g.nameJa, g.nameEn)}
+                  <span className="im-filter-count">{g._count.items}</span>
+                </Link>
+              ))}
+            </nav>
+          ) : null}
+        </div>
+
+        {tree.length === 0 ? (
+          <p className="card px-4 py-6 text-sm text-ink-500">{t('設問はまだありません。')}</p>
         ) : (
-          <div className="divide-y divide-ink-100">
-            {categories.map((category) => (
-              <details key={category.id} className="px-4 py-2">
-                <summary className="cursor-pointer py-1 text-sm font-medium text-ink-900">
-                  {pickName(lang, category.nameJa, category.nameEn)}
-                  <span className="ml-2 text-xs font-normal text-ink-400">
-                    {t('{n}件', { n: category.subcategories.reduce((m, s) => m + s.items.length, 0) })}
-                  </span>
-                </summary>
-                <div className="space-y-3 pb-2 pl-3">
-                  {category.subcategories.map((sub) => (
-                    <div key={sub.id}>
-                      <p className="text-xs font-medium text-ink-700">
-                        {pickName(lang, sub.nameJa, sub.nameEn)}
-                        {sub.isRepeating ? (
-                          <span className="def-tag ml-2">{t('繰り返し（最大{n}件）', { n: sub.maxEntries })}</span>
-                        ) : null}
-                      </p>
-                      <ul className="mt-1 divide-y divide-ink-100 border border-ink-100">
-                        {sub.items.map((item) => (
-                          <li key={item.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
-                            <span className="min-w-0 flex-1">
-                              {lang === 'en' && item.titleEn ? item.titleEn : item.titleJa}
-                              {lang !== 'en' && item.titleEn ? (
-                                <span className="ml-2 text-xs text-ink-400">{item.titleEn}</span>
-                              ) : null}
+          <div className="space-y-2">
+            {tree.map((category) => {
+              const count = category.subcategories.reduce((m, s) => m + s.items.length, 0);
+              return (
+                <details
+                  key={category.id}
+                  className="im-category"
+                  style={{ '--im-accent': category.colour.accent, '--im-tint': category.colour.tint } as React.CSSProperties}
+                >
+                  <summary className="im-category-head">
+                    <ChevronRight size={16} aria-hidden className="im-chevron" />
+                    <span className="im-category-name">
+                      {pickName(lang, category.nameJa, category.nameEn)}
+                      {lang !== 'en' && category.nameEn ? <span className="im-sub-en">{category.nameEn}</span> : null}
+                    </span>
+                    <span className="im-pill">{t('{n}件', { n: count })}</span>
+                  </summary>
+
+                  <div className="im-category-body">
+                    {category.subcategories.map((sub) => (
+                      <div key={sub.id} className="im-sub">
+                        <p className="im-sub-head">
+                          {pickName(lang, sub.nameJa, sub.nameEn)}
+                          {sub.isRepeating ? (
+                            <span className="im-repeat">
+                              <Repeat size={12} aria-hidden /> {t('繰り返し（最大{n}件）', { n: sub.maxEntries })}
                             </span>
-                            <span className="def-tag">{t(TYPE_LABEL[item.type])}</span>
-                            {item.groupTypes.map((g) => (
-                              <span key={g.groupTypeId} className="text-xs text-ink-500">
-                                {pickName(lang, g.groupType.nameJa, g.groupType.nameEn)}
-                              </span>
-                            ))}
-                            {item.status !== 'ACTIVE' ? (
-                              <span className="def-tag">{t(item.status === 'HIDDEN' ? '非表示' : '置き換え済み')}</span>
-                            ) : null}
-                            <span className="text-xs text-ink-400">{t('回答{n}件', { n: item._count.answers })}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ))}
+                          ) : null}
+                        </p>
+                        <ul className="im-items">
+                          {sub.items.map((item) => (
+                            <li key={item.id} className={`im-item ${item.status !== 'ACTIVE' ? 'im-item-muted' : ''}`}>
+                              <div className="im-item-title">
+                                <span>{lang === 'en' && item.titleEn ? item.titleEn : item.titleJa}</span>
+                                {lang !== 'en' && item.titleEn ? <span className="im-item-en">{item.titleEn}</span> : null}
+                              </div>
+                              <div className="im-item-meta">
+                                <span className="im-type">{t(TYPE_LABEL[item.type])}</span>
+                                {item.groupTypes.map((g) => (
+                                  <span key={g.groupTypeId} className="im-group" data-tone={toneOf.get(g.groupTypeId) ?? 0}>
+                                    {groupName(g.groupTypeId)}
+                                  </span>
+                                ))}
+                                {item.status !== 'ACTIVE' ? (
+                                  <span className="im-type">{t(item.status === 'HIDDEN' ? '非表示' : '置き換え済み')}</span>
+                                ) : null}
+                                <span className="im-answers">{t('回答{n}件', { n: item._count.answers })}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         )}
       </section>
