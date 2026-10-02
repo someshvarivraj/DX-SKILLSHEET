@@ -56,6 +56,9 @@ export default async function PeoplePage({
     include: {
       skillSheet: { include: { currentVersion: true } },
       jlptResults: { orderBy: [{ examYear: 'desc' }, { examMonth: 'desc' }], take: 1 },
+      // Added on a question set but not submitted yet: shown as 回答待ち.
+      itemResponses: { where: { status: 'SUBMITTED' }, select: { id: true }, take: 1 },
+      _count: { select: { itemResponses: { where: { status: 'DRAFT' } } } },
     },
   });
 
@@ -205,7 +208,9 @@ export default async function PeoplePage({
                         <td className="tabular text-ink-700">{person.cohort ?? '—'}</td>
                         <td className="text-ink-700">{jlpt ? jlpt.level : '—'}</td>
                         <td>
-                          {version ? (
+                          {person.itemResponses.length === 0 && person._count.itemResponses > 0 ? (
+                            <span className="badge badge-warn">{t('回答待ち')}</span>
+                          ) : version ? (
                             <span className={`badge ${STATUS_CLASS[version.status]}`}>
                               {t(STATUS_LABELS[version.status])}
                             </span>
