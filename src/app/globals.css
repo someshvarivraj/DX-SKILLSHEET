@@ -3188,3 +3188,12 @@ html[data-split] .sheet-toolbar .btn {
   font-size: 0.8125rem;
   color: var(--color-warn-ink);
 }
+/* The ⋯ menu, drawn at the top level and placed under its button (FieldMenu). */
+.menu-floating {
+  position: fixed;
+  top: auto;
+  bottom: auto;
+  z-index: 70;
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+}

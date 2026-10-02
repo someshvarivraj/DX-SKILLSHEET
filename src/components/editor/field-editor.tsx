@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
+import { Portal } from '@/components/ui/portal';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
 import { composeGridText, gridRowsOf } from '@/lib/sheet/grid';
@@ -471,7 +472,14 @@ type MenuEntry =
   | { separator: true }
   | { separator?: false; label: string; onClick: () => void; disabled?: boolean };
 
-/** The ⋯ button and its drop-down of less common actions. */
+/**
+ * The ⋯ button and its drop-down of less common actions.
+ *
+ * The list is drawn at the top level of the page (a portal) and placed under
+ * the button with fixed coordinates: drawn inside the field's card it was cut
+ * off by the card's edge, hiding every item below the first. It opens upwards
+ * when there is no room below.
+ */
 export function FieldMenu({
   items,
   label,
@@ -481,26 +489,50 @@ export function FieldMenu({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const position = useCallback(() => {
+    const button = rootRef.current?.getBoundingClientRect();
+    if (!button) return;
+    const right = Math.max(8, window.innerWidth - button.right);
+    const height = menuRef.current?.offsetHeight ?? 200;
+    const roomBelow = window.innerHeight - button.bottom;
+    setPlace(
+      roomBelow < height + 12 && button.top > roomBelow
+        ? { bottom: window.innerHeight - button.top + 4, right }
+        : { top: button.bottom + 4, right },
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open) position();
+  }, [open, position]);
 
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (
-        e instanceof KeyboardEvent
-          ? e.key === 'Escape'
-          : !rootRef.current?.contains(e.target as Node)
-      ) {
-        setOpen(false);
+      if (e instanceof KeyboardEvent) {
+        if (e.key === 'Escape') setOpen(false);
+        return;
       }
+      const target = e.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
+    // The menu stays with its button while the page scrolls or resizes.
+    const follow = () => position();
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', close);
+    window.addEventListener('scroll', follow, true);
+    window.addEventListener('resize', follow);
     return () => {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', close);
+      window.removeEventListener('scroll', follow, true);
+      window.removeEventListener('resize', follow);
     };
-  }, [open]);
+  }, [open, position]);
 
   return (
     <div className="menu-root" ref={rootRef}>
@@ -519,27 +551,34 @@ export function FieldMenu({
         </svg>
       </button>
       {open ? (
-        <div className="menu" role="menu">
-          {items.map((item, i) =>
-            item.separator ? (
-              <div key={i} className="menu-sep" role="separator" />
-            ) : (
-              <button
-                key={i}
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                disabled={item.disabled}
-                onClick={() => {
-                  setOpen(false);
-                  item.onClick();
-                }}
-              >
-                {item.label}
-              </button>
-            ),
-          )}
-        </div>
+        <Portal>
+          <div
+            ref={menuRef}
+            className="menu menu-floating"
+            role="menu"
+            style={{ ...place, visibility: place ? 'visible' : 'hidden' }}
+          >
+            {items.map((item, i) =>
+              item.separator ? (
+                <div key={i} className="menu-sep" role="separator" />
+              ) : (
+                <button
+                  key={i}
+                  type="button"
+                  role="menuitem"
+                  className="menu-item"
+                  disabled={item.disabled}
+                  onClick={() => {
+                    setOpen(false);
+                    item.onClick();
+                  }}
+                >
+                  {item.label}
+                </button>
+              ),
+            )}
+          </div>
+        </Portal>
       ) : null}
     </div>
   );
