@@ -1,5 +1,6 @@
 'use client';
 
+import { Portal } from '@/components/ui/portal';
 import type { QuestionSetStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -36,14 +37,26 @@ export function SetSettings({
   set,
   groups,
 }: {
-  set: { id: string; name: string; groupTypeId: string; status: QuestionSetStatus; deadline: string | null; canDelete: boolean };
+  set: {
+    id: string;
+    name: string;
+    groupTypeId: string;
+    status: QuestionSetStatus;
+    deadline: string | null;
+    canDelete: boolean;
+  };
   groups: Array<{ id: string; name: string }>;
 }) {
   const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
-  const [form, setForm] = useState({ name: set.name, groupTypeId: set.groupTypeId, status: set.status, deadline: set.deadline ?? '' });
+  const [form, setForm] = useState({
+    name: set.name,
+    groupTypeId: set.groupTypeId,
+    status: set.status,
+    deadline: set.deadline ?? '',
+  });
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="card p-4">
@@ -73,7 +86,12 @@ export function SetSettings({
         </div>
         <label>
           <span className="field-label">{t('回答の締め切り')}</span>
-          <input className="input" type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+          <input
+            className="input"
+            type="date"
+            value={form.deadline}
+            onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+          />
         </label>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -111,7 +129,11 @@ export function SetSettings({
           type="button"
           className="btn btn-primary"
           disabled={pending}
-          onClick={() => startTransition(async () => setResult(await updateSetAction(set.id, { ...form, deadline: form.deadline || null })))}
+          onClick={() =>
+            startTransition(async () =>
+              setResult(await updateSetAction(set.id, { ...form, deadline: form.deadline || null })),
+            )
+          }
         >
           {pending ? t('保存中…') : t('保存')}
         </button>
@@ -193,13 +215,33 @@ export function SetItemRow({
               />
               {t('必須')}
             </label>
-            <button type="button" className="icon-btn im-inline-icon" title={t('表示条件')} aria-label={t('表示条件')} onClick={() => setEditing(true)}>
+            <button
+              type="button"
+              className="icon-btn im-inline-icon"
+              title={t('表示条件')}
+              aria-label={t('表示条件')}
+              onClick={() => setEditing(true)}
+            >
               <GitBranch size={14} aria-hidden />
             </button>
-            <button type="button" className="icon-btn im-inline-icon" title={t('上へ')} aria-label={t('上へ')} disabled={pending} onClick={() => act(() => moveSetItemAction(setId, item.id, -1))}>
+            <button
+              type="button"
+              className="icon-btn im-inline-icon"
+              title={t('上へ')}
+              aria-label={t('上へ')}
+              disabled={pending}
+              onClick={() => act(() => moveSetItemAction(setId, item.id, -1))}
+            >
               <ArrowUp size={14} aria-hidden />
             </button>
-            <button type="button" className="icon-btn im-inline-icon" title={t('下へ')} aria-label={t('下へ')} disabled={pending} onClick={() => act(() => moveSetItemAction(setId, item.id, 1))}>
+            <button
+              type="button"
+              className="icon-btn im-inline-icon"
+              title={t('下へ')}
+              aria-label={t('下へ')}
+              disabled={pending}
+              onClick={() => act(() => moveSetItemAction(setId, item.id, 1))}
+            >
               <ArrowDown size={14} aria-hidden />
             </button>
           </>
@@ -252,69 +294,76 @@ function ConditionDialog({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, pending]);
   return (
-    <div className="dialog-overlay" onClick={pending ? undefined : onClose}>
-      <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-ink-900">{t('表示条件')}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('閉じる')}>
-            <X size={18} aria-hidden />
-          </button>
-        </div>
-        <p className="mt-1 text-sm text-ink-500">
-          {t('「{title}」を、次の回答のときだけ表示します。条件がなければ、いつも表示します。', { title })}
-        </p>
-        <div className="im-form">
-          <div>
-            <span className="field-label">{t('どの設問の回答で決めるか')}</span>
-            <Select
-              value={key}
-              onChange={(v) => {
-                setKey(v);
-                setAnyOf([]);
-              }}
-              searchFrom={1}
-              placeholder={t('設問を選ぶ（選択式の設問）')}
-              options={sources.map((s) => ({ value: s.key, label: s.title }))}
-              ariaLabel={t('どの設問の回答で決めるか')}
-            />
-          </div>
-          {source ? (
-            <div>
-              <span className="field-label">{t('表示する回答（複数選べます）')}</span>
-              <div className="grid gap-1">
-                {source.options.map((o) => (
-                  <label key={o} className="flex items-center gap-2 text-sm text-ink-700">
-                    <input
-                      type="checkbox"
-                      checked={anyOf.includes(o)}
-                      onChange={(e) => setAnyOf(e.target.checked ? [...anyOf, o] : anyOf.filter((x) => x !== o))}
-                    />
-                    {o}
-                  </label>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="mt-4 flex flex-wrap justify-between gap-2">
-          <button type="button" className="btn btn-secondary btn-sm" disabled={pending || !current} onClick={() => onSave(null)}>
-            {t('条件をなくす')}
-          </button>
-          <div className="flex gap-2">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={pending}>
-              {t('キャンセル')}
+    <Portal>
+      <div className="dialog-overlay" onClick={pending ? undefined : onClose}>
+        <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold text-ink-900">{t('表示条件')}</h2>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label={t('閉じる')}>
+              <X size={18} aria-hidden />
             </button>
+          </div>
+          <p className="mt-1 text-sm text-ink-500">
+            {t('「{title}」を、次の回答のときだけ表示します。条件がなければ、いつも表示します。', { title })}
+          </p>
+          <div className="im-form">
+            <div>
+              <span className="field-label">{t('どの設問の回答で決めるか')}</span>
+              <Select
+                value={key}
+                onChange={(v) => {
+                  setKey(v);
+                  setAnyOf([]);
+                }}
+                searchFrom={1}
+                placeholder={t('設問を選ぶ（選択式の設問）')}
+                options={sources.map((s) => ({ value: s.key, label: s.title }))}
+                ariaLabel={t('どの設問の回答で決めるか')}
+              />
+            </div>
+            {source ? (
+              <div>
+                <span className="field-label">{t('表示する回答（複数選べます）')}</span>
+                <div className="grid gap-1">
+                  {source.options.map((o) => (
+                    <label key={o} className="flex items-center gap-2 text-sm text-ink-700">
+                      <input
+                        type="checkbox"
+                        checked={anyOf.includes(o)}
+                        onChange={(e) => setAnyOf(e.target.checked ? [...anyOf, o] : anyOf.filter((x) => x !== o))}
+                      />
+                      {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-4 flex flex-wrap justify-between gap-2">
             <button
               type="button"
-              className="btn btn-primary"
-              disabled={pending || !key || anyOf.length === 0}
-              onClick={() => onSave({ itemKey: key, anyOf })}
+              className="btn btn-secondary btn-sm"
+              disabled={pending || !current}
+              onClick={() => onSave(null)}
             >
-              {t('保存')}
+              {t('条件をなくす')}
             </button>
+            <div className="flex gap-2">
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={pending}>
+                {t('キャンセル')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={pending || !key || anyOf.length === 0}
+                onClick={() => onSave({ itemKey: key, anyOf })}
+              >
+                {t('保存')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { Portal } from '@/components/ui/portal';
 import { useEffect, useState, useTransition } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
@@ -38,23 +39,32 @@ function Dialog({
     return () => document.removeEventListener('keydown', onKey);
   }, [busy, onClose]);
   return (
-    <div className="dialog-overlay" onClick={busy ? undefined : onClose}>
-      <div className={`dialog ${wide ? 'im-dialog' : ''}`} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-ink-900">{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('閉じる')} disabled={busy}>
-            <X size={18} aria-hidden />
-          </button>
+    <Portal>
+      <div className="dialog-overlay" onClick={busy ? undefined : onClose}>
+        <div
+          className={`dialog ${wide ? 'im-dialog' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold text-ink-900">{title}</h2>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label={t('閉じる')} disabled={busy}>
+              <X size={18} aria-hidden />
+            </button>
+          </div>
+          {children}
         </div>
-        {children}
       </div>
-    </div>
+    </Portal>
   );
 }
 
 function ErrorLine({ error }: { error: string | null }) {
   const t = useT();
-  return error ? <p className="mt-3 border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">{t(error)}</p> : null;
+  return error ? (
+    <p className="mt-3 border border-accent-500/35 bg-accent-50 px-3 py-2 text-xs text-[#b03a22]">{t(error)}</p>
+  ) : null;
 }
 
 /**
@@ -168,13 +178,22 @@ export function NameEditButton({
                 {repeat ? (
                   <label>
                     <span className="field-label">{t('最大件数')}</span>
-                    <input className="input w-24" inputMode="numeric" value={entries} onChange={(e) => setEntries(e.target.value)} />
+                    <input
+                      className="input w-24"
+                      inputMode="numeric"
+                      value={entries}
+                      onChange={(e) => setEntries(e.target.value)}
+                    />
                   </label>
                 ) : null}
               </>
             ) : null}
             {kind === 'group' ? (
-              <p className="text-xs text-ink-500">{t('グループは候補者の種類です（例：インド新卒、日本人新卒、ミャンマー）。年度は入れず、質問セットの名前に入れてください。')}</p>
+              <p className="text-xs text-ink-500">
+                {t(
+                  'グループは候補者の種類です（例：インド新卒、日本人新卒、ミャンマー）。年度は入れず、質問セットの名前に入れてください。',
+                )}
+              </p>
             ) : null}
           </div>
           <ErrorLine error={error} />
@@ -298,7 +317,9 @@ export function CreateSetButton({
                       autoFocus
                     />
                   ) : null}
-                  <p className="im-wizard-hint">{t('グループは「誰に聞くか」です（インド新卒、ミャンマー、日本人新卒など）。年度は入れません。')}</p>
+                  <p className="im-wizard-hint">
+                    {t('グループは「誰に聞くか」です（インド新卒、ミャンマー、日本人新卒など）。年度は入れません。')}
+                  </p>
                 </div>
               </div>
 
@@ -312,7 +333,9 @@ export function CreateSetButton({
                         <input type="radio" checked={source === 'copy'} onChange={() => setSource('copy')} />
                         <span>
                           {t('前の質問セットをコピーする')}
-                          <span className="im-wizard-hint">{t('いちばん簡単です。去年のセットをコピーして、変わった所だけ直します。')}</span>
+                          <span className="im-wizard-hint">
+                            {t('いちばん簡単です。去年のセットをコピーして、変わった所だけ直します。')}
+                          </span>
                         </span>
                       </label>
                     ) : null}
@@ -339,7 +362,9 @@ export function CreateSetButton({
                       <input type="radio" checked={source === 'group'} onChange={() => setSource('group')} />
                       <span>
                         {t('このグループの設問をすべて使う')}
-                        <span className="im-wizard-hint">{t('設問マスタで、このグループに付いている設問を全部選んだ状態で作ります。')}</span>
+                        <span className="im-wizard-hint">
+                          {t('設問マスタで、このグループに付いている設問を全部選んだ状態で作ります。')}
+                        </span>
                       </span>
                     </label>
                   </div>
