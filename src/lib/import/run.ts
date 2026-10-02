@@ -315,7 +315,7 @@ export async function runImport(params: {
   return outcome;
 }
 
-function parseDate(value: string): Date | null {
+export function parseDate(value: string): Date | null {
   if (!value) return null;
   const cleaned = value.replace(/年|月/g, '-').replace(/日/g, '').replace(/\//g, '-').trim();
   const d = new Date(cleaned);
@@ -323,7 +323,7 @@ function parseDate(value: string): Date | null {
 }
 
 /** C-1-1 and C-2-* become a JlptResult row; history is kept (§6.10). */
-async function upsertJlpt(personId: string, answers: Record<string, unknown>) {
+export async function upsertJlpt(personId: string, answers: Record<string, unknown>) {
   const levelRaw = String(answers['C-1-1'] ?? '').trim();
   const level = (['N1', 'N2', 'N3', 'N4', 'N5'] as const).find((l) =>
     levelRaw.startsWith(l),

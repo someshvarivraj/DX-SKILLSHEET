@@ -7,6 +7,8 @@ import { requireUser } from '@/lib/auth/session';
 import { can } from '@/lib/auth/permissions';
 import { PageHeader } from '@/components/page-header';
 import { SetItemRow, SetSettings, type ConditionSource } from '@/components/admin/set-editor';
+import { CandidatesPanel } from '@/components/admin/candidates-panel';
+import { answerLink } from '@/lib/items/candidate';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
 import { askedWording } from '@/lib/items/manage';
@@ -42,13 +44,39 @@ export default async function SetEditorPage({ params }: { params: Promise<{ setI
   });
   if (!set) notFound();
 
-  const [categories, groups] = await Promise.all([
+  const [categories, groups, responses] = await Promise.all([
     prisma.itemCategory.findMany({
       orderBy: { order: 'asc' },
       include: { subcategories: { orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' } } } } },
     }),
     prisma.groupType.findMany({ orderBy: { order: 'asc' } }),
+    prisma.response.findMany({
+      where: { setId },
+      orderBy: { createdAt: 'desc' },
+      include: { person: true, _count: { select: { answers: true } } },
+    }),
   ]);
+
+  // One row per candidate: their open draft if any, else their latest submission.
+  const byPerson = new Map<string, (typeof responses)[number]>();
+  for (const r of responses) {
+    const id = r.personId ?? r.id;
+    const seen = byPerson.get(id);
+    if (!seen || (r.status === 'DRAFT' && seen.status !== 'DRAFT')) byPerson.set(id, r);
+  }
+  const candidateRows = [...byPerson.values()].map((r) => ({
+    responseId: r.id,
+    personId: r.personId,
+    name: r.person?.fullNameEnglish ?? '—',
+    email: r.person?.email ?? null,
+    status: r.status,
+    source: r.source,
+    answered: r._count.answers,
+    link: r.token && r.status === 'DRAFT' ? answerLink(r.token) : null,
+    invitedAt: r.invitedAt?.toISOString() ?? null,
+    submittedAt: r.submittedAt?.toISOString() ?? null,
+    updatedAt: r.updatedAt.toISOString(),
+  }));
 
   const inSet = new Map(set.items.map((si) => [si.itemId, si]));
   const askedCount = set.items.length;
@@ -86,6 +114,8 @@ export default async function SetEditorPage({ params }: { params: Promise<{ setI
         }}
         groups={groups.map((g) => ({ id: g.id, name: pickName(lang, g.nameJa, g.nameEn) }))}
       />
+
+      <CandidatesPanel setId={set.id} rows={candidateRows} open={set.status === 'OPEN'} total={candidateRows.length} />
 
       <p className="text-sm text-ink-700">
         {t('聞く設問: {n}件', { n: askedCount })}

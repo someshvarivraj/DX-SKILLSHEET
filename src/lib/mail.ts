@@ -174,3 +174,55 @@ export function buildLoginEmail(link: string, ttlMinutes: number): MailMessage {
     }),
   };
 }
+
+/**
+ * A candidate's personal link to answer a question set (phase 3). Written for
+ * the candidate, so English first; no account or password is involved.
+ */
+export function buildAnswerInviteEmail(params: {
+  name: string;
+  link: string;
+  setName: string;
+  deadline: Date | null;
+}): MailMessage {
+  const env = getEnv();
+  const due = params.deadline
+    ? params.deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Tokyo' })
+    : null;
+  const dueJa = params.deadline
+    ? params.deadline.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' })
+    : null;
+  return {
+    to: '',
+    subject: `Skill sheet questionnaire / スキルシート用アンケートのご案内`,
+    text: [
+      `Dear ${params.name},`,
+      '',
+      'Please fill in the questionnaire for your skill sheet using your personal link below.',
+      'Your answers are saved as you go, so you can finish later from the same link.',
+      due ? `Please submit by ${due}.` : '',
+      '',
+      params.link,
+      '',
+      'This link is for you only. Please do not share it.',
+      '',
+      `${params.name} 様`,
+      '下のリンクから、スキルシート用のアンケートにご回答ください。途中で保存され、同じリンクから続きを入力できます。',
+      dueJa ? `締め切り: ${dueJa}` : '',
+      `（${env.APP_NAME}）`,
+    ]
+      .filter((l) => l !== null)
+      .join('\n'),
+    html: buildHtml({
+      paragraphs: [
+        `Dear ${params.name},`,
+        'Please fill in the questionnaire for your skill sheet using your personal link below. Your answers are saved as you go, so you can finish later from the same link.',
+        ...(due ? [`Please submit by ${due}.`] : []),
+        `${params.name} 様 — 下のボタンから、スキルシート用のアンケートにご回答ください。${dueJa ? `締め切り: ${dueJa}` : ''}`,
+      ],
+      button: 'Open the questionnaire / 回答する',
+      link: params.link,
+      footer: ['This link is for you only. Please do not share it. / このリンクはご本人専用です。共有しないでください。'],
+    }),
+  };
+}

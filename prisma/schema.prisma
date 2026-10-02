@@ -410,6 +410,12 @@ model Response {
   importBatchId String?
   importBatch   ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   submittedAt   DateTime?
+  /// The candidate's personal link (/answer/<token>). Kept, not hashed: the
+  /// admin copies it again when a candidate loses it. It only opens this one
+  /// draft, and stops working once submitted or after the set's deadline.
+  token         String?        @unique
+  /// When the link was last e-mailed from the admin screen.
+  invitedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

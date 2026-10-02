@@ -773,6 +773,32 @@ export const EN: Record<string, string> = {
   "サブカテゴリの名前を入力してください": "Enter a subcategory name",
   "グループの名前を入力してください": "Enter a group name",
 
+  "候補者と回答リンク": "Candidates and answer links",
+  "提出 {a} / {b}人": "Submitted {a} / {b}",
+  "この質問セットは「受付中」ではないため、回答リンクを開いても回答できません。上の「受付の状態」を「受付中」にしてください。": "This question set is not open, so its links can't be used to answer. Set “Status” above to “Open”.",
+  "候補者を追加（1行に1人。「名前, メールアドレス」）": "Add candidates (one per line: “Name, email”)",
+  "既に回答している人（Googleフォームの回答を取り込んだ人など）は、その回答が入った状態でリンクが作られます。本人は確認して提出するだけです。": "For someone who has already answered (for example, imported from the Google Form), the link opens with those answers filled in, so they only check and submit.",
+  "追加して回答リンクを作る": "Add and create links",
+  "まだ候補者がいません。": "No candidates yet.",
+  "候補者": "Candidate",
+  "メールアドレスなし": "No email",
+  "提出済み（ファイル取り込み）": "Submitted (answer file)",
+  "提出済み": "Submitted",
+  "回答中": "In progress",
+  "未回答": "Not started",
+  "メール送信: {at}": "Emailed: {at}",
+  "コピーしました": "Copied",
+  "リンクをコピー": "Copy link",
+  "再送": "Resend",
+  "メールで送る": "Email link",
+  "修正してもらう": "Ask for changes",
+  "回答リンクをメールで送りました": "The answer link was emailed",
+  "修正用の回答リンクを作りました": "A link for changes was created",
+  "候補者を1人以上入力してください": "Enter at least one candidate",
+  "この回答は提出済みのため、リンクを送れません": "This response is already submitted, so the link can't be sent",
+  "メールアドレスが登録されていません": "No email address is registered",
+  "提出済みの回答は削除できません": "A submitted response can't be deleted",
+
   // @@END
 };
 
@@ -844,5 +870,8 @@ export const EN_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^この設問には回答が(\d+)件あるため削除できません。「非表示」か「置き換え」を使ってください。$/, (m) => `This question has ${m[1]} answers, so it can't be deleted. Use “Hide” or “Replace”.`],
   [/^「(.+)」を「(.+)」に置き換えました（回答(\d+)件を移動）$/, (m) => `Replaced “${m[1]}” with “${m[2]}” (${m[3]} answers moved)`],
   [/^「(.+)」は既にあります$/, (m) => `“${m[1]}” already exists`],
+  [/^(\d+)人を追加しました（(\d+)人は既に回答リンクがあります）$/, (m) => `Added ${m[1]} (${m[2]} already had a link)`],
+  [/^(\d+)人を追加しました$/, (m) => `Added ${m[1]}`],
+  [/^メールアドレスの形式が正しくありません: (.+)$/, (m) => `Invalid email address: ${m[1]}`],
   // @@PATTERNS_END
 ];

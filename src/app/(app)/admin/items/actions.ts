@@ -34,6 +34,7 @@ import {
   type ItemInput,
   type ShowIf,
 } from '@/lib/items/manage';
+import { addCandidates, reopenForChanges, removeDraft, sendInvite } from '@/lib/items/candidate';
 
 export type GsUploadState = {
   step: 'idle' | 'preview' | 'done';
@@ -268,4 +269,60 @@ export async function setItemConditionAction(setId: string, itemId: string, show
 
 export async function moveSetItemAction(setId: string, itemId: string, direction: -1 | 1) {
   return run('質問セットの並び順を変更した', () => moveSetItem(setId, itemId, direction), '並び順を保存しました');
+}
+
+// ---------------------------------------------------------------------------
+// Candidates and personal links (phase 3)
+// ---------------------------------------------------------------------------
+
+export async function addCandidatesAction(setId: string, text: string): Promise<ActionResult> {
+  try {
+    const user = await guard();
+    // One per line: "Name, email" (either may be missing, not both).
+    const rows = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(/[,，\t]/).map((p) => p.trim());
+        const email = parts.find((p) => p.includes('@')) ?? '';
+        const name = parts.filter((p) => p !== email).join(' ').trim();
+        return { name, email };
+      });
+    if (rows.length === 0) throw new Error('候補者を1人以上入力してください');
+    const r = await addCandidates(setId, rows, user.id);
+    refresh();
+    return {
+      ok: true,
+      message: r.reused > 0 ? `${r.created}人を追加しました（${r.reused}人は既に回答リンクがあります）` : `${r.created}人を追加しました`,
+    };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '追加に失敗しました' };
+  }
+}
+
+export async function sendInviteAction(responseId: string): Promise<ActionResult> {
+  try {
+    const user = await guard();
+    await sendInvite(responseId, user.id);
+    refresh();
+    return { ok: true, message: '回答リンクをメールで送りました' };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '送信に失敗しました' };
+  }
+}
+
+export async function reopenResponseAction(responseId: string): Promise<ActionResult> {
+  try {
+    const user = await guard();
+    await reopenForChanges(responseId, user.id);
+    refresh();
+    return { ok: true, message: '修正用の回答リンクを作りました' };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '失敗しました' };
+  }
+}
+
+export async function removeDraftAction(responseId: string): Promise<ActionResult> {
+  return run('未提出の回答を削除した', () => removeDraft(responseId), '削除しました');
 }
