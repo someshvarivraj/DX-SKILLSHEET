@@ -824,6 +824,13 @@ export const EN: Record<string, string> = {
   "次へ（.gs を選ぶ）": "Next (choose the .gs)",
   "作る質問セット: {name}": "Creating question set: {name}",
 
+  "まだ受付を開始していません。": "Not open for answers yet.",
+  "このままでは、候補者が回答リンクを開いても回答できません。": "Candidates who open their link can't answer until you start.",
+  "受付を開始する": "Start accepting answers",
+  "受付を開始しました。回答リンクが使えるようになりました": "Now accepting answers. The links work.",
+  "まだ受付を開始していないため、候補者はこのリンクで回答できません。それでもコピーしますか？": "This set isn't open yet, so the candidate can't answer with this link. Copy it anyway?",
+  "まだ受付を開始していないため、候補者はこのリンクで回答できません。それでも送りますか？": "This set isn't open yet, so the candidate can't answer with this link. Send it anyway?",
+
   // @@END
 };
 

@@ -104,6 +104,9 @@ export default async function SetEditorPage({ params }: { params: Promise<{ setI
       />
 
       <SetSettings
+        // Re-created when the set changes elsewhere (受付を開始する), so the form
+        // never shows — and saves back — a stale status.
+        key={set.updatedAt.toISOString()}
         set={{
           id: set.id,
           name: set.name,

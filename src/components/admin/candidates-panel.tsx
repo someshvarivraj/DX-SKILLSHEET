@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { Copy, Mail, RotateCcw, Trash2, UserPlus } from 'lucide-react';
+import { Copy, Mail, PlayCircle, RotateCcw, Trash2, UserPlus } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 import {
   addCandidatesAction,
+  openSetAction,
   reopenResponseAction,
   removeDraftAction,
   sendInviteAction,
@@ -64,9 +65,15 @@ export function CandidatesPanel({
         <span className="panel-head-meta">{t('提出 {a} / {b}人', { a: submitted, b: total })}</span>
       </div>
       {!open ? (
-        <p className="border-b border-ink-100 bg-warn-bg px-4 py-2 text-xs text-warn-ink">
-          {t('この質問セットは「受付中」ではないため、回答リンクを開いても回答できません。上の「受付の状態」を「受付中」にしてください。')}
-        </p>
+        <div className="cp-closed">
+          <p>
+            <strong>{t('まだ受付を開始していません。')}</strong>{' '}
+            {t('このままでは、候補者が回答リンクを開いても回答できません。')}
+          </p>
+          <button type="button" className="btn btn-primary btn-sm" disabled={pending} onClick={() => act(() => openSetAction(setId))}>
+            <PlayCircle size={14} aria-hidden /> {t('受付を開始する')}
+          </button>
+        </div>
       ) : null}
 
       <div className="grid gap-2 border-b border-ink-100 p-4">
@@ -151,6 +158,7 @@ export function CandidatesPanel({
                           type="button"
                           className="btn btn-secondary btn-sm mr-1"
                           onClick={async () => {
+                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はこのリンクで回答できません。それでもコピーしますか？'))) return;
                             await navigator.clipboard.writeText(r.link!);
                             setCopied(r.responseId);
                             setTimeout(() => setCopied(null), 2000);
@@ -162,7 +170,10 @@ export function CandidatesPanel({
                           type="button"
                           className="btn btn-secondary btn-sm mr-1"
                           disabled={pending || !r.email}
-                          onClick={() => act(() => sendInviteAction(r.responseId))}
+                          onClick={() => {
+                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はこのリンクで回答できません。それでも送りますか？'))) return;
+                            act(() => sendInviteAction(r.responseId));
+                          }}
                         >
                           <Mail size={14} aria-hidden /> {r.invitedAt ? t('再送') : t('メールで送る')}
                         </button>

@@ -3175,3 +3175,16 @@ html[data-split] .sheet-toolbar .btn {
   margin-top: 0.25rem;
   accent-color: var(--color-brand-500);
 }
+/* 受付を開始していない質問セット: the warning with its own button */
+.cp-closed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  border-bottom: 1px solid #eed9a8;
+  background: var(--color-warn-bg);
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--color-warn-ink);
+}

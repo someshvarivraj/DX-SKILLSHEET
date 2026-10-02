@@ -337,3 +337,12 @@ export async function reopenResponseAction(responseId: string): Promise<ActionRe
 export async function removeDraftAction(responseId: string): Promise<ActionResult> {
   return run('未提出の回答を削除した', () => removeDraft(responseId), '削除しました');
 }
+
+/** 受付を開始する — open the set so its answer links work. */
+export async function openSetAction(setId: string): Promise<ActionResult> {
+  return run(
+    '質問セットの受付を開始した',
+    () => prisma.questionSet.update({ where: { id: setId }, data: { status: 'OPEN' } }).then(() => undefined),
+    '受付を開始しました。回答リンクが使えるようになりました',
+  );
+}
