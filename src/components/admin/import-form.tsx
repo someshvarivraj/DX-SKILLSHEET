@@ -205,7 +205,7 @@ export function ImportForm() {
         ))}
         {importState.message ? (
           <div className="mt-3 flex gap-3 border border-final-line bg-final-bg px-3 py-2.5 text-sm text-final-ink">
-            <MoraBot mood="happy" size={52} title="" />
+            <MoraBot mood="approved" size={56} title="" />
             <div className="min-w-0">
               <p className="font-medium">{t(importState.message)}</p>
               {importState.generationQueued ? (

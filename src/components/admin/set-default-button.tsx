@@ -51,7 +51,7 @@ export function SetDefaultButton({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start gap-4">
-                <MoraBot mood="trouble" size={72} title="" />
+                <MoraBot mood="checking" size={72} title="" />
                 <div className="min-w-0">
                   <h2 id="target-title" className="text-lg font-semibold text-ink-900">
                     {t('回答ファイルの取り込み先を変更しますか？')}

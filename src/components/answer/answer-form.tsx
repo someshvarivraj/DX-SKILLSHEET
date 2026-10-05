@@ -144,7 +144,7 @@ export function AnswerForm({
   if (submitted) {
     return (
       <main className="af-closed">
-        <MoraBot mood="happy" size={96} title="" />
+        <MoraBot mood="approved" size={120} title="" />
         <h1 className="af-closed-title">Thank you{name ? `, ${name}` : ''}. Your answers have been submitted.</h1>
         <p className="af-closed-ja">回答を受け付けました。ありがとうございました。</p>
         <p className="af-closed-sub">If you need to change something, please contact the person who sent you the link.</p>
@@ -160,7 +160,7 @@ export function AnswerForm({
     <div className="af" ref={topRef}>
       <header className="af-head">
         <div className="af-head-row">
-          <MoraBot mood={isReview ? 'happy' : 'explain'} size={44} title="" />
+          <MoraBot mood={isReview ? 'checking' : 'explain'} size={44} title="" />
           <div className="min-w-0 flex-1">
             <p className="af-set">{setName}</p>
             <h1 className="af-title">Skill sheet questionnaire</h1>
@@ -302,7 +302,7 @@ export function AnswerForm({
         <div className="dialog-overlay" onClick={pending ? undefined : () => setConfirming(false)}>
           <div className="dialog" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-4">
-              <MoraBot mood="think" size={64} title="" />
+              <MoraBot mood="checking" size={72} title="" />
               <div>
                 <h2 className="text-lg font-semibold text-ink-900">Submit your answers?</h2>
                 <p className="mt-1 text-sm text-ink-700">

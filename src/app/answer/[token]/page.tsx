@@ -25,7 +25,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ token: 
       form.state === 'notfound'
         ? { mood: 'trouble' as const, en: 'This link is not valid.', ja: 'このリンクは無効です。', sub: 'Please check the link in your e-mail, or ask the person who sent it.' }
         : form.state === 'submitted'
-          ? { mood: 'happy' as const, en: `Thank you${form.name ? `, ${form.name}` : ''}. Your answers have been submitted.`, ja: '回答を受け付けました。ありがとうございました。', sub: 'If you need to change something, please contact the person who sent you the link.' }
+          ? { mood: 'approved' as const, en: `Thank you${form.name ? `, ${form.name}` : ''}. Your answers have been submitted.`, ja: '回答を受け付けました。ありがとうございました。', sub: 'If you need to change something, please contact the person who sent you the link.' }
           : { mood: 'explain' as const, en: form.reason === 'deadline' ? 'The deadline for this questionnaire has passed.' : 'This questionnaire is not open for answers.', ja: form.reason === 'deadline' ? '回答の締め切りを過ぎています。' : '現在、回答を受け付けていません。', sub: 'Please contact the person who sent you the link.' };
     return (
       <main className="af-closed">

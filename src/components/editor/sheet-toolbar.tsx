@@ -282,7 +282,7 @@ function ConfirmFinaliseDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
-          <MoraBot mood="trouble" size={72} title="" />
+          <MoraBot mood="checking" size={80} title="" />
           <div className="min-w-0">
             <h2 id="finalise-title" className="text-lg font-semibold text-ink-900">
               {t('未確認の項目が{n}件あります', { n: items.length })}

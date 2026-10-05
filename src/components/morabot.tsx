@@ -1,3 +1,5 @@
+import { withBasePath } from '@/lib/base-path';
+
 /**
  * モラボット — the application's mascot.
  *
@@ -10,12 +12,18 @@
  *   trouble  困る       — an error, a page that does not exist
  *   think    考える     — reading a file, the AI writing, no search results
  *   explain  説明する   — empty screens and guidance
+ *   approved できた！    — finished and approved (✓ badge)
+ *   checking 確認中      — please check / reviewing (checklist, magnifier)
+ *
+ * `approved` and `checking` are Sano-san's own artwork (2026-10-05), used as
+ * images (public/morabot/*.png, background removed) rather than redrawn, so
+ * the details stay exactly as drawn.
  *
  * Coordinates are in the character sheet's own 1440-px square, cropped by the
  * viewBox to the robot itself.
  */
 
-export type MoraBotMood = 'default' | 'happy' | 'trouble' | 'think' | 'explain';
+export type MoraBotMood = 'default' | 'happy' | 'trouble' | 'think' | 'explain' | 'approved' | 'checking';
 
 const C = {
   blue: '#2150B8',
@@ -33,6 +41,14 @@ const LABELS: Record<MoraBotMood, string> = {
   trouble: 'モラボット（困る）',
   think: 'モラボット（考える）',
   explain: 'モラボット（説明する）',
+  approved: 'モラボット（できた）',
+  checking: 'モラボット（確認中）',
+};
+
+/** Artwork poses: file and width/height ratio. */
+const ART: Partial<Record<MoraBotMood, { file: string; ratio: number }>> = {
+  approved: { file: '/morabot/approved.png', ratio: 473 / 480 },
+  checking: { file: '/morabot/checking.png', ratio: 501 / 480 },
 };
 
 /** Ring eyes; `look` shifts the pupils (e.g. up and to the side to think). */
@@ -130,6 +146,23 @@ export function MoraBot({
   title?: string;
 }) {
   const label = title ?? LABELS[mood];
+
+  const art = headOnly ? undefined : ART[mood];
+  if (art) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a small static image; next/image adds nothing here
+      <img
+        src={withBasePath(art.file)}
+        height={size}
+        width={Math.round(size * art.ratio)}
+        alt={label}
+        aria-hidden={label ? undefined : true}
+        className={`morabot ${animate ? 'morabot-busy' : ''} morabot-${mood} ${className}`}
+        draggable={false}
+      />
+    );
+  }
+
   const viewBox = headOnly ? '320 210 800 700' : '300 190 840 1000';
   const [, , w, h] = viewBox.split(' ').map(Number) as [number, number, number, number];
 
