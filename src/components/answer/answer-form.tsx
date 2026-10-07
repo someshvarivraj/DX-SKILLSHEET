@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Check, ChevronLeft, ChevronRight, Maximize2, Plus, Trash2 } from 'lucide-react';
+import { Portal } from '@/components/ui/portal';
 import { MoraBot } from '@/components/morabot';
 import { saveDraftAction, submitAnswersAction } from '@/app/answer/[token]/actions';
 import type { DraftAnswer, FormPage, FormQuestion } from '@/lib/items/candidate';
@@ -34,6 +36,7 @@ export function AnswerForm({
   deadline,
   pages,
   initialAnswers,
+  homeHref = null,
 }: {
   token: string;
   setName: string;
@@ -41,6 +44,8 @@ export function AnswerForm({
   deadline: string | null;
   pages: FormPage[];
   initialAnswers: DraftAnswer[];
+  /** The candidate's page (マイページ), when they came from it. */
+  homeHref?: string | null;
 }) {
   const [answers, setAnswers] = useState<Answers>(() =>
     Object.fromEntries(initialAnswers.map((a) => [k(a.itemKey, a.entry), a.value])),
@@ -147,7 +152,16 @@ export function AnswerForm({
         <MoraBot mood="approved" size={120} title="" />
         <h1 className="af-closed-title">Thank you{name ? `, ${name}` : ''}. Your answers have been submitted.</h1>
         <p className="af-closed-ja">回答を受け付けました。ありがとうございました。</p>
-        <p className="af-closed-sub">If you need to change something, please contact the person who sent you the link.</p>
+        {homeHref ? (
+          <>
+            <p className="af-closed-sub">The team will now prepare your skill sheet. You will see it on your page when it is ready.</p>
+            <Link href={homeHref} className="btn btn-primary mt-4">
+              Back to my page／マイページへ
+            </Link>
+          </>
+        ) : (
+          <p className="af-closed-sub">If you need to change something, please contact the person who sent you the link.</p>
+        )}
       </main>
     );
   }
@@ -159,6 +173,11 @@ export function AnswerForm({
   return (
     <div className="af" ref={topRef}>
       <header className="af-head">
+        {homeHref ? (
+          <Link href={homeHref} className="af-home">
+            <ChevronLeft size={14} aria-hidden /> My page／マイページ
+          </Link>
+        ) : null}
         <div className="af-head-row">
           <MoraBot mood={isReview ? 'checking' : 'sheet'} size={48} title="" />
           <div className="min-w-0 flex-1">
@@ -402,6 +421,7 @@ function Question({
   onChange: (v: AnswerValue) => void;
 }) {
   const id = `q-${q.key}`;
+  const [writing, setWriting] = useState(false);
   const str = typeof value === 'string' ? value : '';
   const list = Array.isArray(value) ? value : [];
   const grid = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, string>) : {};
@@ -440,7 +460,28 @@ function Question({
         />
       ) : null}
       {q.type === 'PARAGRAPH' ? (
-        <textarea id={id} className="input af-textarea" rows={4} value={str} maxLength={v?.maxLength} onChange={(e) => onChange(e.target.value)} />
+        <div className="af-long">
+          <textarea id={id} className="input af-textarea" rows={6} value={str} maxLength={v?.maxLength} onChange={(e) => onChange(e.target.value)} />
+          <div className="af-long-bar">
+            <span className="af-count">
+              {v?.maxLength ? `${str.length} / ${v.maxLength}` : `${str.length} characters`}
+            </span>
+            <button type="button" className="af-expand" onClick={() => setWriting(true)}>
+              <Maximize2 size={14} aria-hidden /> Write in full screen
+            </button>
+          </div>
+          {writing ? (
+            <FullScreenWriter
+              title={q.titleEn ?? q.titleJa}
+              titleJa={q.titleEn ? q.titleJa : null}
+              help={q.help}
+              value={str}
+              maxLength={v?.maxLength}
+              onChange={(next) => onChange(next)}
+              onClose={() => setWriting(false)}
+            />
+          ) : null}
+        </div>
       ) : null}
       {q.type === 'DATE' ? <input id={id} type="date" className="input af-date" value={str} onChange={(e) => onChange(e.target.value)} /> : null}
 
@@ -534,5 +575,77 @@ function Question({
 
       {error ? <p className="af-error">{error}</p> : null}
     </div>
+  );
+}
+
+/**
+ * A long answer written on the whole screen: the question at the top, a large
+ * text area, the length as you type. Saves as the normal field does — this is
+ * the same answer, just more room to write it.
+ */
+function FullScreenWriter({
+  title,
+  titleJa,
+  help,
+  value,
+  maxLength,
+  onChange,
+  onClose,
+}: {
+  title: string;
+  titleJa: string | null;
+  help: string | null;
+  value: string;
+  maxLength?: number;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const area = areaRef.current;
+    if (area) {
+      area.focus();
+      area.setSelectionRange(area.value.length, area.value.length);
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    // The page behind does not scroll while writing.
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [onClose]);
+
+  return (
+    <Portal>
+      <div className="af-writer" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="af-writer-head">
+          <div className="min-w-0">
+            <h2 className="af-writer-title">{title}</h2>
+            {titleJa ? <p className="af-ja">{titleJa}</p> : null}
+          </div>
+          <button type="button" className="btn btn-primary" onClick={onClose}>
+            <Check size={16} aria-hidden /> Done
+          </button>
+        </div>
+        {help ? <p className="af-writer-help">{help}</p> : null}
+        <textarea
+          ref={areaRef}
+          className="af-writer-area"
+          value={value}
+          maxLength={maxLength}
+          placeholder="Write your answer here…"
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <div className="af-writer-foot">
+          <span>{maxLength ? `${value.length} / ${maxLength}` : `${value.length} characters`}</span>
+          <span>Saved automatically · Esc to close</span>
+        </div>
+      </div>
+    </Portal>
   );
 }

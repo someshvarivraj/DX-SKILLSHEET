@@ -36,6 +36,7 @@ import {
   type ShowIf,
 } from '@/lib/items/manage';
 import { addCandidates, reopenForChanges, removeDraft, sendInvite } from '@/lib/items/candidate';
+import { candidateLoginLink } from '@/lib/items/candidate-access';
 
 export type GsUploadState = {
   step: 'idle' | 'preview' | 'done';
@@ -305,7 +306,7 @@ export async function addCandidatesAction(setId: string, text: string): Promise<
     refresh();
     return {
       ok: true,
-      message: r.reused > 0 ? `${r.created}人を追加しました（${r.reused}人は既に回答リンクがあります）` : `${r.created}人を追加しました`,
+      message: r.reused > 0 ? `${r.created}人を追加しました（${r.reused}人は既に追加済みです）` : `${r.created}人を追加しました`,
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : '追加に失敗しました' };
@@ -317,9 +318,23 @@ export async function sendInviteAction(responseId: string): Promise<ActionResult
     const user = await guard();
     await sendInvite(responseId, user.id);
     refresh();
-    return { ok: true, message: '回答リンクをメールで送りました' };
+    return { ok: true, message: 'マイページのログインリンクをメールで送りました' };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : '送信に失敗しました' };
+  }
+}
+
+/** A link to the candidate's page, to paste into a chat. */
+export async function candidateLinkAction(responseId: string): Promise<ActionResult & { link?: string }> {
+  try {
+    const user = await guard();
+    const response = await prisma.response.findUniqueOrThrow({ where: { id: responseId } });
+    if (!response.personId) throw new Error('候補者が見つかりません');
+    const { link, email } = await candidateLoginLink(response.personId);
+    await recordAudit({ userId: user.id, action: 'definition.update', entityType: 'Response', entityId: responseId, personId: response.personId, summary: `マイページのログインリンクを発行した（${email}）` });
+    return { ok: true, message: 'ログインリンクをコピーしました', link };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : '失敗しました' };
   }
 }
 
@@ -328,7 +343,7 @@ export async function reopenResponseAction(responseId: string): Promise<ActionRe
     const user = await guard();
     await reopenForChanges(responseId, user.id);
     refresh();
-    return { ok: true, message: '修正用の回答リンクを作りました' };
+    return { ok: true, message: '更新の依頼を作りました。「メールで送る」で本人に知らせてください' };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : '失敗しました' };
   }

@@ -18,7 +18,8 @@ import { recordAudit } from '@/lib/audit';
 import { generateToken } from '@/lib/auth/crypto';
 import { withBasePath } from '@/lib/base-path';
 import { UNNAMED_PERSON } from '@/lib/constants';
-import { buildAnswerInviteEmail, sendMail } from '@/lib/mail';
+import { buildCandidateInviteEmail, sendMail } from '@/lib/mail';
+import { candidateLoginLink, ensureCandidateUser, LINK_DAYS } from './candidate-access';
 import { enqueueGeneration } from '@/lib/sheet/generation-jobs';
 import { getEditableVersion, getOrCreateSkillSheet } from '@/lib/sheet/version';
 import { ensureRecords, parseDate, upsertJlpt } from '@/lib/import/run';
@@ -286,6 +287,9 @@ export async function addCandidates(
     }
     if (await createDraftFor(setId, person.id, inSet)) created++;
     else reused++;
+    // Their login to マイページ. Without an address, or with one a staff account
+    // uses, it is made (or the problem shown) when the link is sent.
+    if (person.email) await ensureCandidateUser(person.id).catch(() => undefined);
   }
   await recordAudit({
     userId,
@@ -323,19 +327,26 @@ async function createDraftFor(setId: string, personId: string, inSet: Set<string
   return true;
 }
 
+/**
+ * E-mail the candidate a link to their page: the first invitation, or — when
+ * they have answered before — a request to update their answers.
+ */
 export async function sendInvite(responseId: string, userId: string) {
   const response = await prisma.response.findUniqueOrThrow({ where: { id: responseId }, include: { person: true, set: true } });
-  if (!response.token || response.status !== 'DRAFT') throw new Error('この回答は提出済みのため、リンクを送れません');
+  if (response.status !== 'DRAFT') throw new Error('この回答は提出済みのため、リンクを送れません');
   if (!response.person?.email) throw new Error('メールアドレスが登録されていません');
-  const mail = buildAnswerInviteEmail({
+  const { link, email } = await candidateLoginLink(response.person.id);
+  const answeredBefore = await prisma.response.count({ where: { personId: response.person.id, status: 'SUBMITTED' } });
+  const mail = buildCandidateInviteEmail({
     name: response.person.fullNameEnglish,
-    link: answerLink(response.token),
-    setName: response.set.name,
+    link,
+    kind: answeredBefore > 0 ? 'update' : 'first',
     deadline: response.set.deadline,
+    days: LINK_DAYS,
   });
-  await sendMail({ ...mail, to: response.person.email });
+  await sendMail({ ...mail, to: email });
   await prisma.response.update({ where: { id: responseId }, data: { invitedAt: new Date() } });
-  await recordAudit({ userId, action: 'definition.update', entityType: 'Response', entityId: responseId, personId: response.personId ?? undefined, summary: `回答リンクを ${response.person.email} に送った` });
+  await recordAudit({ userId, action: 'definition.update', entityType: 'Response', entityId: responseId, personId: response.personId ?? undefined, summary: `マイページのログインリンクを ${email} に送った` });
 }
 
 /** Reopen a submitted response for changes: a new draft from its answers, with a new link. */

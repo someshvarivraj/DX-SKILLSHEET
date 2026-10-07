@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { getCurrentUser } from '@/lib/auth/session';
 import { loadAnswerForm } from '@/lib/items/candidate';
 import { AnswerForm } from '@/components/answer/answer-form';
 import { MoraBot } from '@/components/morabot';
@@ -12,13 +14,17 @@ export const metadata: Metadata = {
 };
 
 /**
- * A candidate's personal link (phase 3). No login: the token is the only key,
- * and it opens this one questionnaire until it is submitted or the deadline
- * passes. Written for the candidate, so English first.
+ * The answer screen. Candidates reach it from their page (マイページ) after
+ * logging in; links sent before マイページ existed open it directly, the token
+ * being the only key. It opens this one questionnaire until it is submitted or
+ * the deadline passes. Written for the candidate, so English first.
  */
 export default async function AnswerPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const form = await loadAnswerForm(token);
+  // A logged-in candidate came from their page and can go back to it.
+  const user = await getCurrentUser();
+  const homeHref = user?.role === 'ENGINEER' ? '/my-sheet' : null;
 
   if (form.state !== 'open') {
     const message =
@@ -32,7 +38,12 @@ export default async function AnswerPage({ params }: { params: Promise<{ token: 
         <MoraBot mood={message.mood} size={96} title="" />
         <h1 className="af-closed-title">{message.en}</h1>
         <p className="af-closed-ja">{message.ja}</p>
-        <p className="af-closed-sub">{message.sub}</p>
+        <p className="af-closed-sub">{homeHref ? 'Your page shows where things stand.' : message.sub}</p>
+        {homeHref ? (
+          <Link href={homeHref} className="btn btn-primary mt-4">
+            Back to my page／マイページへ
+          </Link>
+        ) : null}
       </main>
     );
   }
@@ -47,6 +58,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ token: 
       deadline={form.deadline ? form.deadline.toISOString() : null}
       pages={form.pages}
       initialAnswers={form.answers}
+      homeHref={homeHref}
     />
     </>
   );

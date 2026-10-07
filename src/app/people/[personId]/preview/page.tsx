@@ -62,7 +62,9 @@ export default async function PreviewPage({
   const backQuery = new URLSearchParams();
   if (preset) backQuery.set('preset', preset);
   if (tab) backQuery.set('tab', tab);
-  const backHref = `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
+  // A candidate came from their own page (マイページ).
+  const isCandidate = user.role === 'ENGINEER';
+  const backHref = isCandidate ? '/my-sheet' : `/people/${personId}${backQuery.size > 0 ? `?${backQuery}` : ''}`;
 
   // Inside the editor's split panel: the sheet and one small bar (zoom,
   // 全画面表示, PDF). The heading and 編集に戻る are left out — the editor is
@@ -122,7 +124,7 @@ export default async function PreviewPage({
         toolbar={
           <>
             <Link href={backHref} scroll={false} className="btn btn-secondary">
-              {t('編集に戻る')}
+              {isCandidate ? t('マイページに戻る') : t('編集に戻る')}
             </Link>
             {can(user, 'sheet.export') ? (
               isFinal ? (

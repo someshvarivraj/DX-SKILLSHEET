@@ -8,7 +8,6 @@ import { can } from '@/lib/auth/permissions';
 import { PageHeader } from '@/components/page-header';
 import { SetItemRow, SetSettings, type ConditionSource } from '@/components/admin/set-editor';
 import { CandidatesPanel } from '@/components/admin/candidates-panel';
-import { answerLink } from '@/lib/items/candidate';
 import { getLang, getT } from '@/lib/i18n/server';
 import { pickName } from '@/lib/i18n';
 import { askedWording } from '@/lib/items/manage';
@@ -72,7 +71,7 @@ export default async function SetEditorPage({ params }: { params: Promise<{ setI
     status: r.status,
     source: r.source,
     answered: r._count.answers,
-    link: r.token && r.status === 'DRAFT' ? answerLink(r.token) : null,
+    canLink: r.status === 'DRAFT',
     invitedAt: r.invitedAt?.toISOString() ?? null,
     submittedAt: r.submittedAt?.toISOString() ?? null,
     updatedAt: r.updatedAt.toISOString(),

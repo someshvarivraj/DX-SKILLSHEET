@@ -6,6 +6,7 @@ import { Copy, Mail, PlayCircle, RotateCcw, Trash2, UserPlus } from 'lucide-reac
 import { useT } from '@/lib/i18n/client';
 import {
   addCandidatesAction,
+  candidateLinkAction,
   openSetAction,
   reopenResponseAction,
   removeDraftAction,
@@ -21,7 +22,8 @@ export type CandidateRow = {
   status: 'DRAFT' | 'SUBMITTED';
   source: 'APP' | 'IMPORT';
   answered: number;
-  link: string | null;
+  /** Not submitted yet: a link to their page can be sent. */
+  canLink: boolean;
   invitedAt: string | null;
   submittedAt: string | null;
   updatedAt: string;
@@ -31,9 +33,10 @@ const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
 /**
- * Candidates of one question set and their personal links: add them (one per
- * line, "Name, email"), copy or e-mail each link, see who has answered, and
- * reopen a submitted questionnaire when something must change.
+ * Candidates of one question set: add them (one per line, "Name, email"),
+ * send each their login link to マイページ — where they answer the
+ * questionnaire and later see their skill sheet — see who has answered, and
+ * ask for an update when something must change.
  */
 export function CandidatesPanel({
   setId,
@@ -61,14 +64,14 @@ export function CandidatesPanel({
   return (
     <section className="card overflow-hidden">
       <div className="panel-head">
-        <h2 className="panel-title">{t('候補者と回答リンク')}</h2>
+        <h2 className="panel-title">{t('候補者とマイページ')}</h2>
         <span className="panel-head-meta">{t('提出 {a} / {b}人', { a: submitted, b: total })}</span>
       </div>
       {!open ? (
         <div className="cp-closed">
           <p>
             <strong>{t('まだ受付を開始していません。')}</strong>{' '}
-            {t('このままでは、候補者が回答リンクを開いても回答できません。')}
+            {t('このままでは、候補者がマイページを開いてもアンケートに回答できません。')}
           </p>
           <button type="button" className="btn btn-primary btn-sm" disabled={pending} onClick={() => act(() => openSetAction(setId))}>
             <PlayCircle size={14} aria-hidden /> {t('受付を開始する')}
@@ -90,7 +93,7 @@ export function CandidatesPanel({
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-ink-500">
-            {t('既に回答している人（Googleフォームの回答を取り込んだ人など）は、その回答が入った状態でリンクが作られます。本人は確認して提出するだけです。')}
+            {t('追加した人には、マイページのログインアカウントが作られます。既に回答している人（Googleフォームの回答を取り込んだ人など）は、その回答が入った状態です。本人は確認して提出するだけです。')}
           </p>
           <button
             type="button"
@@ -104,7 +107,7 @@ export function CandidatesPanel({
               })
             }
           >
-            <UserPlus size={14} aria-hidden /> {t('追加して回答リンクを作る')}
+            <UserPlus size={14} aria-hidden /> {t('候補者を追加する')}
           </button>
         </div>
         {result ? <p className={`text-xs ${result.ok ? 'text-final-ink' : 'text-[#b03a22]'}`}>{t(result.message)}</p> : null}
@@ -152,26 +155,31 @@ export function CandidatesPanel({
                   <td>{r.answered}</td>
                   <td className="text-xs text-ink-500">{fmt(r.submittedAt ?? r.updatedAt)}</td>
                   <td className="whitespace-nowrap text-right">
-                    {r.status === 'DRAFT' && r.link ? (
+                    {r.canLink ? (
                       <>
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm mr-1"
                           onClick={async () => {
-                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はこのリンクで回答できません。それでもコピーしますか？'))) return;
-                            await navigator.clipboard.writeText(r.link!);
+                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はマイページでアンケートに回答できません。それでもコピーしますか？'))) return;
+                            const res = await candidateLinkAction(r.responseId);
+                            if (!res.ok || !res.link) {
+                              setResult(res);
+                              return;
+                            }
+                            await navigator.clipboard.writeText(res.link);
                             setCopied(r.responseId);
                             setTimeout(() => setCopied(null), 2000);
                           }}
                         >
-                          <Copy size={14} aria-hidden /> {copied === r.responseId ? t('コピーしました') : t('リンクをコピー')}
+                          <Copy size={14} aria-hidden /> {copied === r.responseId ? t('コピーしました') : t('ログインリンクをコピー')}
                         </button>
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm mr-1"
                           disabled={pending || !r.email}
                           onClick={() => {
-                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はこのリンクで回答できません。それでも送りますか？'))) return;
+                            if (!open && !window.confirm(t('まだ受付を開始していないため、候補者はマイページでアンケートに回答できません。それでも送りますか？'))) return;
                             act(() => sendInviteAction(r.responseId));
                           }}
                         >
@@ -190,7 +198,7 @@ export function CandidatesPanel({
                       </>
                     ) : (
                       <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={() => act(() => reopenResponseAction(r.responseId))}>
-                        <RotateCcw size={14} aria-hidden /> {t('修正してもらう')}
+                        <RotateCcw size={14} aria-hidden /> {t('更新を依頼する')}
                       </button>
                     )}
                   </td>
