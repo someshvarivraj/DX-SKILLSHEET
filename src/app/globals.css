@@ -461,6 +461,27 @@ html[data-split] .page {
   border-bottom: 1px solid var(--color-ink-100);
   padding: 0.9rem 1.25rem;
 }
+/* Title on the left, its buttons on the right. A long title wraps inside its
+   own space, so the buttons stay on the first line beside it; on a narrow
+   screen they move to the next line, still on the right. */
+.panel-head-main,
+.field-label-main {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.field-label-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+.head-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
 .panel-head .panel-title {
   font-size: 1rem;
   font-weight: 600;
@@ -815,19 +836,9 @@ html[data-split] .sheet-toolbar .btn {
   padding: 0.35rem;
 }
 .lang-menu {
-  top: auto;
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: auto;
   min-width: 9rem;
   margin: 0;
   list-style: none;
-}
-.lang-menu-down {
-  top: calc(100% + 4px);
-  bottom: auto;
-  right: 0;
-  left: auto;
 }
 .flag {
   flex: none;
@@ -1401,11 +1412,8 @@ html[data-split] .sheet-toolbar .btn {
 }
 
 .select-menu {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 1px solid var(--color-ink-100);
   border-radius: 0;
@@ -1429,6 +1437,8 @@ html[data-split] .sheet-toolbar .btn {
   background: var(--color-sand-50);
 }
 .select-list {
+  flex: 1;
+  min-height: 0;
   max-height: 17rem;
   overflow-y: auto;
   padding: 0.25rem;
@@ -2683,11 +2693,9 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-accent-500);
 }
 .ip-pop {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  width: min(32rem, 100%);
+  display: flex;
+  flex-direction: column;
+  width: 32rem;
   border: 1px solid var(--color-ink-200);
   background: #fff;
   box-shadow: var(--shadow-lift);
@@ -2708,6 +2716,8 @@ html[data-split] .sheet-toolbar .btn {
   color: var(--color-ink-900);
 }
 .ip-list {
+  flex: 1;
+  min-height: 0;
   max-height: 18rem;
   overflow-y: auto;
 }
@@ -3190,6 +3200,8 @@ html[data-split] .sheet-toolbar .btn {
 }
 /* The ⋯ menu, drawn at the top level and placed under its button (FieldMenu). */
 .menu-floating {
+  right: auto;
+  max-width: calc(100vw - 1rem);
   position: fixed;
   top: auto;
   bottom: auto;
