@@ -14,8 +14,10 @@ import { withBasePath } from '@/lib/base-path';
  *   explain  説明する   — empty screens and guidance
  *   approved できた！    — finished and approved (✓ badge)
  *   checking 確認中      — please check / reviewing (checklist, magnifier)
+ *   writing  作成中      — the AI is writing, a file is being imported (pen, clipboard)
+ *   sheet    シート      — a skill sheet is ready; the candidate's questionnaire (profile card)
  *
- * `approved` and `checking` are Sano-san's own artwork (2026-10-05), used as
+ * The last four are Sano-san's own artwork (2026-10-05, 10-07), used as
  * images (public/morabot/*.png, background removed) rather than redrawn, so
  * the details stay exactly as drawn.
  *
@@ -23,7 +25,16 @@ import { withBasePath } from '@/lib/base-path';
  * viewBox to the robot itself.
  */
 
-export type MoraBotMood = 'default' | 'happy' | 'trouble' | 'think' | 'explain' | 'approved' | 'checking';
+export type MoraBotMood =
+  | 'default'
+  | 'happy'
+  | 'trouble'
+  | 'think'
+  | 'explain'
+  | 'approved'
+  | 'checking'
+  | 'writing'
+  | 'sheet';
 
 const C = {
   blue: '#2150B8',
@@ -43,12 +54,16 @@ const LABELS: Record<MoraBotMood, string> = {
   explain: 'モラボット（説明する）',
   approved: 'モラボット（できた）',
   checking: 'モラボット（確認中）',
+  writing: 'モラボット（作成中）',
+  sheet: 'モラボット（スキルシート）',
 };
 
 /** Artwork poses: file and width/height ratio. */
 const ART: Partial<Record<MoraBotMood, { file: string; ratio: number }>> = {
   approved: { file: '/morabot/approved.png', ratio: 473 / 480 },
   checking: { file: '/morabot/checking.png', ratio: 501 / 480 },
+  writing: { file: '/morabot/writing.png', ratio: 429 / 480 },
+  sheet: { file: '/morabot/sheet.png', ratio: 429 / 480 },
 };
 
 /** Ring eyes; `look` shifts the pupils (e.g. up and to the side to think). */
@@ -260,7 +275,7 @@ export function MoraBotProgress({
           style={known ? { left: `${p}%` } : undefined}
         >
           <MoraBot
-            mood={known && p >= 100 ? 'happy' : 'think'}
+            mood={known && p >= 100 ? 'approved' : 'writing'}
             size={40}
             animate={!known || p < 100}
             title=""

@@ -160,7 +160,7 @@ export function AnswerForm({
     <div className="af" ref={topRef}>
       <header className="af-head">
         <div className="af-head-row">
-          <MoraBot mood={isReview ? 'checking' : 'explain'} size={44} title="" />
+          <MoraBot mood={isReview ? 'checking' : 'sheet'} size={48} title="" />
           <div className="min-w-0 flex-1">
             <p className="af-set">{setName}</p>
             <h1 className="af-title">Skill sheet questionnaire</h1>

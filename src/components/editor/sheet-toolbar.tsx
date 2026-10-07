@@ -195,7 +195,8 @@ export function SheetToolbar({
 
         {/* One short line on what to do next, only when there is something to
             do. */}
-        <p className="sheet-toolbar-hint mt-2 text-sm text-ink-500">
+        <p className="sheet-toolbar-hint mt-2 flex items-center gap-2 text-sm text-ink-500">
+          {isFinal ? <MoraBot mood="sheet" size={32} title="" /> : null}
           {isFinal
             ? t('確定済みです。内容を直すと、新しい下書きが作られます。')
             : model.unreviewedCount > 0
