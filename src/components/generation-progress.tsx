@@ -133,7 +133,7 @@ export function GenerationBanner() {
         />
       ) : (
         <div className="flex items-center gap-3">
-          <MoraBot mood="approved" size={52} title="" />
+          <MoraBot mood="sheet" size={56} title="" />
           <p className="font-semibold text-ink-900">{t('AIによる文章の作成が完了しました')}</p>
         </div>
       )}
