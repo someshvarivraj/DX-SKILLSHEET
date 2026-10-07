@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from '../src/lib/import/parse';
+import { parseFormTimestamp } from '../src/lib/import/timestamp';
 import {
   matchColumns,
   rowToAnswers,
@@ -155,5 +156,19 @@ describe.runIf(haveFixtures)('importing the sample response file', () => {
     expect(ananya['D-1-12']).toBeDefined();
     expect(ananya['H-2-2']).toContain('peer-reviewed');
     expect(ananya['A-1-7']).toContain('ベジタリアン');
+  });
+});
+
+describe('parseFormTimestamp', () => {
+  it('reads the Google Forms Japanese timestamp as Japan time', () => {
+    expect(parseFormTimestamp('2026/09/29 2:49:36 午後 GMT+9')?.toISOString()).toBe('2026-09-29T05:49:36.000Z');
+    expect(parseFormTimestamp('2026/09/30 5:16:04 午前 GMT+9')?.toISOString()).toBe('2026-09-29T20:16:04.000Z');
+    expect(parseFormTimestamp('2026/09/30 12:05:00 午前')?.toISOString()).toBe('2026-09-29T15:05:00.000Z');
+    expect(parseFormTimestamp('2026/09/30 12:05:00 午後')?.toISOString()).toBe('2026-09-30T03:05:00.000Z');
+  });
+
+  it('returns null for an empty or unreadable value', () => {
+    expect(parseFormTimestamp('')).toBeNull();
+    expect(parseFormTimestamp('not a date')).toBeNull();
   });
 });
