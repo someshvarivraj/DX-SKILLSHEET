@@ -304,11 +304,20 @@ export function ImportForm() {
                       <td className="text-ink-700">{row.email ?? '—'}</td>
                       <td className="tabular text-ink-700">{row.answerCount}</td>
                       <td>
-                        {row.isNewPerson ? (
+                        {row.status === 'new' ? (
                           <span className="badge badge-final">{t('新規')}</span>
-                        ) : (
+                        ) : row.status === 'update' ? (
                           <span className="badge badge-review">{t('既存・差分確認')}</span>
+                        ) : row.status === 'same' ? (
+                          <span className="badge">{t('取り込み済み（スキップ）')}</span>
+                        ) : (
+                          <span className="badge">{t('回答リンクで回答済み（スキップ）')}</span>
                         )}
+                        {row.linkOpen && (row.status === 'new' || row.status === 'update') ? (
+                          <span className="mt-0.5 block text-xs text-ink-500">
+                            {t('回答リンクも送付済み（未提出）')}
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -331,8 +340,14 @@ export function ImportForm() {
               <p className="text-xs text-ink-700">
                 {t(
                   '上の{n}行を取り込む。既存の対象者の内容は自動では上書きされず、差分の確認対象になる。',
-                  { n: preview.totalRows },
+                  { n: preview.rows.filter((r) => r.status === 'new' || r.status === 'update').length },
                 )}
+                {preview.rows.some((r) => r.status === 'same' || r.status === 'inApp')
+                  ? t(
+                      '取り込み済みの行と、回答リンクで回答済みの人の行（{n}行）は取り込まない。',
+                      { n: preview.rows.filter((r) => r.status === 'same' || r.status === 'inApp').length },
+                    )
+                  : null}
               </p>
             )}
             <span className="flex-1" />

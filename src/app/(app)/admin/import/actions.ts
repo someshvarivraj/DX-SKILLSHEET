@@ -90,7 +90,10 @@ export async function runImportAction(
       updated: outcome.updated,
       needsReview: outcome.needsReview,
       generationQueued: outcome.generationQueued,
-      message: `取り込みが完了しました。新規${outcome.created}件、既存${outcome.updated}件。`,
+      message:
+        outcome.skipped > 0
+          ? `取り込みが完了しました。新規${outcome.created}件、既存${outcome.updated}件、スキップ${outcome.skipped}件（取り込み済み・回答リンクで回答済み）。`
+          : `取り込みが完了しました。新規${outcome.created}件、既存${outcome.updated}件。`,
     };
   } catch (error) {
     return { step: 'idle', error: (error as Error).message };

@@ -23,10 +23,12 @@ import {
   saveImportedResponse,
   toAnswerMap,
   toItemAnswers,
+  type ItemAnswer,
   type SetCodeMap,
 } from '@/lib/items/answers';
 import { isSystemColumn, matchColumns, rowToAnswers, type ColumnMatch } from './match';
 import { parseUpload, type ParsedFile } from './parse';
+import { parseFormTimestamp } from './timestamp';
 
 export type ImportPreviewRow = {
   index: number;
@@ -36,7 +38,83 @@ export type ImportPreviewRow = {
   personId: string | null;
   isNewPerson: boolean;
   answerCount: number;
+  /**
+   * What importing this row does. Answers arrive both from Google Form files
+   * and from the answer links, and a form export always holds every row, so:
+   *   new      — a person seen for the first time
+   *   update   — newer answers for someone already here (differences reviewed)
+   *   same     — this very response was imported before; skipped
+   *   inApp    — they have since answered through their link; skipped, so an
+   *              older form answer never replaces the newer one
+   */
+  status: RowStatus;
+  /** An answer link was sent and is not submitted yet. */
+  linkOpen: boolean;
 };
+
+export type RowStatus = 'new' | 'update' | 'same' | 'inApp';
+
+/** The form's own timestamp column: when the candidate submitted it. */
+function rowTimestamp(row: Record<string, string>): Date | null {
+  return parseFormTimestamp(String(row['タイムスタンプ'] ?? row['Timestamp'] ?? ''));
+}
+
+
+/** JSON with object keys sorted: the database (jsonb) reorders them. */
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stableJson((value as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/** The answers as one comparable string, whatever their order. */
+function answersFingerprint(answers: Array<{ itemId: string; entry: number; value: unknown }>): string {
+  return answers
+    .map((a) => `${a.itemId}#${a.entry}=${stableJson(a.value)}`)
+    .sort()
+    .join('\n');
+}
+
+async function rowStatus(
+  personId: string | null,
+  submittedAt: Date | null,
+  items: ItemAnswer[],
+): Promise<{ status: RowStatus; linkOpen: boolean }> {
+  if (!personId) return { status: 'new', linkOpen: false };
+  const responses = await prisma.response.findMany({
+    where: { personId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      source: true,
+      status: true,
+      submittedAt: true,
+      answers: { select: { itemId: true, entry: true, value: true } },
+    },
+  });
+  const linkOpen = responses.some((r) => r.source === 'APP' && r.status === 'DRAFT');
+  const submitted = responses.filter((r) => r.status === 'SUBMITTED');
+  if (submitted.length === 0) return { status: 'new', linkOpen };
+  const newerInApp = submitted.some(
+    (r) => r.source === 'APP' && (!submittedAt || !r.submittedAt || r.submittedAt >= submittedAt),
+  );
+  if (newerInApp) return { status: 'inApp', linkOpen };
+  // The same response: by the form's timestamp, or — for answers imported
+  // before timestamps were read — by identical answers.
+  const fingerprint = answersFingerprint(items);
+  const same = submitted.some(
+    (r) =>
+      r.source === 'IMPORT' &&
+      ((submittedAt !== null && r.submittedAt?.getTime() === submittedAt.getTime()) ||
+        answersFingerprint(r.answers) === fingerprint),
+  );
+  if (same) return { status: 'same', linkOpen };
+  return { status: 'update', linkOpen };
+}
 
 export type ImportPreview = {
   fileName: string;
@@ -141,7 +219,7 @@ export async function previewImport(params: {
   const rows: ImportPreviewRow[] = [];
   for (let i = 0; i < parsed.rows.length; i++) {
     const row = parsed.rows[i];
-    const { answers } = readRow(row, matches, types, codes);
+    const { items, answers } = readRow(row, matches, types, codes);
     const email = findEmail(row);
     const person = await findExistingPerson(
       email,
@@ -149,6 +227,7 @@ export async function previewImport(params: {
     );
 
     rows.push({
+      ...(await rowStatus(person?.id ?? null, rowTimestamp(row), items)),
       index: i,
       email,
       nameEnglish: (answers['A-1-1'] as string) ?? null,
@@ -178,6 +257,8 @@ export type ImportOutcome = {
   batchId: string;
   created: number;
   updated: number;
+  /** Rows imported before, or replaced by a newer answer through the link. */
+  skipped: number;
   /** People whose sheet already had content: differences are queued for review. */
   needsReview: Array<{ personId: string; name: string }>;
   /** New people whose AI generation was started in the background. */
@@ -217,6 +298,7 @@ export async function runImport(params: {
     batchId: batch.id,
     created: 0,
     updated: 0,
+    skipped: 0,
     needsReview: [],
     generationQueued: 0,
   };
@@ -227,6 +309,11 @@ export async function runImport(params: {
   for (const index of indexes) {
     const row = parsed.rows[index];
     if (!row) continue;
+    const planned = preview.rows[index];
+    if (planned && (planned.status === 'same' || planned.status === 'inApp')) {
+      outcome.skipped++;
+      continue;
+    }
     const { items, answers } = readRow(row, matches, types, codes);
     const email = findEmail(row);
     const nameEnglish = String(answers['A-1-1'] ?? '').trim();
@@ -270,7 +357,7 @@ export async function runImport(params: {
       setId: params.setId,
       personId: person.id,
       importBatchId: batch.id,
-      submittedAt: parseDate(String(row['タイムスタンプ'] ?? row['Timestamp'] ?? '')),
+      submittedAt: rowTimestamp(row),
       answers: items,
     });
 
@@ -308,7 +395,7 @@ export async function runImport(params: {
     action: 'import.run',
     entityType: 'ImportBatch',
     entityId: batch.id,
-    summary: `${params.fileName} を取り込んだ（新規${outcome.created}件、更新${outcome.updated}件）`,
+    summary: `${params.fileName} を取り込んだ（新規${outcome.created}件、更新${outcome.updated}件、スキップ${outcome.skipped}件）`,
     meta: { unmapped: preview.unmapped },
   });
 
