@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { MoraBot } from '@/components/morabot';
 import { getLang, getT } from '@/lib/i18n/server';
 import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
+import { BulkPdfBar } from '@/components/bulk-pdf-bar';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,20 @@ export default async function PeoplePage({
     _count: { _all: true },
   });
   const unreviewedByVersion = new Map(unreviewedCounts.map((c) => [c.versionId, c._count._all]));
+
+  // §11.4: several people's PDFs at once — anyone with a finalised version.
+  const canBulk = can(user, 'sheet.export') && user.role !== 'ENGINEER';
+  const finalSheets = canBulk
+    ? new Set(
+        (
+          await prisma.sheetVersion.findMany({
+            where: { status: 'FINAL' },
+            select: { skillSheetId: true },
+            distinct: ['skillSheetId'],
+          })
+        ).map((v) => v.skillSheetId),
+      )
+    : new Set<string>();
 
   const statusOf = (p: (typeof people)[number]) => p.skillSheet?.currentVersion?.status ?? 'DRAFT';
   const searched = query ? people.filter((p) => matchesPersonQuery(p, query)) : people;
@@ -172,10 +187,13 @@ export default async function PeoplePage({
               </Link>
             </div>
           ) : (
+            <>
+            {canBulk ? <div className="border-t border-ink-100"><BulkPdfBar /></div> : null}
             <div className="table-scroll border-t border-ink-100">
               <table className="data-table !min-w-[44rem]">
                 <thead>
                   <tr>
+                    {canBulk ? <th className="w-10"><span className="sr-only">{t('PDFに含める')}</span></th> : null}
                     <th>{t('氏名')}</th>
                     <th>{t('期')}</th>
                     <th>{t('日本語')}</th>
@@ -191,6 +209,24 @@ export default async function PeoplePage({
                     const jlpt = person.jlptResults[0];
                     return (
                       <tr key={person.id} className="relative">
+                        {canBulk ? (
+                          // Above the row's link layer, so ticking does not open the sheet.
+                          <td className="relative z-10">
+                            <input
+                              type="checkbox"
+                              name="id"
+                              value={person.id}
+                              form="bulk-pdf"
+                              disabled={!person.skillSheet || !finalSheets.has(person.skillSheet.id)}
+                              title={
+                                person.skillSheet && finalSheets.has(person.skillSheet.id)
+                                  ? t('PDFに含める')
+                                  : t('確定版がないため選べません')
+                              }
+                              aria-label={t('{name}のPDFを含める', { name: person.fullNameEnglish })}
+                            />
+                          </td>
+                        ) : null}
                         <td>
                           {/* The link covers the whole row (see the ::after
                               below), so anywhere on the row opens the sheet. */}
@@ -234,6 +270,7 @@ export default async function PeoplePage({
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}

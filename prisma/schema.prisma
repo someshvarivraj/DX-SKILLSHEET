@@ -743,6 +743,10 @@ model FieldValue {
   /// The original English answer, always kept and shown beside the Japanese
   /// so a reviewer can check the translation — spec §8.4.
   sourceText String?
+  /// A newer answer the operator chose not to take on re-import ("keep the
+  /// current value", spec §5.2). The difference is not offered again until the
+  /// answer changes once more.
+  keptSourceText String?
 
   /// Locked fields are never touched by AI regeneration — spec §7.5.
   isLocked    Boolean   @default(false)

@@ -222,7 +222,7 @@ export function ImportForm() {
                   <ul className="mt-1 list-inside list-disc">
                     {importState.needsReview.map((p) => (
                       <li key={p.personId}>
-                        <Link href={`/people/${p.personId}`} className="underline">
+                        <Link href={`/people/${p.personId}/differences`} className="underline">
                           {p.name}
                         </Link>
                       </li>

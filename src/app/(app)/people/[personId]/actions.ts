@@ -22,8 +22,10 @@ import {
   generateFieldValue,
   generateSection,
   revertFieldValue,
+  runGeneration,
   setFieldFlags,
 } from '@/lib/sheet/fields';
+import { keepCurrentValues, loadImportDiffs } from '@/lib/sheet/import-diff';
 import {
   createRecord,
   setDisplayedRecords,
@@ -97,6 +99,7 @@ async function guardValue(personId: string, valueId: string) {
 function refresh(personId: string) {
   revalidatePath(`/people/${personId}`);
   revalidatePath(`/people/${personId}/preview`);
+  revalidatePath(`/people/${personId}/differences`);
   revalidatePath('/people');
   revalidatePath('/my-sheet');
 }
@@ -508,4 +511,82 @@ export async function addMemoAction(
 
   refresh(personId);
   return { ok: true, message: 'メモを追加した' };
+}
+
+/**
+ * Re-import differences (spec §5.2): rebuild the chosen fields from the newest
+ * answers. Only fields that really differ are touched, and locked fields never.
+ */
+export async function takeNewAnswersAction(
+  personId: string,
+  targets: Array<{ fieldId: string; recordId: string | null }>,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await requireUser();
+    if (!canAccessPerson(user, personId) || !can(user, 'sheet.edit') || user.role === 'ENGINEER') {
+      throw new OwnershipError('この操作を行う権限がない');
+    }
+    const diffs = await loadImportDiffs(personId);
+    const chosen = diffs.filter(
+      (d) => !d.locked && targets.some((t) => t.fieldId === d.fieldId && t.recordId === d.recordId),
+    );
+    if (chosen.length === 0) return { ok: true, message: '取り込む項目がありません' };
+    const sheet = await getOrCreateSkillSheet(personId);
+    const version = await getEditableVersion(sheet.id, user.id);
+    const toTarget = (d: (typeof chosen)[number]) => ({
+      fieldId: d.fieldId,
+      recordId: d.recordId,
+      fieldName: d.fieldName,
+    });
+    // A field that was empty is shown once it has a value; a choice made on a
+    // field with a value is left as it was.
+    const [wasEmpty, hadValue] = [
+      chosen.filter((d) => !d.currentJa.trim()).map(toTarget),
+      chosen.filter((d) => d.currentJa.trim()).map(toTarget),
+    ];
+    const base = { versionId: version.id, personId, userId: user.id };
+    const a = await runGeneration(wasEmpty, { ...base, displayFromValue: true });
+    const b = await runGeneration(hadValue, base);
+    await recordAudit({
+      userId: user.id,
+      action: 'sheet.field_generate',
+      entityType: 'SheetVersion',
+      entityId: version.id,
+      personId,
+      summary: `取り込みの差分: ${chosen.length}項目を新しい回答で作り直した`,
+    });
+    refresh(personId);
+    const failed = a.failed + b.failed;
+    return {
+      ok: true,
+      message:
+        `${a.generated + b.generated}項目を新しい回答で作り直しました。内容を確認してください` +
+        (failed > 0 ? `（${failed}項目は作成できませんでした）` : ''),
+      warnings: [...new Set([...a.warnings, ...b.warnings])],
+    };
+  });
+}
+
+/** Re-import differences (§5.2): keep the current value for the chosen fields. */
+export async function keepCurrentValuesAction(
+  personId: string,
+  targets: Array<{ fieldId: string; recordId: string | null }>,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await requireUser();
+    if (!canAccessPerson(user, personId) || !can(user, 'sheet.edit') || user.role === 'ENGINEER') {
+      throw new OwnershipError('この操作を行う権限がない');
+    }
+    const kept = await keepCurrentValues(personId, targets);
+    await recordAudit({
+      userId: user.id,
+      action: 'sheet.field_edit',
+      entityType: 'Person',
+      entityId: personId,
+      personId,
+      summary: `取り込みの差分: ${kept}項目は現在の値を維持した`,
+    });
+    refresh(personId);
+    return { ok: true, message: `${kept}項目は現在の値のままにしました` };
+  });
 }

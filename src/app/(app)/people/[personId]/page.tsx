@@ -13,6 +13,10 @@ import { ScrollRestore } from '@/components/editor/scroll-restore';
 import { SplitPreview } from '@/components/editor/split-preview';
 import { GenerationNotice } from '@/components/generation-progress';
 import { prisma } from '@/lib/db';
+import Link from 'next/link';
+import { loadImportDiffs } from '@/lib/sheet/import-diff';
+import { MoraBot } from '@/components/morabot';
+import { getT } from '@/lib/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +74,11 @@ export default async function PersonEditorPage({
 
   const readOnly = !can(user, 'sheet.edit') && !can(user, 'sheet.editOwnExperience');
 
+  // Answers imported (or submitted) again since the sheet was made — §5.2.
+  const t = await getT();
+  const diffCount =
+    showSupplement ? (await loadImportDiffs(personId)).length : 0;
+
   const photo = (
     <PhotoPanel
       personId={personId}
@@ -110,6 +119,18 @@ export default async function PersonEditorPage({
         canExportSupplement={showSupplement && can(user, 'sheet.export')}
       />
       <GenerationNotice personId={personId} />
+      {diffCount > 0 ? (
+        <div className="card diff-notice" role="status">
+          <MoraBot mood="checking" size={40} title="" />
+          <p className="min-w-0 flex-1">
+            <strong>{t('新しい回答と違う項目が{n}件あります。', { n: diffCount })}</strong>{' '}
+            {t('項目ごとに、新しい回答を取り込むか、現在の値を維持するかを選んでください。')}
+          </p>
+          <Link href={`/people/${personId}/differences`} className="btn btn-primary btn-sm">
+            {t('差分を確認する')}
+          </Link>
+        </div>
+      ) : null}
 
       <SplitPreview
         personId={personId}
