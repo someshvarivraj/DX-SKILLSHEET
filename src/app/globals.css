@@ -3480,3 +3480,101 @@ html[data-split] .sheet-toolbar .btn {
   font-size: 0.8125rem;
   color: var(--color-ink-400);
 }
+
+/* 取り込みの差分 — re-import differences (import-diff-list.tsx, spec §5.2). */
+.diff-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-top: 3px solid var(--color-brand-500);
+}
+.diff-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.diff-card {
+  padding: 0.9rem 1.1rem;
+}
+.diff-locked {
+  opacity: 0.75;
+}
+.diff-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.8rem;
+  margin-bottom: 0.7rem;
+}
+.diff-section {
+  font-size: 0.75rem;
+  color: var(--color-ink-500);
+}
+.diff-field {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.diff-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-ink-500);
+}
+.diff-label-new {
+  color: var(--color-brand-600);
+}
+.diff-text {
+  min-height: 2.5rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-ink-100);
+  background: var(--color-sand-50);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--color-ink-900);
+}
+.diff-old {
+  color: var(--color-ink-500);
+}
+.diff-new {
+  border-color: var(--color-brand-200);
+  background: var(--color-brand-50);
+}
+.diff-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-left: 4px solid var(--color-brand-500);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+@media (max-width: 900px) {
+  .diff-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* People list: several PDFs at once (bulk-pdf-bar.tsx, spec §11.4). */
+.bulk-pdf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-brand-50);
+  padding: 0.6rem 1rem;
+}

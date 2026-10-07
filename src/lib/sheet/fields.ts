@@ -64,6 +64,13 @@ async function loadFieldDefinition(fieldId: string): Promise<FieldDefinition & {
     where: { id: fieldId },
     include: { sources: { orderBy: { order: 'asc' } }, section: true },
   });
+  return toFieldDefinition(field);
+}
+
+/** A field row (with its sources and section) as the pipeline's definition. */
+export function toFieldDefinition(
+  field: Prisma.SheetFieldGetPayload<{ include: { sources: true; section: true } }>,
+): FieldDefinition & { sectionCode: string; nameJa: string } {
   return {
     id: field.id,
     code: field.code,
@@ -333,7 +340,7 @@ export async function generateFieldValue(params: {
   };
 }
 
-type GenerationTarget = { fieldId: string; fieldName: string; recordId: string | null };
+export type GenerationTarget = { fieldId: string; fieldName: string; recordId: string | null };
 export type GenerationOutcome = { generated: number; skipped: number; failed: number; warnings: string[] };
 
 /** Initial generation for a whole section (§7.5 bulk generation). */
@@ -403,7 +410,7 @@ async function sectionTargets(sectionId: string, personId: string): Promise<Gene
  * are independent. One field failing (an AI error, a cut-off answer) is
  * reported and the rest still run, instead of the whole batch stopping.
  */
-async function runGeneration(
+export async function runGeneration(
   targets: GenerationTarget[],
   params: {
     versionId: string;

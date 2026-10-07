@@ -96,6 +96,7 @@ export async function cloneVersion(
             valueJa: v.valueJa,
             valueJson: v.valueJson as never,
             sourceText: v.sourceText,
+            keptSourceText: v.keptSourceText,
             isLocked: v.isLocked,
             isReviewed: v.isReviewed,
             isDisplayed: v.isDisplayed,

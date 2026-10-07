@@ -79,7 +79,7 @@ export function resolveSourceCode(code: string, recordPrefix?: string | null): s
 
 export function collectSourceValues(
   field: FieldDefinition,
-  ctx: ProcessContext,
+  ctx: Pick<ProcessContext, 'answers' | 'recordPrefix'>,
 ): Array<{ code: string; value: unknown }> {
   const prefix = ctx.recordPrefix;
 
@@ -113,6 +113,14 @@ function stringifySources(values: Array<{ code: string; value: unknown }>): stri
           : `[${v.code}] ${String(v.value).trim()}`,
     )
     .join('\n\n');
+}
+
+/** The English answer(s) a field is built from, as stored in `sourceText`. */
+export function sourceTextFor(
+  field: FieldDefinition,
+  ctx: Pick<ProcessContext, 'answers' | 'recordPrefix'>,
+): string {
+  return stringifySources(collectSourceValues(field, ctx));
 }
 
 const emptyResult = (sourceText: string): ProcessResult => ({
