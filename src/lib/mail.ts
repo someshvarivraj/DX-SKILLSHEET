@@ -176,14 +176,16 @@ export function buildLoginEmail(link: string, ttlMinutes: number): MailMessage {
 }
 
 /**
- * A candidate's personal link to answer a question set (phase 3). Written for
- * the candidate, so English first; no account or password is involved.
+ * A candidate's link to their own page (マイページ): the first invitation, or
+ * a request to update answers already given. English first — it is written
+ * for the candidate. The link keeps working for `days` days.
  */
-export function buildAnswerInviteEmail(params: {
+export function buildCandidateInviteEmail(params: {
   name: string;
   link: string;
-  setName: string;
+  kind: 'first' | 'update';
   deadline: Date | null;
+  days: number;
 }): MailMessage {
   const env = getEnv();
   const due = params.deadline
@@ -192,37 +194,50 @@ export function buildAnswerInviteEmail(params: {
   const dueJa = params.deadline
     ? params.deadline.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' })
     : null;
+  const intro =
+    params.kind === 'update'
+      ? 'We would like you to check and update the information for your skill sheet. Your previous answers are already filled in — please review them, change what is new, and submit.'
+      : 'Your personal page for your skill sheet is ready. Please log in and fill in the questionnaire. Your answers are saved as you go, so you can finish later.';
+  const introJa =
+    params.kind === 'update'
+      ? 'スキルシートの情報の確認・更新をお願いします。前回の回答が入った状態ですので、変更点を直して提出してください。'
+      : 'スキルシート用のマイページをご用意しました。ログインして、アンケートにご回答ください。';
+  const validity = `This link works for ${params.days} days. After that, enter your e-mail address on the login page to get a new one.`;
   return {
     to: '',
-    subject: `Skill sheet questionnaire / スキルシート用アンケートのご案内`,
+    subject:
+      params.kind === 'update'
+        ? 'Please update your skill sheet information / スキルシート情報の更新のお願い'
+        : 'Your skill sheet page / スキルシート マイページのご案内',
     text: [
       `Dear ${params.name},`,
       '',
-      'Please fill in the questionnaire for your skill sheet using your personal link below.',
-      'Your answers are saved as you go, so you can finish later from the same link.',
+      intro,
       due ? `Please submit by ${due}.` : '',
       '',
       params.link,
       '',
+      validity,
       'This link is for you only. Please do not share it.',
       '',
       `${params.name} 様`,
-      '下のリンクから、スキルシート用のアンケートにご回答ください。途中で保存され、同じリンクから続きを入力できます。',
+      introJa,
       dueJa ? `締め切り: ${dueJa}` : '',
       `（${env.APP_NAME}）`,
-    ]
-      .filter((l) => l !== null)
-      .join('\n'),
+    ].join('\n'),
     html: buildHtml({
       paragraphs: [
         `Dear ${params.name},`,
-        'Please fill in the questionnaire for your skill sheet using your personal link below. Your answers are saved as you go, so you can finish later from the same link.',
+        intro,
         ...(due ? [`Please submit by ${due}.`] : []),
-        `${params.name} 様 — 下のボタンから、スキルシート用のアンケートにご回答ください。${dueJa ? `締め切り: ${dueJa}` : ''}`,
+        `${params.name} 様 — ${introJa}${dueJa ? ` 締め切り: ${dueJa}` : ''}`,
       ],
-      button: 'Open the questionnaire / 回答する',
+      button: 'Open my page / マイページを開く',
       link: params.link,
-      footer: ['This link is for you only. Please do not share it. / このリンクはご本人専用です。共有しないでください。'],
+      footer: [
+        `${validity} / このリンクは${params.days}日間有効です。`,
+        'This link is for you only. Please do not share it. / このリンクはご本人専用です。共有しないでください。',
+      ],
     }),
   };
 }

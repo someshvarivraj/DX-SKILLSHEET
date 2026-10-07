@@ -77,6 +77,10 @@ model LoginToken {
   tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
+  /// A candidate's dashboard link: works again until it expires, so the link
+  /// in their invitation e-mail keeps opening their page. Staff links are
+  /// single use.
+  reusable  Boolean   @default(false)
   requestIp String?
   createdAt DateTime  @default(now())
 

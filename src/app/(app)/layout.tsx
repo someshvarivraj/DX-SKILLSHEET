@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const links: Array<NavItem & { show: boolean }> = [
     { href: '/people', label: t('対象者一覧'), icon: 'people', show: user.role !== 'ENGINEER' },
-    { href: '/my-sheet', label: t('自分のスキルシート'), icon: 'sheet', show: user.role === 'ENGINEER' },
+    { href: '/my-sheet', label: t('マイページ'), icon: 'sheet', show: user.role === 'ENGINEER' },
     { href: '/admin/import', label: t('回答の取り込み'), icon: 'import', show: can(user, 'import.run') },
     { href: '/admin/items', label: t('設問マスタ'), icon: 'items', show: can(user, 'definition.manage') },
     { href: '/admin/fields', label: t('項目定義'), icon: 'fields', show: can(user, 'definition.manage') },
