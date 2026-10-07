@@ -97,7 +97,7 @@ export function SectionPanel({
   return (
     <section className="card overflow-hidden" id={`section-${section.code}`}>
       <header className="panel-head">
-        <div className="min-w-0">
+        <div className="panel-head-main">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="panel-title">{sectionName}</h2>
             {section.document === 'SUPPLEMENT' ? (
@@ -125,45 +125,45 @@ export function SectionPanel({
           ) : null}
         </div>
 
-        <span className="flex-1" />
-
-        {canAdd ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={pending}
-            onClick={() =>
-              run(async () => addRecordAction(personId, section.recordKind as RecordKind))
-            }
-          >
-            ＋ {t('追加')}
-          </button>
-        ) : null}
-        {!sectionReadOnly ? (
-          <FieldMenu
-            label={t('このセクションの操作')}
-            items={[
-              {
-                label: pending ? t('作成中…') : t('このセクションをAIでまとめて作成'),
-                disabled: pending,
-                onClick: () => {
-                  // Before the transition, so the progress shows at once.
-                  setGenerating(true);
-                  run(async () => {
-                    try {
-                      return await generateSectionAction(personId, {
-                        sectionId: section.id,
-                        sectionCode: section.code,
-                      });
-                    } finally {
-                      setGenerating(false);
-                    }
-                  });
+        <div className="head-tools">
+          {canAdd ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={pending}
+              onClick={() =>
+                run(async () => addRecordAction(personId, section.recordKind as RecordKind))
+              }
+            >
+              ＋ {t('追加')}
+            </button>
+          ) : null}
+          {!sectionReadOnly ? (
+            <FieldMenu
+              label={t('このセクションの操作')}
+              items={[
+                {
+                  label: pending ? t('作成中…') : t('このセクションをAIでまとめて作成'),
+                  disabled: pending,
+                  onClick: () => {
+                    // Before the transition, so the progress shows at once.
+                    setGenerating(true);
+                    run(async () => {
+                      try {
+                        return await generateSectionAction(personId, {
+                          sectionId: section.id,
+                          sectionCode: section.code,
+                        });
+                      } finally {
+                        setGenerating(false);
+                      }
+                    });
+                  },
                 },
-              },
-            ]}
-          />
-        ) : null}
+              ]}
+            />
+          ) : null}
+        </div>
       </header>
 
       {generating ? (

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { FloatingLayer, useFloating } from '@/components/ui/floating';
 import { BASE_PATH } from '@/lib/base-path';
 import { LANG_COOKIE, type Lang } from '@/lib/i18n';
 import { useLang } from '@/lib/i18n/client';
@@ -22,7 +23,8 @@ export function LanguageSwitcher({
   direction = 'up',
 }: {
   compact?: boolean;
-  /** Which way the list opens: up from the menu's foot, down from a top bar. */
+  /** Where the button sits: the menu's foot ('up') or a top bar ('down'). The
+   *  list opens wherever there is room. */
   direction?: 'up' | 'down';
 }) {
   const lang = useLang();
@@ -30,11 +32,15 @@ export function LanguageSwitcher({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  // Drawn at the top level: beside the folded menu it was cut off.
+  const menuStyle = useFloating(open, rootRef, menuRef, { align: direction === 'down' ? 'end' : 'start' });
 
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !rootRef.current?.contains(e.target as Node)) {
+      const outside = (node: Node) => !rootRef.current?.contains(node) && !menuRef.current?.contains(node);
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : outside(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -72,27 +78,31 @@ export function LanguageSwitcher({
         {compact ? null : <ChevronDown size={16} aria-hidden className="text-ink-400" />}
       </button>
       {open ? (
-        <ul
-          className={`menu lang-menu ${direction === 'down' ? 'lang-menu-down' : ''}`}
-          role="listbox"
-          aria-label="Language"
-        >
-          {OPTIONS.map((o) => (
-            <li key={o.lang}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={o.lang === lang}
-                className="menu-item"
-                onClick={() => choose(o.lang)}
-              >
-                <Flag lang={o.lang} />
-                {o.label}
-                {o.lang === lang ? <span className="ml-auto text-brand-500">✓</span> : null}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <FloatingLayer>
+          <ul
+            ref={menuRef}
+            style={menuStyle}
+            className="menu lang-menu"
+            role="listbox"
+            aria-label="Language"
+          >
+            {OPTIONS.map((o) => (
+              <li key={o.lang}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={o.lang === lang}
+                  className="menu-item"
+                  onClick={() => choose(o.lang)}
+                >
+                  <Flag lang={o.lang} />
+                  {o.label}
+                  {o.lang === lang ? <span className="ml-auto text-brand-500">✓</span> : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </FloatingLayer>
       ) : null}
     </div>
   );

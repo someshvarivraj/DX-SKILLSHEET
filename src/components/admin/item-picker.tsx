@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
+import { FloatingLayer, useFloating } from '@/components/ui/floating';
 import { useT } from '@/lib/i18n/client';
 
 /** A question a skill sheet field can be built from. */
@@ -49,11 +50,16 @@ export function ItemPicker({ value, onChange }: { value: string[]; onChange: (co
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  // Drawn at the top level: inside the definition table it was cut off.
+  const popStyle = useFloating(open, addRef, popRef);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!rootRef.current?.contains(target) && !popRef.current?.contains(target)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -103,45 +109,47 @@ export function ItemPicker({ value, onChange }: { value: string[]; onChange: (co
             </span>
           );
         })}
-        <button type="button" className="im-add !mt-0" onClick={() => setOpen((o) => !o)}>
+        <button ref={addRef} type="button" className="im-add !mt-0" onClick={() => setOpen((o) => !o)}>
           <Plus size={14} aria-hidden /> {t('設問を選ぶ')}
         </button>
       </div>
       {open ? (
-        <div className="ip-pop">
-          <div className="ip-search">
-            <Search size={14} aria-hidden />
-            <input
-              autoFocus
-              className="ip-search-input"
-              placeholder={t('設問名・カテゴリ・グループで検索')}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+        <FloatingLayer>
+          <div ref={popRef} className="ip-pop" style={popStyle}>
+            <div className="ip-search">
+              <Search size={14} aria-hidden />
+              <input
+                autoFocus
+                className="ip-search-input"
+                placeholder={t('設問名・カテゴリ・グループで検索')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <ul className="ip-list" role="listbox">
+              {matches.length === 0 ? <li className="ip-empty">{t('該当する設問がありません')}</li> : null}
+              {matches.map((i) => (
+                <li key={i.key}>
+                  <button
+                    type="button"
+                    className="ip-option"
+                    onClick={() => {
+                      onChange([...value, i.key]);
+                      setQuery('');
+                    }}
+                  >
+                    <span className="ip-option-title">{i.title}</span>
+                    <span className="ip-option-sub">
+                      {i.category}
+                      {i.titleEn ? ` · ${i.titleEn}` : ''}
+                      {i.groups.length ? ` · ${i.groups.join('・')}` : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="ip-list" role="listbox">
-            {matches.length === 0 ? <li className="ip-empty">{t('該当する設問がありません')}</li> : null}
-            {matches.map((i) => (
-              <li key={i.key}>
-                <button
-                  type="button"
-                  className="ip-option"
-                  onClick={() => {
-                    onChange([...value, i.key]);
-                    setQuery('');
-                  }}
-                >
-                  <span className="ip-option-title">{i.title}</span>
-                  <span className="ip-option-sub">
-                    {i.category}
-                    {i.titleEn ? ` · ${i.titleEn}` : ''}
-                    {i.groups.length ? ` · ${i.groups.join('・')}` : ''}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        </FloatingLayer>
       ) : null}
     </div>
   );

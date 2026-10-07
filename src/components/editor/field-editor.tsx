@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
-import { Portal } from '@/components/ui/portal';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { FloatingLayer, useFloating } from '@/components/ui/floating';
 import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
 import { composeGridText, gridRowsOf } from '@/lib/sheet/grid';
@@ -256,58 +256,60 @@ export function FieldEditor({
       className={`field-block ${field.isLocked ? 'bg-sand-50' : ''}`}
     >
       <div className="field-label-row">
-        <label className="field-name" htmlFor={`input-${field.id}${recordId ?? ''}`}>
-          {pickName(lang, field.nameJa, field.nameEn)}
-        </label>
-        <button
-          type="button"
-          className="field-help-btn"
-          aria-label={t('この項目について')}
-          aria-expanded={panel === 'help'}
-          onClick={() => togglePanel('help')}
-        >
-          ?
-        </button>
-        {field.isLocked ? <span className="tag">{t('ロック中')}</span> : null}
-        {field.displayToggle && !field.isDisplayed ? (
-          <span className="tag">{t('PDFに載せない')}</span>
-        ) : null}
-
-        <span className="flex-1" />
-
-        <SaveIndicator state={saveState} />
-        {hasTarget ? (
-          <span className={`field-count ${overLimit ? 'field-count-over' : ''}`}>
-            {t('{n}字', { n: length })}
-            {field.targetLengthMax ? t(' / 目安{n}字', { n: field.targetLengthMax }) : ''}
-          </span>
-        ) : null}
-
-        {canReview ? (
-          <label
-            className={`review-check ${
-              field.isReviewed ? 'review-check-on' : needsReview ? 'review-check-todo' : ''
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={field.isReviewed}
-              disabled={pending}
-              onChange={(e) =>
-                run(async () =>
-                  setFieldFlagsAction(personId, {
-                    valueId: field.valueId!,
-                    sectionCode,
-                    isReviewed: e.target.checked,
-                  }),
-                )
-              }
-            />
-            {field.isReviewed ? t('確認済み') : t('確認')}
+        <div className="field-label-main">
+          <label className="field-name" htmlFor={`input-${field.id}${recordId ?? ''}`}>
+            {pickName(lang, field.nameJa, field.nameEn)}
           </label>
-        ) : null}
+          <button
+            type="button"
+            className="field-help-btn"
+            aria-label={t('この項目について')}
+            aria-expanded={panel === 'help'}
+            onClick={() => togglePanel('help')}
+          >
+            ?
+          </button>
+          {field.isLocked ? <span className="tag">{t('ロック中')}</span> : null}
+          {field.displayToggle && !field.isDisplayed ? (
+            <span className="tag">{t('PDFに載せない')}</span>
+          ) : null}
+        </div>
 
-        {menuItems.length > 0 ? <FieldMenu items={menuItems} /> : null}
+        <div className="head-tools">
+          <SaveIndicator state={saveState} />
+          {hasTarget ? (
+            <span className={`field-count ${overLimit ? 'field-count-over' : ''}`}>
+              {t('{n}字', { n: length })}
+              {field.targetLengthMax ? t(' / 目安{n}字', { n: field.targetLengthMax }) : ''}
+            </span>
+          ) : null}
+
+          {canReview ? (
+            <label
+              className={`review-check ${
+                field.isReviewed ? 'review-check-on' : needsReview ? 'review-check-todo' : ''
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={field.isReviewed}
+                disabled={pending}
+                onChange={(e) =>
+                  run(async () =>
+                    setFieldFlagsAction(personId, {
+                      valueId: field.valueId!,
+                      sectionCode,
+                      isReviewed: e.target.checked,
+                    }),
+                  )
+                }
+              />
+              {field.isReviewed ? t('確認済み') : t('確認')}
+            </label>
+          ) : null}
+
+          {menuItems.length > 0 ? <FieldMenu items={menuItems} /> : null}
+        </div>
       </div>
 
       {panel === 'help' ? (
@@ -487,10 +489,9 @@ type MenuEntry =
 /**
  * The ⋯ button and its drop-down of less common actions.
  *
- * The list is drawn at the top level of the page (a portal) and placed under
- * the button with fixed coordinates: drawn inside the field's card it was cut
- * off by the card's edge, hiding every item below the first. It opens upwards
- * when there is no room below.
+ * The list is drawn at the top level of the page (a portal) and kept on
+ * screen by useFloating: drawn inside the field's card it was cut off by the
+ * card's edge, and a section's ⋯ beside its title ran off the left side.
  */
 export function FieldMenu({
   items,
@@ -501,26 +502,10 @@ export function FieldMenu({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [place, setPlace] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const position = useCallback(() => {
-    const button = rootRef.current?.getBoundingClientRect();
-    if (!button) return;
-    const right = Math.max(8, window.innerWidth - button.right);
-    const height = menuRef.current?.offsetHeight ?? 200;
-    const roomBelow = window.innerHeight - button.bottom;
-    setPlace(
-      roomBelow < height + 12 && button.top > roomBelow
-        ? { bottom: window.innerHeight - button.top + 4, right }
-        : { top: button.bottom + 4, right },
-    );
-  }, []);
-
-  useLayoutEffect(() => {
-    if (open) position();
-  }, [open, position]);
+  const style = useFloating(open, buttonRef, menuRef, { align: 'end' });
 
   useEffect(() => {
     if (!open) return;
@@ -532,23 +517,18 @@ export function FieldMenu({
       const target = e.target as Node;
       if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
-    // The menu stays with its button while the page scrolls or resizes.
-    const follow = () => position();
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', close);
-    window.addEventListener('scroll', follow, true);
-    window.addEventListener('resize', follow);
     return () => {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', close);
-      window.removeEventListener('scroll', follow, true);
-      window.removeEventListener('resize', follow);
     };
-  }, [open, position]);
+  }, [open]);
 
   return (
     <div className="menu-root" ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
         className="icon-btn"
         aria-label={label ?? t('その他の操作')}
@@ -563,12 +543,12 @@ export function FieldMenu({
         </svg>
       </button>
       {open ? (
-        <Portal>
+        <FloatingLayer>
           <div
             ref={menuRef}
             className="menu menu-floating"
             role="menu"
-            style={{ ...place, visibility: place ? 'visible' : 'hidden' }}
+            style={style}
           >
             {items.map((item, i) =>
               item.separator ? (
@@ -590,7 +570,7 @@ export function FieldMenu({
               ),
             )}
           </div>
-        </Portal>
+        </FloatingLayer>
       ) : null}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useT } from '@/lib/i18n/client';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { FloatingLayer, useFloating } from '@/components/ui/floating';
 
 export type SelectOption = {
   value: string;
@@ -61,6 +62,9 @@ export function Select({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Drawn at the top level so a card, table or dialog never cuts the list off.
+  const menuStyle = useFloating(open, buttonRef, menuRef, { matchWidth: true });
 
   const selected = options.find((o) => o.value === value) ?? null;
   const searchable = options.length >= searchFrom;
@@ -100,7 +104,8 @@ export function Select({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) close(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) close(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
@@ -198,80 +203,82 @@ export function Select({
       </button>
 
       {open ? (
-        <div className="select-menu">
-          {searchable ? (
-            <div className="select-search">
-              <input
-                ref={searchRef}
-                className="input"
-                type="text"
-                value={query}
-                placeholder={t('絞り込む')}
-                aria-label={t('選択肢を絞り込む')}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setActiveIndex(0);
-                }}
-              />
-            </div>
-          ) : null}
+        <FloatingLayer>
+          <div ref={menuRef} className="select-menu" style={menuStyle}>
+            {searchable ? (
+              <div className="select-search">
+                <input
+                  ref={searchRef}
+                  className="input"
+                  type="text"
+                  value={query}
+                  placeholder={t('絞り込む')}
+                  aria-label={t('選択肢を絞り込む')}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setActiveIndex(0);
+                  }}
+                />
+              </div>
+            ) : null}
 
-          <ul
-            ref={listRef}
-            id={listboxId}
-            role="listbox"
-            tabIndex={-1}
-            aria-activedescendant={
-              visible[activeIndex] ? `${listboxId}-${visible[activeIndex].value}` : undefined
-            }
-            className="select-list"
-          >
-            {visible.length === 0 ? (
-              <li className="select-empty">{t('該当する選択肢がない')}</li>
-            ) : (
-              visible.map((option, index) => {
-                const heading = option.group && option.group !== lastGroup ? option.group : null;
-                lastGroup = option.group;
-                return (
-                  <li key={option.value}>
-                    {heading ? <p className="select-group">{heading}</p> : null}
-                    <div
-                      id={`${listboxId}-${option.value}`}
-                      role="option"
-                      aria-selected={option.value === value}
-                      aria-disabled={option.disabled || undefined}
-                      data-active={index === activeIndex}
-                      className="select-option"
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => commit(option)}
-                    >
-                      <span className="select-option-label">
-                        {option.label}
-                        {option.hint ? (
-                          <span className="select-option-hint">{option.hint}</span>
-                        ) : null}
-                      </span>
-                      {option.value === value ? (
-                        <span className="select-check" aria-hidden>
-                          <svg viewBox="0 0 12 12" width="12" height="12">
-                            <path
-                              d="M2.5 6.3 4.8 8.6 9.5 3.9"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+            <ul
+              ref={listRef}
+              id={listboxId}
+              role="listbox"
+              tabIndex={-1}
+              aria-activedescendant={
+                visible[activeIndex] ? `${listboxId}-${visible[activeIndex].value}` : undefined
+              }
+              className="select-list"
+            >
+              {visible.length === 0 ? (
+                <li className="select-empty">{t('該当する選択肢がない')}</li>
+              ) : (
+                visible.map((option, index) => {
+                  const heading = option.group && option.group !== lastGroup ? option.group : null;
+                  lastGroup = option.group;
+                  return (
+                    <li key={option.value}>
+                      {heading ? <p className="select-group">{heading}</p> : null}
+                      <div
+                        id={`${listboxId}-${option.value}`}
+                        role="option"
+                        aria-selected={option.value === value}
+                        aria-disabled={option.disabled || undefined}
+                        data-active={index === activeIndex}
+                        className="select-option"
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onClick={() => commit(option)}
+                      >
+                        <span className="select-option-label">
+                          {option.label}
+                          {option.hint ? (
+                            <span className="select-option-hint">{option.hint}</span>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
+                        {option.value === value ? (
+                          <span className="select-check" aria-hidden>
+                            <svg viewBox="0 0 12 12" width="12" height="12">
+                              <path
+                                d="M2.5 6.3 4.8 8.6 9.5 3.9"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+        </FloatingLayer>
       ) : null}
     </div>
   );
