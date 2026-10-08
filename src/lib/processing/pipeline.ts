@@ -15,7 +15,7 @@ import type { GlossaryCategory, Processing, ValueType } from '@prisma/client';
 import { getAiProvider, isSendableField } from '@/lib/ai';
 import type { Glossary } from '@/lib/glossary/glossary';
 import { runRule, type RuleContext } from '@/lib/rules';
-import { cleanChoice, cleanChoiceList, cleanGrid, isNoneOption } from '@/lib/style/choice';
+import { cleanChoice, cleanChoiceList, cleanGrid, isNoneOption, oneLinkPerLine } from '@/lib/style/choice';
 import { normaliseJapanese } from '@/lib/style/text';
 import { buildMessages } from './prompt';
 
@@ -272,7 +272,8 @@ function processCopy(
     .filter(Boolean);
 
   return {
-    valueJa: normaliseJapanese(parts.join(' ')),
+    // Links typed on one line are printed one to a line (GitHub, portfolio).
+    valueJa: oneLinkPerLine(normaliseJapanese(parts.join(' '))),
     valueJson: null,
     sourceText,
     usedAi: false,

@@ -4,8 +4,10 @@ import {
   cleanChoice,
   cleanChoiceList,
   cleanGrid,
+  isNoAnswerText,
   isNoneOption,
   japaneseSideOfOption,
+  oneLinkPerLine,
   splitListText,
   stripLeadingMarker,
 } from '../src/lib/style/choice';
@@ -201,5 +203,23 @@ describe('lists on the sheet — one separator, 「、」', () => {
   it('keeps commas inside brackets', () => {
     expect(splitListText('Linux（Ubuntu, CentOS など）, macOS')).toEqual(['Linux（Ubuntu, CentOS など）', 'macOS']);
     expect(splitListText('Visual Studio Code（VSCode）;  PyTorch')).toEqual(['Visual Studio Code（VSCode）', 'PyTorch']);
+  });
+});
+
+describe('free-text answers on the sheet', () => {
+  it('puts several links on their own lines, each with its label', () => {
+    expect(oneLinkPerLine('github: https://github.com/anurag161 portfolio:https://portfolio-qpeq.onrender.com/')).toBe(
+      'github: https://github.com/anurag161\nportfolio: https://portfolio-qpeq.onrender.com/',
+    );
+    expect(oneLinkPerLine('https://github.com/a https://a.dev')).toBe('https://github.com/a\nhttps://a.dev');
+  });
+
+  it('leaves a single link alone', () => {
+    expect(oneLinkPerLine('GitHub: https://github.com/a')).toBe('GitHub: https://github.com/a');
+  });
+
+  it('treats "N/A" and similar as no answer', () => {
+    for (const v of ['N/A', 'n/a', 'NA', 'None', '-', 'なし', '特になし', 'Not applicable.']) expect(isNoAnswerText(v)).toBe(true);
+    for (const v of ['Nagoya', 'No. 3 in class', 'Naresh et al., 2025']) expect(isNoAnswerText(v)).toBe(false);
   });
 });

@@ -139,3 +139,25 @@ export function cleanGrid(
       value: japaneseSideOfOption(value),
     }));
 }
+
+/**
+ * Free-text "no answer" — "N/A", "None", "-", "なし" typed into a details box.
+ * Such an answer means there is nothing to report (§8.3), not content to print.
+ */
+const NO_ANSWER_TEXT = /^(?:n\/?a|na|none|nil|nothing|not applicable|no|-+|―|ー|なし|無し|特になし|該当なし)\.?$/i;
+
+export function isNoAnswerText(value: string): boolean {
+  return NO_ANSWER_TEXT.test(value.trim());
+}
+
+/**
+ * Several links typed on one line ("github: https://… portfolio:https://…")
+ * are put one to a line, each with its label. Text with fewer than two links
+ * is returned unchanged.
+ */
+export function oneLinkPerLine(text: string): string {
+  if ((text.match(/https?:\/\//g) ?? []).length < 2) return text;
+  return text
+    .replace(/(?<![:：])\s+(?=(?:[A-Za-z][\w .-]{0,30}?\s*[:：]\s*)?https?:\/\/)/g, '\n')
+    .replace(/^([A-Za-z][\w .-]{0,30}?)\s*[:：]\s*(?=https?:\/\/)/gm, '$1: ');
+}

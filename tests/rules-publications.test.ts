@@ -45,6 +45,12 @@ describe.each([
     expect(run(ctx({ [presence]: 'なし／None', [detail]: '' })).text).toBe('なし');
   });
 
+  it('詳細に「N/A」などと書かれていても、内容とはみなさず「なし」と表示する', () => {
+    for (const na of ['N/A', 'None', '-', 'なし']) {
+      expect(run(ctx({ [presence]: 'なし／None', [detail]: na })).text).toBe('なし');
+    }
+  });
+
   it('「なし」を選んで詳細が残っていても、内容が優先される', () => {
     // The detail box is what the reader is shown, so a stale entry must not be
     // hidden behind a 「なし」 the person forgot to change back.
