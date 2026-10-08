@@ -170,6 +170,10 @@ export function MoraBot({
         src={withBasePath(art.file)}
         height={size}
         width={Math.round(size * art.ratio)}
+        // A fixed size in CSS too. The base stylesheet sets images to
+        // `height: auto`, so inside a flex row beside a few lines of text the
+        // picture was stretched to the row's height and looked squashed.
+        style={{ width: Math.round(size * art.ratio), height: size, objectFit: 'contain' }}
         alt={label}
         aria-hidden={label ? undefined : true}
         className={`morabot ${animate ? 'morabot-busy' : ''} morabot-${mood} ${className}`}
