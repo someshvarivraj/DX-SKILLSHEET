@@ -10,6 +10,8 @@ import { MoraBot } from '@/components/morabot';
 import { getLang, getT } from '@/lib/i18n/server';
 import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
 import { BulkPdfBar } from '@/components/bulk-pdf-bar';
+import { ResumeGenerationNotice } from '@/components/resume-generation';
+import { findStalledPeople } from '@/lib/sheet/generation-jobs';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +93,9 @@ export default async function PeoplePage({
       )
     : new Set<string>();
 
+  // Answered, but no text written: generation was interrupted or never ran.
+  const stalled = can(user, 'sheet.edit') && user.role !== 'ENGINEER' ? await findStalledPeople() : [];
+
   const statusOf = (p: (typeof people)[number]) => p.skillSheet?.currentVersion?.status ?? 'DRAFT';
   const searched = query ? people.filter((p) => matchesPersonQuery(p, query)) : people;
   const counts: Record<FilterKey, number> = {
@@ -125,6 +130,7 @@ export default async function PeoplePage({
       />
 
       <GenerationBanner />
+      {stalled.length > 0 ? <ResumeGenerationNotice names={stalled.map((p) => p.name)} /> : null}
 
       {people.length === 0 ? (
         <div className="card flex flex-col items-center p-12 text-center">

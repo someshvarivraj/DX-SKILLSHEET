@@ -9,14 +9,18 @@
  * person's fields still go AI_CONCURRENCY at a time), and the screens poll
  * /api/generation-status to show progress.
  *
- * Kept in memory, not in the database: the app is a single long-running
- * process (`node server.js`), and a table would need a manual migration on the
- * server. The trade-off: a restart mid-run loses the queue — the fields
- * already written stay, the rest can be generated from the section's ⋯ menu.
- * `globalThis` so development hot-reloads do not lose it either.
+ * The progress shown on screen lives in memory (`globalThis`, so development
+ * hot-reloads keep it). The list of people still to do is also saved in the
+ * settings table: every deployment restarts the app, and a queue kept only in
+ * memory was lost then — 10 people imported, 4 written, 6 never started
+ * (2026-10-08). After a restart the saved list is picked up again, and only
+ * fields not yet written are generated, so nothing already written or edited
+ * is replaced.
  */
 
+import { prisma } from '@/lib/db';
 import { generateAllSections } from './fields';
+import { getEditableVersion, getOrCreateSkillSheet } from './version';
 
 export type GenerationJob = {
   personId: string;
@@ -29,20 +33,58 @@ export type GenerationJob = {
   finishedAt?: number;
 };
 
-type QueueItem = { personId: string; versionId: string; userId: string };
+type QueueItem = { personId: string; name: string; userId: string; onlyMissing?: boolean };
 
-type Store = { jobs: Map<string, GenerationJob>; queue: QueueItem[]; running: boolean };
+type Store = {
+  jobs: Map<string, GenerationJob>;
+  queue: QueueItem[];
+  running: boolean;
+  /** Everyone queued or running — what is saved, and resumed after a restart. */
+  pending: Map<string, QueueItem>;
+  resumed: boolean;
+};
 
 const store: Store = ((globalThis as { __generationJobs?: Store }).__generationJobs ??= {
   jobs: new Map(),
   queue: [],
   running: false,
+  pending: new Map(),
+  resumed: false,
 });
+
+const SETTING_KEY = 'generation.pending';
+
+async function savePending(): Promise<void> {
+  const value = [...store.pending.values()];
+  await prisma.setting
+    .upsert({
+      where: { key: SETTING_KEY },
+      create: { key: SETTING_KEY, value, note: 'AIの文章作成を待っている人（再起動後に再開する）' },
+      update: { value },
+    })
+    .catch((error) => console.error('[generation] could not save the queue:', error));
+}
+
+/**
+ * Pick up the people left over from before a restart. Called once per process,
+ * at start-up (src/instrumentation.ts) and again by the progress endpoint as a
+ * safety net; only the first call does anything.
+ */
+export async function resumeGenerationQueue(): Promise<void> {
+  if (store.resumed) return;
+  store.resumed = true;
+  const row = await prisma.setting.findUnique({ where: { key: SETTING_KEY } }).catch(() => null);
+  const saved = Array.isArray(row?.value) ? (row.value as QueueItem[]) : [];
+  for (const item of saved) {
+    if (item?.personId && item.userId) enqueueGeneration({ ...item, onlyMissing: true });
+  }
+  if (saved.length > 0) console.log(`[generation] resumed ${saved.length} after a restart`);
+}
 
 /** How long a finished job stays listed, so screens can show 「完了」. */
 const KEEP_FINISHED_MS = 10 * 60_000;
 
-export function enqueueGeneration(item: QueueItem & { name: string }): void {
+export function enqueueGeneration(item: QueueItem & { versionId?: string }): void {
   const existing = store.jobs.get(item.personId);
   if (existing && (existing.status === 'queued' || existing.status === 'running')) return;
 
@@ -54,12 +96,22 @@ export function enqueueGeneration(item: QueueItem & { name: string }): void {
     total: 0,
     failed: 0,
   });
-  store.queue.push({ personId: item.personId, versionId: item.versionId, userId: item.userId });
+  const queued: QueueItem = { personId: item.personId, name: item.name, userId: item.userId, onlyMissing: item.onlyMissing };
+  store.queue.push(queued);
+  store.pending.set(item.personId, queued);
+  void savePending();
   void drain();
 }
 
 /** Queued, running, and recently finished jobs. */
+/** Whether this person's text is queued or being written right now. */
+export function isGenerating(personId: string): boolean {
+  const job = store.jobs.get(personId);
+  return Boolean(job && (job.status === 'queued' || job.status === 'running'));
+}
+
 export function listGenerationJobs(): GenerationJob[] {
+  void resumeGenerationQueue();
   const now = Date.now();
   for (const [id, job] of store.jobs) {
     if (job.finishedAt && now - job.finishedAt > KEEP_FINISHED_MS) store.jobs.delete(id);
@@ -76,10 +128,15 @@ async function drain(): Promise<void> {
       if (!job) continue;
       job.status = 'running';
       try {
+        // The version to write into is found now, not when queued: after a
+        // restart, or once the sheet was finalised meanwhile, it may differ.
+        const sheet = await getOrCreateSkillSheet(item.personId);
+        const version = await getEditableVersion(sheet.id, item.userId);
         const outcome = await generateAllSections({
-          versionId: item.versionId,
+          versionId: version.id,
           personId: item.personId,
           userId: item.userId,
+          onlyMissing: item.onlyMissing,
           // An import derives the sheet from the form, so a field that comes
           // back empty starts unticked and the operator ticks it by hand.
           displayFromValue: true,
@@ -96,8 +153,37 @@ async function drain(): Promise<void> {
         console.error(`[generation] ${item.personId}:`, error);
       }
       job.finishedAt = Date.now();
+      store.pending.delete(item.personId);
+      await savePending();
     }
   } finally {
     store.running = false;
   }
+}
+
+/**
+ * People whose text was never written although they have answered: their
+ * generation was lost (before the queue was saved) or never started. The
+ * people list offers to start it for them.
+ */
+export async function findStalledPeople(): Promise<Array<{ personId: string; name: string }>> {
+  const people = await prisma.person.findMany({
+    where: { isActive: true, itemResponses: { some: { status: 'SUBMITTED' } } },
+    select: {
+      id: true,
+      fullNameEnglish: true,
+      fullNameKatakana: true,
+      skillSheet: { select: { currentVersionId: true } },
+    },
+  });
+  const versionIds = people.map((p) => p.skillSheet?.currentVersionId).filter((id): id is string => Boolean(id));
+  const written = new Set(
+    (
+      await prisma.fieldValue.groupBy({ by: ['versionId'], where: { versionId: { in: versionIds } } })
+    ).map((g) => g.versionId),
+  );
+  return people
+    .filter((p) => !isGenerating(p.id))
+    .filter((p) => !p.skillSheet?.currentVersionId || !written.has(p.skillSheet.currentVersionId))
+    .map((p) => ({ personId: p.id, name: p.fullNameKatakana ?? p.fullNameEnglish }));
 }

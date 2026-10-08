@@ -368,10 +368,27 @@ export async function generateAllSections(params: {
   displayFromValue?: boolean;
   /** Called with (done, total) at the start and after every field. */
   onProgress?: (done: number, total: number) => void;
+  /**
+   * Only fields not written yet. Used when generation resumes after the app
+   * restarted part-way: what was already written (and perhaps already edited
+   * by hand) is left alone.
+   */
+  onlyMissing?: boolean;
 }): Promise<GenerationOutcome> {
   const sections = await prisma.sheetSection.findMany({ orderBy: { order: 'asc' }, select: { id: true } });
-  const targets: GenerationTarget[] = [];
+  let targets: GenerationTarget[] = [];
   for (const section of sections) targets.push(...(await sectionTargets(section.id, params.personId)));
+  if (params.onlyMissing) {
+    const written = new Set(
+      (
+        await prisma.fieldValue.findMany({
+          where: { versionId: params.versionId },
+          select: { fieldId: true, recordKey: true },
+        })
+      ).map((v) => `${v.fieldId}#${v.recordKey}`),
+    );
+    targets = targets.filter((t) => !written.has(`${t.fieldId}#${t.recordId ?? ''}`));
+  }
   return runGeneration(targets, params);
 }
 

@@ -311,6 +311,12 @@ export async function runImport(params: {
     if (!row) continue;
     const planned = preview.rows[index];
     if (planned && (planned.status === 'same' || planned.status === 'inApp')) {
+      // Already imported: nothing new — except the JLPT level, which earlier
+      // imports dropped when the form had no exam date. Recording it again is
+      // harmless (same row), and lets a re-import fill in the 日本語 column.
+      if (planned.status === 'same' && planned.personId) {
+        await upsertJlpt(planned.personId, readRow(row, matches, types, codes).answers);
+      }
       outcome.skipped++;
       continue;
     }
@@ -418,9 +424,15 @@ export async function upsertJlpt(personId: string, answers: Record<string, unkno
   if (!level) return;
 
   const session = String(answers['C-2-1'] ?? '');
-  const year = Number(session.match(/(\d{4})\s*年/)?.[1] ?? session.match(/(\d{4})/)?.[1]);
-  const month = Number(session.match(/年\s*(\d{1,2})\s*月/)?.[1] ?? (/12月|December/.test(session) ? 12 : /7月|July/.test(session) ? 7 : NaN));
-  if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+  const parsedYear = Number(session.match(/(\d{4})\s*年/)?.[1] ?? session.match(/(\d{4})/)?.[1]);
+  const parsedMonth = Number(session.match(/年\s*(\d{1,2})\s*月/)?.[1] ?? (/12月|December/.test(session) ? 12 : /7月|July/.test(session) ? 7 : NaN));
+  // The level alone is still worth keeping: some forms ask only the level
+  // (C-1-1) and not the exam session or scores (C-2-x). The date is then
+  // stored as 0 / 0 — "unknown" — which reads 「N4取得」 on the sheet and
+  // sorts after any result with a real date.
+  const dated = Number.isFinite(parsedYear) && Number.isFinite(parsedMonth);
+  const year = dated ? parsedYear : 0;
+  const month = dated ? parsedMonth : 0;
 
   const int = (v: unknown): number | null => {
     const n = Number(String(v ?? '').replace(/[^\d]/g, ''));
