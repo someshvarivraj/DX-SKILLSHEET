@@ -910,6 +910,10 @@ export const EN: Record<string, string> = {
   "PDFに含める": "Include in the download",
   "確定版がないため選べません": "No finalised version yet",
   "{name}のPDFを含める": "Include {name}",
+  "{n}名のスキルシートの文章がまだ作成されていません。": "The text of {n} skill sheets has not been written yet.",
+  "AIによる作成が途中で止まった可能性があります（{names}）。": "The AI writing may have been interrupted ({names}).",
+  "開始しています…": "Starting…",
+  "文章の作成を開始する": "Start writing",
   // @@END
 };
 
