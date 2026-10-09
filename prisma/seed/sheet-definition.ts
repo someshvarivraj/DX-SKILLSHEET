@@ -866,7 +866,10 @@ export const SECTIONS: SectionSeed[] = [
         nameEn: 'Japanese study history',
         order: 15,
         sources: ['C-1-3'],
-        processing: 'COPY',
+        // Free text written in English: translated, not copied (§4, ch.6
+        // processing types). As COPY it printed the English answer.
+        processing: 'TRANSLATE',
+        valueType: 'TEXT',
       },
       {
         code: 'jlpt_description',

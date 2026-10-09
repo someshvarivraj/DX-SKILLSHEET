@@ -9,7 +9,7 @@
 
 import type { Glossary } from '@/lib/glossary/glossary';
 import { buildDescription, buildQualificationLine, type JlptScores } from './jlpt';
-import { isNoneOption, japaneseSideOfOption } from '@/lib/style/choice';
+import { isNoAnswerText, isNoneOption, japaneseSideOfOption } from '@/lib/style/choice';
 
 export type RuleContext = {
   /** Raw answers keyed by question code, already resolved for the record. */
@@ -145,7 +145,8 @@ function presenceWithDetail(
   detailAnswer: unknown,
 ): RuleResult {
   const presence = str(presenceAnswer);
-  const detail = str(detailAnswer);
+  // "N/A" typed into the details box means no details, not text to print.
+  const detail = isNoAnswerText(str(detailAnswer)) ? '' : str(detailAnswer);
 
   if (!presence && !detail) return { text: '' };
   if (detail) return { text: detail };
