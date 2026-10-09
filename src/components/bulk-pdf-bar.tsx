@@ -13,7 +13,7 @@ const FORM_ID = 'bulk-pdf';
  * people table (form="bulk-pdf"); this bar counts them, downloads the ZIP and
  * shows that the PDFs are being made — one person takes a few seconds.
  */
-export function BulkPdfBar() {
+export function BulkPdfBar({ finalCount }: { finalCount: number }) {
   const t = useT();
   const [count, setCount] = useState(0);
   const [busy, setBusy] = useState(0);
@@ -62,10 +62,23 @@ export function BulkPdfBar() {
     }
   };
 
+  // Nobody finalised yet: say so, rather than offer a button that selects nobody.
+  if (finalCount === 0) {
+    return (
+      <div className="bulk-pdf">
+        <span className="text-sm text-ink-700">
+          {t('PDFは確定したスキルシートだけを出力できます。確定済みの人がいないため、まだ選べません。各人のシートで内容を確認して「確定する」を押すと、ここでまとめてダウンロードできるようになります。')}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <form id={FORM_ID} className="bulk-pdf" onSubmit={(e) => { e.preventDefault(); void download(); }}>
       <span className="text-sm text-ink-700">
-        {count > 0 ? t('{n}人を選択中', { n: count }) : t('確定済みの人を選ぶと、PDFをまとめてダウンロードできます')}
+        {count > 0
+          ? t('{n}人を選択中', { n: count })
+          : t('確定済みの{n}人から選んで、PDFをまとめてダウンロードできます', { n: finalCount })}
       </span>
       <button type="button" className="btn btn-quiet btn-sm" onClick={() => selectAll(count === 0)}>
         {count === 0 ? t('確定済みをすべて選択') : t('選択を解除')}

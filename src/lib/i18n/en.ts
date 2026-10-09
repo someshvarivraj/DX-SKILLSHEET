@@ -914,6 +914,8 @@ export const EN: Record<string, string> = {
   "AIによる作成が途中で止まった可能性があります（{names}）。": "The AI writing may have been interrupted ({names}).",
   "開始しています…": "Starting…",
   "文章の作成を開始する": "Start writing",
+  "PDFは確定したスキルシートだけを出力できます。確定済みの人がいないため、まだ選べません。各人のシートで内容を確認して「確定する」を押すと、ここでまとめてダウンロードできるようになります。": "PDFs can only be made from finalised skill sheets. Nobody is finalised yet, so there is nothing to select. Check each sheet and press “Finalise” — their PDFs can then be downloaded together here.",
+  "確定済みの{n}人から選んで、PDFをまとめてダウンロードできます": "Select from the {n} finalised people to download their PDFs together",
   // @@END
 };
 

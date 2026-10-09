@@ -194,7 +194,7 @@ export default async function PeoplePage({
             </div>
           ) : (
             <>
-            {canBulk ? <div className="border-t border-ink-100"><BulkPdfBar /></div> : null}
+            {canBulk ? <div className="border-t border-ink-100"><BulkPdfBar finalCount={people.filter((p) => p.skillSheet && finalSheets.has(p.skillSheet.id)).length} /></div> : null}
             <div className="table-scroll border-t border-ink-100">
               <table className="data-table !min-w-[44rem]">
                 <thead>
