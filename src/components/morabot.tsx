@@ -16,7 +16,7 @@ import { withBasePath } from '@/lib/base-path';
  *   checking 確認中      — please check / reviewing (checklist, magnifier)
  *   writing  作成中      — the AI is writing, a file is being imported (pen, clipboard)
  *   sheet    シート      — a skill sheet is ready; the candidate's questionnaire (profile card)
- *   man      男性        — a male candidate in the people list (green, with a tie)
+ *   man      男性        — a male candidate in the people list (blue head, green body, tie)
  *   woman    女性        — a female candidate in the people list (pink, with a bow)
  *
  * The last four are Sano-san's own artwork (2026-10-05, 10-07), used as

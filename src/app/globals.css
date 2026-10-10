@@ -3586,7 +3586,7 @@ tr.person-female > td:first-child {
   box-shadow: inset 4px 0 0 #ff6fa8;
 }
 tr.person-male > td:first-child {
-  box-shadow: inset 4px 0 0 #1f9e8c;
+  box-shadow: inset 4px 0 0 #148a0b;
 }
 .person-name {
   display: flex;
