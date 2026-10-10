@@ -3578,3 +3578,22 @@ html[data-split] .sheet-toolbar .btn {
   background: var(--color-brand-50);
   padding: 0.6rem 1rem;
 }
+
+/* People list: gender at a glance (Sano-san, 2026-10-10) — a stripe down the
+   row's left edge, pink for women and green for men, beside the matching
+   MoraBot. */
+tr.person-female > td:first-child {
+  box-shadow: inset 4px 0 0 #ff6fa8;
+}
+tr.person-male > td:first-child {
+  box-shadow: inset 4px 0 0 #1f9e8c;
+}
+.person-name {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.person-name-blank {
+  flex: none;
+  width: 25px;
+}

@@ -16,6 +16,8 @@ import { withBasePath } from '@/lib/base-path';
  *   checking 確認中      — please check / reviewing (checklist, magnifier)
  *   writing  作成中      — the AI is writing, a file is being imported (pen, clipboard)
  *   sheet    シート      — a skill sheet is ready; the candidate's questionnaire (profile card)
+ *   man      男性        — a male candidate in the people list (green, with a tie)
+ *   woman    女性        — a female candidate in the people list (pink, with a bow)
  *
  * The last four are Sano-san's own artwork (2026-10-05, 10-07), used as
  * images (public/morabot/*.png, background removed) rather than redrawn, so
@@ -34,7 +36,9 @@ export type MoraBotMood =
   | 'approved'
   | 'checking'
   | 'writing'
-  | 'sheet';
+  | 'sheet'
+  | 'man'
+  | 'woman';
 
 const C = {
   blue: '#2150B8',
@@ -56,6 +60,8 @@ const LABELS: Record<MoraBotMood, string> = {
   checking: 'モラボット（確認中）',
   writing: 'モラボット（作成中）',
   sheet: 'モラボット（スキルシート）',
+  man: '男性',
+  woman: '女性',
 };
 
 /** Artwork poses: file and width/height ratio. */
@@ -64,6 +70,8 @@ const ART: Partial<Record<MoraBotMood, { file: string; ratio: number }>> = {
   checking: { file: '/morabot/checking.png', ratio: 501 / 480 },
   writing: { file: '/morabot/writing.png', ratio: 429 / 480 },
   sheet: { file: '/morabot/sheet.png', ratio: 429 / 480 },
+  man: { file: '/morabot/man.png', ratio: 355 / 480 },
+  woman: { file: '/morabot/woman.png', ratio: 355 / 480 },
 };
 
 /** Ring eyes; `look` shifts the pupils (e.g. up and to the side to think). */
