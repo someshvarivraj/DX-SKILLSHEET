@@ -369,7 +369,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
   const rowCount = Math.max(identity.length + (ageGenderRow ? 1 : 0), 1);
 
   return (
-    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)} data-section={section.code}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />
@@ -378,7 +378,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
       <tbody>
         <SectionBand section={section} />
         {identity.map((field, index) => (
-          <tr key={field.id}>
+          <tr key={field.id} data-field={field.code}>
             <th className="label">{field.code === 'employee_number' ? 'No.' : field.nameJa}</th>
             <td className={field.code === 'full_name' ? 'name-main' : undefined}>
               {renderValue(field.valueJa, field.valueJson, field.valueType)}
@@ -402,7 +402,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
           </tr>
         ) : null}
         {rest.map((field) => (
-          <tr key={field.id}>
+          <tr key={field.id} data-field={field.code}>
             <th className="label">{field.nameJa}</th>
             <td colSpan={2}>{renderValue(field.valueJa, field.valueJson, field.valueType)}</td>
           </tr>
@@ -415,7 +415,7 @@ function PersonalBlock({ section, photoUrl }: { section: SectionView; photoUrl?:
 /** Career aspirations: a grouped block with one spanning label, as in the samples. */
 function GroupedBlock({ section }: { section: SectionView }) {
   return (
-    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)} data-section={section.code}>
       <colgroup>
         <col style={{ width: '72px' }} />
         <col style={{ width: '172px' }} />
@@ -423,7 +423,7 @@ function GroupedBlock({ section }: { section: SectionView }) {
       </colgroup>
       <tbody>
         {section.fields.map((field, index) => (
-          <tr key={field.id}>
+          <tr key={field.id} data-field={field.code}>
             {index === 0 ? (
               <th className="group-label" rowSpan={section.fields.length}>
                 {section.nameJa}
@@ -441,7 +441,7 @@ function GroupedBlock({ section }: { section: SectionView }) {
 function RepeatingBlock({ section }: { section: SectionView }) {
   if (section.code === 'education') {
     return (
-      <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+      <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)} data-section={section.code}>
         {/* Shares of the page width, not fixed pixels: the degree column was
             106px, so 「B.Tech（Bachelor of Technology）」 broke after every
             word while the school column stayed half empty (2026-10-10).
@@ -459,7 +459,7 @@ function RepeatingBlock({ section }: { section: SectionView }) {
               record.fields.find((f) => f.code === code)?.valueJa ?? '';
             return (
               // pre-line: a value on two lines (学士 / B.Tech（…）) stays on two.
-              <tr key={record.id} style={{ whiteSpace: 'pre-line' }}>
+              <tr key={record.id} style={{ whiteSpace: 'pre-line' }} data-record={record.id}>
                 <td>{get('edu_years')}</td>
                 <td>
                   {get('edu_institution')}
@@ -481,7 +481,7 @@ function RepeatingBlock({ section }: { section: SectionView }) {
   }
 
   return (
-    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)} data-section={section.code}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />
@@ -492,6 +492,7 @@ function RepeatingBlock({ section }: { section: SectionView }) {
         {section.records.map((record, index) => (
           <RecordRows
             key={record.id}
+            recordId={record.id}
             sectionName={section.nameJa}
             index={index + 1}
             fields={record.fields}
@@ -503,21 +504,23 @@ function RepeatingBlock({ section }: { section: SectionView }) {
 }
 
 function RecordRows({
+  recordId,
   sectionName,
   index,
   fields,
 }: {
+  recordId: string;
   sectionName: string;
   index: number;
   fields: SectionView['fields'];
 }) {
   return (
     <>
-      <tr className="record-band">
+      <tr className="record-band" data-record={recordId}>
         <th colSpan={3}>{`${sectionName} ${index}`}</th>
       </tr>
       {fields.map((field) => (
-        <tr key={field.id}>
+        <tr key={field.id} data-field={field.code} data-record={recordId}>
           <th className="label">{field.nameJa}</th>
           <td colSpan={2}>{renderValue(field.valueJa, field.valueJson, field.valueType)}</td>
         </tr>
@@ -528,7 +531,7 @@ function RecordRows({
 
 function SimpleBlock({ section }: { section: SectionView }) {
   return (
-    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+    <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)} data-section={section.code}>
       <colgroup>
         <col style={{ width: '150px' }} />
         <col />
@@ -537,7 +540,7 @@ function SimpleBlock({ section }: { section: SectionView }) {
       <tbody>
         <SectionBand section={section} />
         {section.fields.map((field) => (
-          <tr key={field.id}>
+          <tr key={field.id} data-field={field.code}>
             <th className="label">{field.nameJa}</th>
             <td colSpan={2}>{renderValue(field.valueJa, field.valueJson, field.valueType)}</td>
           </tr>
