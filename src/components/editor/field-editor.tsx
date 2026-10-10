@@ -445,35 +445,52 @@ export function FieldEditor({
           ) : history.length === 0 ? (
             <p className="text-xs text-ink-400">{t('履歴はまだありません。')}</p>
           ) : (
-            history.map((entry) => (
-              <div key={entry.id} className="border-b border-ink-100 pb-2 last:border-0 last:pb-0">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
-                  <span className="font-medium text-ink-700">
-                    {t(CHANGE_LABELS[entry.changeType] ?? entry.changeType)}
-                  </span>
-                  <span>{new Date(entry.createdAt).toLocaleString(t('ja-JP'))}</span>
-                  {entry.changedBy ? <span>{entry.changedBy}</span> : null}
-                  <span className="flex-1" />
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      className="font-medium text-brand-500 hover:underline"
-                      onClick={() =>
-                        run(async () =>
-                          revertFieldAction(personId, { historyId: entry.id, sectionCode }),
-                        )
-                      }
-                    >
-                      {t('この内容に戻す')}
-                    </button>
+            history.map((entry, index) => {
+              // Each change shows what it replaced and what it wrote, so the
+              // AI's original is visible beside a hand edit (Sano-san,
+              // 2026-10-10: the latest entry looked identical to the field).
+              const isCurrent = index === 0 && (entry.valueJa ?? '') === value;
+              const showBefore = entry.previousJa !== null && entry.previousJa !== entry.valueJa;
+              const restore = (to: 'after' | 'before') =>
+                run(async () => revertFieldAction(personId, { historyId: entry.id, sectionCode, to }));
+              return (
+                <div key={entry.id} className="hist-entry">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
+                    <span className="font-medium text-ink-700">
+                      {t(CHANGE_LABELS[entry.changeType] ?? entry.changeType)}
+                    </span>
+                    <span>{new Date(entry.createdAt).toLocaleString(t('ja-JP'))}</span>
+                    {entry.changedBy ? <span>{entry.changedBy}</span> : null}
+                    {isCurrent ? <span className="tag">{t('現在の内容')}</span> : null}
+                  </div>
+                  {entry.prompt ? <p className="text-xs text-ink-500">{t('指示')}: {entry.prompt}</p> : null}
+                  {showBefore ? (
+                    <div className="hist-text hist-before">
+                      <div className="hist-head">
+                        <span className="hist-label">{t('変更前')}</span>
+                        {!readOnly ? (
+                          <button type="button" className="hist-restore" onClick={() => restore('before')}>
+                            {t('変更前に戻す')}
+                          </button>
+                        ) : null}
+                      </div>
+                      <p>{entry.previousJa || t('（空欄）')}</p>
+                    </div>
                   ) : null}
+                  <div className="hist-text">
+                    <div className="hist-head">
+                      <span className="hist-label">{showBefore ? t('変更後') : t('内容')}</span>
+                      {!readOnly && !isCurrent ? (
+                        <button type="button" className="hist-restore" onClick={() => restore('after')}>
+                          {t('この内容に戻す')}
+                        </button>
+                      ) : null}
+                    </div>
+                    <p>{entry.valueJa || t('（空欄）')}</p>
+                  </div>
                 </div>
-                {entry.prompt ? <p className="text-xs text-ink-500">{t('指示')}: {entry.prompt}</p> : null}
-                <p className="whitespace-pre-wrap text-sm text-ink-700">
-                  {entry.valueJa || t('（空欄）')}
-                </p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       ) : null}

@@ -528,23 +528,30 @@ export async function revertFieldValue(params: {
   historyId: string;
   userId: string;
   personId: string;
+  /** The version being edited; defaults to the entry's own (older callers). */
+  versionId?: string;
+  /** The text after this change (default), or the text it replaced. */
+  to?: 'after' | 'before';
 }) {
   const entry = await prisma.fieldValueHistory.findUniqueOrThrow({
     where: { id: params.historyId },
     include: { fieldValue: { include: { field: { select: { valueType: true } } } } },
   });
 
+  const text = params.to === 'before' ? entry.previousJa : entry.valueJa;
   const value = await writeFieldValue({
-    versionId: entry.fieldValue.versionId,
+    versionId: params.versionId ?? entry.fieldValue.versionId,
     fieldId: entry.fieldValue.fieldId,
     recordId: entry.fieldValue.recordId,
-    valueJa: entry.valueJa,
+    valueJa: text,
     // For a GRID the rows are rebuilt from the text: entries written by a hand
     // edit before 2026-10-01 carried the old, unedited rows.
     valueJson:
       entry.fieldValue.field.valueType === 'GRID'
-        ? parseGridText(entry.valueJa ?? '')
-        : entry.valueJson,
+        ? parseGridText(text ?? '')
+        : params.to === 'before'
+          ? null
+          : entry.valueJson,
     changeType: 'REVERT',
     userId: params.userId,
     markReviewed: true,

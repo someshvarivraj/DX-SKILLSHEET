@@ -919,6 +919,9 @@ export const EN: Record<string, string> = {
   "女性": "Female",
   "男性": "Male",
   "日本語に翻訳する": "Translate into Japanese",
+  "現在の内容": "Current",
+  "変更前": "Before",
+  "変更前に戻す": "Restore the earlier text",
   // @@END
 };
 
