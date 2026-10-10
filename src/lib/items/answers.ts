@@ -137,3 +137,30 @@ export async function askedItemKeys(personId: string): Promise<Set<string> | nul
   if (!response) return null;
   return new Set(response.set.items.map((i) => i.item.key));
 }
+
+export type Gender = 'male' | 'female';
+
+/**
+ * Each person's gender from their latest submitted answers (A-1-3,
+ * 「男性／Male」「女性／Female」), for the people list. People who have not
+ * answered it are left out.
+ */
+export async function gendersOf(personIds: string[]): Promise<Map<string, Gender>> {
+  const rows = await prisma.answer.findMany({
+    where: {
+      item: { key: 'A-1-3' },
+      response: { personId: { in: personIds }, status: 'SUBMITTED' },
+    },
+    select: { value: true, response: { select: { personId: true, createdAt: true } } },
+    orderBy: { response: { createdAt: 'desc' } },
+  });
+  const out = new Map<string, Gender>();
+  for (const row of rows) {
+    const personId = row.response.personId;
+    if (!personId || out.has(personId)) continue; // newest first
+    const v = String(row.value ?? '').toLowerCase();
+    if (v.includes('女') || /\bfemale\b|\bwoman\b/.test(v)) out.set(personId, 'female');
+    else if (v.includes('男') || /\bmale\b|\bman\b/.test(v)) out.set(personId, 'male');
+  }
+  return out;
+}

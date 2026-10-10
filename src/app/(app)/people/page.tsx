@@ -12,6 +12,7 @@ import { GenerationBanner, GenerationRowBadge } from '@/components/generation-pr
 import { BulkPdfBar } from '@/components/bulk-pdf-bar';
 import { ResumeGenerationNotice } from '@/components/resume-generation';
 import { findStalledPeople } from '@/lib/sheet/generation-jobs';
+import { gendersOf } from '@/lib/items/answers';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,6 +96,10 @@ export default async function PeoplePage({
 
   // Answered, but no text written: generation was interrupted or never ran.
   const stalled = can(user, 'sheet.edit') && user.role !== 'ENGINEER' ? await findStalledPeople() : [];
+
+  // Sano-san (2026-10-10): the gender should be visible in the list — pink
+  // for women, green for men, with MoraBot drawn to match.
+  const genders = await gendersOf(people.map((p) => p.id));
 
   const statusOf = (p: (typeof people)[number]) => p.skillSheet?.currentVersion?.status ?? 'DRAFT';
   const searched = query ? people.filter((p) => matchesPersonQuery(p, query)) : people;
@@ -213,8 +218,12 @@ export default async function PeoplePage({
                     const version = person.skillSheet?.currentVersion;
                     const unreviewed = version ? (unreviewedByVersion.get(version.id) ?? 0) : 0;
                     const jlpt = person.jlptResults[0];
+                    const gender = genders.get(person.id);
                     return (
-                      <tr key={person.id} className="relative">
+                      <tr
+                        key={person.id}
+                        className={`relative ${gender === 'female' ? 'person-female' : gender === 'male' ? 'person-male' : ''}`}
+                      >
                         {canBulk ? (
                           // Above the row's link layer, so ticking does not open the sheet.
                           <td className="relative z-10">
@@ -234,6 +243,13 @@ export default async function PeoplePage({
                           </td>
                         ) : null}
                         <td>
+                          <div className="person-name">
+                          {gender ? (
+                            <MoraBot mood={gender === 'female' ? 'woman' : 'man'} size={34} title={gender === 'female' ? t('女性') : t('男性')} />
+                          ) : (
+                            <span className="person-name-blank" aria-hidden />
+                          )}
+                          <div className="min-w-0">
                           {/* The link covers the whole row (see the ::after
                               below), so anywhere on the row opens the sheet. */}
                           <Link
@@ -245,6 +261,8 @@ export default async function PeoplePage({
                           <GenerationRowBadge personId={person.id} />
                           <div className="text-xs text-ink-500">
                             {lang === 'en' ? person.fullNameKatakana : person.fullNameEnglish}
+                          </div>
+                          </div>
                           </div>
                         </td>
                         <td className="tabular text-ink-700">{person.cohort ?? '—'}</td>
