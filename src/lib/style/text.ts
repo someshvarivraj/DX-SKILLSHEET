@@ -134,6 +134,22 @@ export function checkStyle(
     issues.push({ rule: 'spacing', message: '日本語と英数字の間に空白がある' });
   }
 
+  // Sano-san (2026-10-10): long sentences chaining several points with
+  // 「〜ので」「〜ため」 are hard to read; one point per sentence.
+  if (options.prose !== false) {
+    const longest = text
+      .split(/[。！？\n]/)
+      .map((s) => s.trim())
+      .sort((a, b) => [...b].length - [...a].length)[0];
+    if (longest && [...longest].length > 80) {
+      issues.push({
+        rule: 'long-sentence',
+        message: `1文が長い（${[...longest].length}字）。内容ごとに文を分けること`,
+        sample: `${[...longest].slice(0, 20).join('')}…`,
+      });
+    }
+  }
+
   if (options.nounForm) {
     if (/(すること|をする|します)$/.test(text.trim())) {
       issues.push({ rule: 'noun-form', message: '体言止めになっていない' });

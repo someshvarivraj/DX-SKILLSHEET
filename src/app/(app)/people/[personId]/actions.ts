@@ -203,12 +203,20 @@ export async function setFieldFlagsAction(
 
 export async function revertFieldAction(
   personId: string,
-  input: { historyId: string; sectionCode?: string },
+  input: { historyId: string; sectionCode?: string; to?: 'after' | 'before' },
 ): Promise<ActionResult> {
   return runAction(async () => {
     const history = await assertHistoryBelongsToPerson(input.historyId, personId);
-    const { user } = await guard(personId, history.sectionCode);
-    await revertFieldValue({ historyId: input.historyId, userId: user.id, personId });
+    const { user, version } = await guard(personId, history.sectionCode);
+    // Into the version being edited — never back into the (perhaps finalised)
+    // version the history entry was recorded in.
+    await revertFieldValue({
+      historyId: input.historyId,
+      userId: user.id,
+      personId,
+      versionId: version.id,
+      to: input.to ?? 'after',
+    });
     refresh(personId);
     return { ok: true, message: '以前の内容に戻した' };
   });
@@ -233,8 +241,23 @@ export async function loadHistoryAction(
   // The value id decides which rows come back, so it has to belong to this
   // person — otherwise any signed-in user could read another sheet's history.
   await assertValueBelongsToPerson(valueId, personId);
+  // The field's history across every version of this sheet. Editing a
+  // finalised sheet starts a new version, and the values are copied into it
+  // without their history — so the AI's original text, written in an earlier
+  // version, was nowhere to be found (Sano-san, 2026-10-10).
+  const value = await prisma.fieldValue.findUniqueOrThrow({
+    where: { id: valueId },
+    select: { fieldId: true, recordKey: true, version: { select: { skillSheetId: true } } },
+  });
   const rows = await prisma.fieldValueHistory.findMany({
-    where: { fieldValueId: valueId },
+    where: {
+      fieldValue: {
+        fieldId: value.fieldId,
+        recordKey: value.recordKey,
+        version: { skillSheetId: value.version.skillSheetId },
+      },
+      changeType: { notIn: ['LOCK', 'UNLOCK', 'REVIEW'] },
+    },
     orderBy: { createdAt: 'desc' },
     take: 30,
     include: { changedBy: { select: { displayName: true } } },

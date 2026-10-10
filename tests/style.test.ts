@@ -227,3 +227,17 @@ describe('free-text answers on the sheet', () => {
     for (const v of ['Nagoya', 'No. 3 in class', 'Naresh et al., 2025']) expect(isNoAnswerText(v)).toBe(false);
   });
 });
+
+describe('sentence length (Sano-san, 2026-10-10)', () => {
+  it('reports a sentence that chains several points', () => {
+    const before =
+      '学士課程の日印共同プロジェクトで日本のチームと協働した経験から日本の製造業に興味を持ったので、製造、機械システム、AI（人工知能）、コンピュータビジョンを融合させた分野に関心があるため、日本の品質意識の高さや技術力の蓄積を学び、実際の生産環境における効率的なシステム構築に貢献したいと考えている。';
+    expect(checkStyle(before).some((i) => i.rule === 'long-sentence')).toBe(true);
+  });
+
+  it('accepts the same content split into sentences', () => {
+    const after =
+      '学士課程の日印共同プロジェクトで日本のチームと協働した経験から日本の製造業に興味を持った。日本の品質意識の高さや技術力の蓄積を学び、実際の生産環境における効率的なシステム構築に貢献したいと考えている。製造、機械システム、AI（人工知能）、コンピュータビジョンを融合させた分野に関心がある。';
+    expect(checkStyle(after).some((i) => i.rule === 'long-sentence')).toBe(false);
+  });
+});
