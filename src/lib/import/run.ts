@@ -23,10 +23,12 @@ import {
   saveImportedResponse,
   toAnswerMap,
   toItemAnswers,
+  dropHiddenAnswers,
   type ItemAnswer,
   type SetCodeMap,
 } from '@/lib/items/answers';
 import { isSystemColumn, matchColumns, rowToAnswers, type ColumnMatch } from './match';
+import type { ShowIf } from '@/lib/items/validate';
 import { parseUpload, type ParsedFile } from './parse';
 import { parseFormTimestamp } from './timestamp';
 
@@ -152,8 +154,10 @@ function readRow(
   matches: ColumnMatch[],
   types: Map<string, string>,
   codes: SetCodeMap,
+  showIf: Map<string, ShowIf>,
 ) {
-  const items = toItemAnswers(rowToAnswers(row, matches, types), codes);
+  // Only what the form would have shown this person (§4.1 branching).
+  const items = dropHiddenAnswers(toItemAnswers(rowToAnswers(row, matches, types), codes), showIf);
   return { items, answers: toAnswerMap(items) };
 }
 
@@ -206,7 +210,7 @@ export async function previewImport(params: {
 }): Promise<{ preview: ImportPreview; parsed: ParsedFile; matches: ColumnMatch[] }> {
   const parsed = await parseUpload(params.fileName, params.buffer);
   const set = await prisma.questionSet.findUniqueOrThrow({ where: { id: params.setId } });
-  const { refs, types, codes } = await loadSetQuestions(params.setId);
+  const { refs, types, codes, showIf } = await loadSetQuestions(params.setId);
 
   const matches = matchColumns(parsed.headers, refs);
   const unmapped = matches
@@ -219,7 +223,7 @@ export async function previewImport(params: {
   const rows: ImportPreviewRow[] = [];
   for (let i = 0; i < parsed.rows.length; i++) {
     const row = parsed.rows[i];
-    const { items, answers } = readRow(row, matches, types, codes);
+    const { items, answers } = readRow(row, matches, types, codes, showIf);
     const email = findEmail(row);
     const person = await findExistingPerson(
       email,
@@ -281,7 +285,7 @@ export async function runImport(params: {
     buffer: params.buffer,
     setId: params.setId,
   });
-  const { types, codes } = await loadSetQuestions(params.setId);
+  const { types, codes, showIf } = await loadSetQuestions(params.setId);
 
   const batch = await prisma.importBatch.create({
     data: {
@@ -315,12 +319,12 @@ export async function runImport(params: {
       // imports dropped when the form had no exam date. Recording it again is
       // harmless (same row), and lets a re-import fill in the 日本語 column.
       if (planned.status === 'same' && planned.personId) {
-        await upsertJlpt(planned.personId, readRow(row, matches, types, codes).answers);
+        await upsertJlpt(planned.personId, readRow(row, matches, types, codes, showIf).answers);
       }
       outcome.skipped++;
       continue;
     }
-    const { items, answers } = readRow(row, matches, types, codes);
+    const { items, answers } = readRow(row, matches, types, codes, showIf);
     const email = findEmail(row);
     const nameEnglish = String(answers['A-1-1'] ?? '').trim();
     const nameKatakana = String(answers['A-1-2'] ?? '').trim();

@@ -8,10 +8,11 @@
  * builds exactly that lookup, so none of those needed to change.
  */
 
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { splitTitle } from '@/lib/form/parse-apps-script';
 import type { QuestionRef } from '@/lib/import/match';
+import { isShown, type AnswerValue, type ShowIf } from './validate';
 
 export type ItemAnswer = { itemId: string; key: string; entry: number; value: unknown };
 
@@ -36,6 +37,8 @@ export async function loadSetQuestions(setId: string): Promise<{
   refs: QuestionRef[];
   types: Map<string, string>;
   codes: SetCodeMap;
+  /** Each question's display condition in this set, by item key. */
+  showIf: Map<string, ShowIf>;
 }> {
   const setItems = await prisma.questionSetItem.findMany({
     where: { setId },
@@ -45,7 +48,9 @@ export async function loadSetQuestions(setId: string): Promise<{
   const refs: QuestionRef[] = [];
   const types = new Map<string, string>();
   const codes: SetCodeMap = new Map();
+  const showIf = new Map<string, ShowIf>();
   for (const si of setItems) {
+    if (si.showIf) showIf.set(si.item.key, si.showIf as ShowIf);
     si.formCodes.forEach((code, index) => {
       const header = si.formHeaders[index] ?? `${code}. ${si.item.titleJa}`;
       const { ja, en } = splitTitle(header);
@@ -54,7 +59,23 @@ export async function loadSetQuestions(setId: string): Promise<{
       codes.set(code, { itemId: si.itemId, key: si.item.key, entry: index + 1 });
     });
   }
-  return { refs, types, codes };
+  return { refs, types, codes, showIf };
+}
+
+/**
+ * Answers to questions the form would not have shown, dropped — as on the
+ * answer screen. A bachelor's student who also picked something in the
+ * master's 学位 list (B-1-2(M), shown only for 修士) no longer gets that
+ * printed beside their B.Tech.
+ */
+export function dropHiddenAnswers(items: ItemAnswer[], showIf: Map<string, ShowIf>): ItemAnswer[] {
+  if (showIf.size === 0) return items;
+  const valueOf = new Map(items.map((a) => [`${a.key}#${a.entry}`, a.value]));
+  return items.filter((a) =>
+    isShown(showIf.get(a.key) ?? null, (key) =>
+      (valueOf.get(`${key}#${a.entry}`) ?? valueOf.get(`${key}#1`)) as AnswerValue | undefined,
+    ),
+  );
 }
 
 /** Answers keyed by form code -> answers per item and entry. Empty answers are skipped. */
@@ -117,9 +138,17 @@ export async function latestAnswerMap(personId: string): Promise<{
     include: { answers: { include: { item: { select: { key: true } } } } },
   });
   if (!response) return { responseId: null, answers: {} };
+  // Answers stored before the import applied the form's conditions may still
+  // hold a hidden page's answer; the sheet never reads those.
+  const setItems = await prisma.questionSetItem.findMany({
+    where: { setId: response.setId, showIf: { not: Prisma.DbNull } },
+    select: { showIf: true, item: { select: { key: true } } },
+  });
+  const showIf = new Map(setItems.map((si) => [si.item.key, si.showIf as ShowIf]));
+  const items = response.answers.map((a) => ({ itemId: a.itemId, key: a.item.key, entry: a.entry, value: a.value }));
   return {
     responseId: response.id,
-    answers: toAnswerMap(response.answers.map((a) => ({ key: a.item.key, entry: a.entry, value: a.value }))),
+    answers: toAnswerMap(dropHiddenAnswers(items, showIf)),
   };
 }
 

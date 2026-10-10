@@ -18,7 +18,7 @@ import { prisma } from '@/lib/db';
 import { resolveSectionColours, type SectionColour } from './section-colours';
 import { characterCount, checkStyle, type StyleIssue } from '@/lib/style/text';
 import { isFieldPrintable } from './visibility';
-import { askedItemKeys } from '@/lib/items/answers';
+import { askedItemKeys, latestAnswerMap } from '@/lib/items/answers';
 
 export type FieldView = {
   id: string;
@@ -270,6 +270,14 @@ export async function loadSheetModel(
 
   const colours = resolveSectionColours(sections);
 
+  // The 2026 form asks bachelor's students to repeat their degree in B-2
+  // ("repeat them in section B-2"); B-2 exists for master's students' earlier
+  // bachelor's. For a bachelor's student it is the same degree twice, so it is
+  // left off — on screen and on the sheet. (Master's students keep both.)
+  const finalLevel = String((await latestAnswerMap(personId)).answers['B-1-1'] ?? '');
+  const repeatsFinalDegree = (record: { kind: string; sourcePrefix: string | null }) =>
+    record.kind === 'EDUCATION' && record.sourcePrefix === 'B-2' && finalLevel.startsWith('学士');
+
   const sectionViews: SectionView[] = sections.map((section) => {
     const isRepeating = section.kind === 'REPEATING';
 
@@ -297,7 +305,7 @@ export async function loadSheetModel(
 
     const records: RecordView[] = isRepeating
       ? sheet.records
-          .filter((r) => r.kind === section.recordKind)
+          .filter((r) => r.kind === section.recordKind && !repeatsFinalDegree(r))
           .map((record) => {
             const display = preset
               ? record.displays.find((d) => d.presetId === preset.id)

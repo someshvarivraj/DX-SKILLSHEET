@@ -91,7 +91,10 @@ export function collectSourceValues(
   let codes = field.sourceCodes;
   if (prefix) {
     const direct = codes.filter((c) => c.startsWith(`${prefix}-`));
-    if (direct.length > 0) codes = direct;
+    // No question of this record's own: only the shared "x" form applies.
+    // Falling back to every listed code mixed other records' answers in — the
+    // second education row's 学位 showed 学士, B.Tech, その他 and 高校 at once.
+    codes = direct.length > 0 ? direct : codes.filter((c) => c.includes('-x-'));
   }
 
   return codes
@@ -272,8 +275,9 @@ function processCopy(
     .filter(Boolean);
 
   return {
-    // Links typed on one line are printed one to a line (GitHub, portfolio).
-    valueJa: oneLinkPerLine(normaliseJapanese(parts.join(' '))),
+    // Several answers are put on separate lines (学士 / B.Tech（…）), not run
+    // together; links typed on one line are printed one to a line.
+    valueJa: oneLinkPerLine(normaliseJapanese(parts.join('\n'))),
     valueJson: null,
     sourceText,
     usedAi: false,

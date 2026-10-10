@@ -78,6 +78,10 @@ describe('japaneseSideOfOption (spec §4.1)', () => {
     );
   });
 
+  it('is not misled by a 「・」 in the English half', () => {
+    expect(japaneseSideOfOption('高校／High School・Senior Secondary School')).toBe('高校');
+  });
+
   it('handles options with a full-width colon', () => {
     expect(japaneseSideOfOption('PLC：三菱電機／Mitsubishi Electric')).toBe(
       'PLC：三菱電機',
