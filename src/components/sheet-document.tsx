@@ -442,15 +442,15 @@ function RepeatingBlock({ section }: { section: SectionView }) {
   if (section.code === 'education') {
     return (
       <table className={sectionClass(section.code)} style={sectionColourStyle(section.colour)}>
+        {/* Shares of the page width, not fixed pixels: the degree column was
+            106px, so 「B.Tech（Bachelor of Technology）」 broke after every
+            word while the school column stayed half empty (2026-10-10).
+            成績 sits beside the school name, as Sano-san asked. */}
         <colgroup>
-          {/* Wide enough that a full 「2022年8月 - 2026年5月」 and 「学士（工学）」
-              each stay on one line rather than breaking mid-parenthesis. */}
-          <col style={{ width: '178px' }} />
-          <col />
-          {/* 成績 sits beside the school name, as Sano-san asked. Wide enough
-              that a full 「CGPA 8.7 / 10」 stays on one line. */}
-          <col style={{ width: '116px' }} />
-          <col style={{ width: '106px' }} />
+          <col style={{ width: '21%' }} />
+          <col style={{ width: '35%' }} />
+          <col style={{ width: '19%' }} />
+          <col style={{ width: '25%' }} />
         </colgroup>
         <tbody>
           <SectionBand section={section} span={4} />
@@ -458,7 +458,8 @@ function RepeatingBlock({ section }: { section: SectionView }) {
             const get = (code: string) =>
               record.fields.find((f) => f.code === code)?.valueJa ?? '';
             return (
-              <tr key={record.id}>
+              // pre-line: a value on two lines (学士 / B.Tech（…）) stays on two.
+              <tr key={record.id} style={{ whiteSpace: 'pre-line' }}>
                 <td>{get('edu_years')}</td>
                 <td>
                   {get('edu_institution')}

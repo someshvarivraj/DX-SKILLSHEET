@@ -37,11 +37,18 @@ export function stripLeadingMarker(option: string): string {
 }
 
 /** Return the Japanese half of a bilingual option string. */
+/**
+ * Japanese words, not just Japanese punctuation: 「High School・Senior Secondary
+ * School」 is the English half even though it contains a 「・」.
+ */
+const hasJapaneseWords = (s: string) => /[\u3040-\u30ff\u3400-\u9fff々〆]/.test(s.replace(/[・ー]/g, ''));
+
 export function japaneseSideOfOption(option: string): string {
   const s = stripLeadingMarker(option).trim();
   if (!s.includes('／')) return s;
 
   const parts = s.split('／');
+  const hasJapanese = hasJapaneseWords;
 
   // Japanese on the left: find the longest head with Japanese and a tail without.
   for (let i = parts.length - 1; i >= 1; i--) {
