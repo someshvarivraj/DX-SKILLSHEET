@@ -918,6 +918,7 @@ export const EN: Record<string, string> = {
   "確定済みの{n}人から選んで、PDFをまとめてダウンロードできます": "Select from the {n} finalised people to download their PDFs together",
   "女性": "Female",
   "男性": "Male",
+  "日本語に翻訳する": "Translate into Japanese",
   // @@END
 };
 

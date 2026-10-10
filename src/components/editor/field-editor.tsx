@@ -87,7 +87,7 @@ export function FieldEditor({
   const [aiBusy, setAiBusy] = useState(false);
 
   const disabled = Boolean(readOnly) || field.isLocked || pending;
-  const actions = fieldActions(field.processing, field.valueType);
+  const actions = fieldActions(field.processing, field.valueType, field.valueJa);
 
   const run = (fn: () => Promise<{ message?: string; warnings?: string[] }>) =>
     startTransition(async () => {
@@ -196,6 +196,14 @@ export function FieldEditor({
       disabled,
       onClick: () =>
         runAi(() => generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode })),
+    });
+  }
+  if (!readOnly && actions.translate) {
+    menuItems.push({
+      label: t('日本語に翻訳する'),
+      disabled,
+      onClick: () =>
+        runAi(() => generateFieldAction(personId, { fieldId: field.id, recordId, sectionCode, translate: true })),
     });
   }
   if (!readOnly && actions.regenerateWithInstructions) {
