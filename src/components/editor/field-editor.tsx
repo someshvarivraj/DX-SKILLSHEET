@@ -253,6 +253,10 @@ export function FieldEditor({
       // (see scroll-restore.tsx).
       id={`field-${field.id}${recordId ? `-${recordId}` : ''}`}
       data-field-anchor=""
+      // Read by the side-by-side preview to show the same field (split-preview.tsx).
+      data-field-code={field.code}
+      data-record-id={recordId ?? undefined}
+      data-section-code={sectionCode}
       className={`field-block ${field.isLocked ? 'bg-sand-50' : ''}`}
     >
       <div className="field-label-row">
