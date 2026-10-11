@@ -67,3 +67,11 @@ export function checkPhoto(
 export function buildPhotoKey(personId: string, extension: 'jpg' | 'png'): string {
   return `photos/${personId}/${Date.now()}.${extension}`;
 }
+
+/**
+ * The unadjusted photo kept beside an adjusted one, so adjusting again starts
+ * from the full picture rather than from an already-cropped copy.
+ */
+export function originalPhotoKey(photoKey: string): string {
+  return `${photoKey}.original.jpg`;
+}

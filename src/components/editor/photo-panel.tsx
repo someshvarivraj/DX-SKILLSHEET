@@ -7,6 +7,7 @@ import {
   removePhotoAction,
   uploadPhotoAction,
 } from '@/app/(app)/people/[personId]/actions';
+import { PhotoEditor } from './photo-editor';
 
 /**
  * The 写真 box, filled from this screen.
@@ -22,10 +23,13 @@ import {
 export function PhotoPanel({
   personId,
   photoUrl,
+  originalUrl = null,
   readOnly = false,
 }: {
   personId: string;
   photoUrl: string | null;
+  /** The unadjusted photo kept beside it, if there is one. */
+  originalUrl?: string | null;
   readOnly?: boolean;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
@@ -36,6 +40,9 @@ export function PhotoPanel({
   // picked without waiting for the round trip.
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The photo open in 写真を調整する (Sano-san, 2026-10-11): a chosen file, or
+  // the stored one being adjusted again.
+  const [editing, setEditing] = useState<Blob | null>(null);
 
   const run = (work: () => Promise<{ ok: boolean; message?: string }>) => {
     setNotice(null);
@@ -59,12 +66,33 @@ export function PhotoPanel({
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
-    setPreview(URL.createObjectURL(file));
+    if (inputRef.current) inputRef.current.value = '';
+    setError(null);
+    setEditing(file);
+  };
+
+  /** Adjust the stored photo again — from its original when one was kept. */
+  const adjustStored = async () => {
+    setError(null);
+    for (const url of [originalUrl, photoUrl]) {
+      if (!url) continue;
+      const res = await fetch(url).catch(() => null);
+      if (res?.ok) {
+        setEditing(await res.blob());
+        return;
+      }
+    }
+    setError('写真を読み込めませんでした');
+  };
+
+  const saveAdjusted = (photo: Blob, original: Blob) => {
+    setEditing(null);
+    setPreview(URL.createObjectURL(photo));
     const data = new FormData();
-    data.set('photo', file);
+    data.set('photo', new File([photo], 'photo.jpg', { type: 'image/jpeg' }));
+    data.set('original', new File([original], 'original.jpg', { type: 'image/jpeg' }));
     run(async () => {
       const result = await uploadPhotoAction(personId, data);
-      if (inputRef.current) inputRef.current.value = '';
       if (!result.ok) setPreview(null);
       return result;
     });
@@ -123,6 +151,11 @@ export function PhotoPanel({
                   {photoUrl ? t('写真を差し替える') : t('写真を選ぶ')}
                 </button>
                 {photoUrl ? (
+                  <button type="button" className="btn btn-secondary" disabled={pending} onClick={() => void adjustStored()}>
+                    {t('写真を調整する')}
+                  </button>
+                ) : null}
+                {photoUrl ? (
                   <button
                     type="button"
                     className="btn btn-danger"
@@ -154,6 +187,9 @@ export function PhotoPanel({
           ) : null}
         </div>
       </div>
+      {editing ? (
+        <PhotoEditor source={editing} onCancel={() => setEditing(null)} onSave={saveAdjusted} />
+      ) : null}
     </div>
   );
 }

@@ -16,7 +16,7 @@ import {
 } from '@/lib/auth/ownership';
 import { runAction, OperatorError } from '@/lib/actions/result';
 import { getStorage } from '@/lib/storage';
-import { buildPhotoKey, checkPhoto } from '@/lib/photo';
+import { buildPhotoKey, checkPhoto, originalPhotoKey } from '@/lib/photo';
 import {
   editFieldValue,
   generateFieldValue,
@@ -446,6 +446,16 @@ export async function uploadPhotoAction(
 
     const key = buildPhotoKey(personId, check.extension);
     await getStorage().put(key, Buffer.from(bytes), file.type);
+
+    // The unadjusted photo, when it was adjusted on screen (photo-editor.tsx).
+    const original = formData.get('original');
+    if (original instanceof File && original.size > 0) {
+      const originalBytes = new Uint8Array(await original.arrayBuffer());
+      const originalCheck = checkPhoto(original.type, originalBytes);
+      if (originalCheck.ok && originalCheck.extension === 'jpg') {
+        await getStorage().put(originalPhotoKey(key), Buffer.from(originalBytes), 'image/jpeg');
+      }
+    }
     await prisma.person.update({ where: { id: personId }, data: { photoKey: key } });
 
     await recordAudit({

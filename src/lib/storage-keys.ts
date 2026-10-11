@@ -42,8 +42,11 @@ export async function personIdForStorageKey(key: string): Promise<StorageKeyOwne
     return exists ? { personId, kind: 'export', contentType: 'application/pdf' } : null;
   }
 
+  // The unadjusted original beside a photo (lib/photo.ts) belongs to whoever
+  // holds that photo.
+  const photoKey = key.replace(/\.original\.jpg$/, '');
   const person = await prisma.person.findFirst({
-    where: { photoKey: key },
+    where: { photoKey },
     select: { id: true },
   });
   if (!person) return null;

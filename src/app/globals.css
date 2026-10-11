@@ -3660,3 +3660,127 @@ tr.person-male > td:first-child {
 .hist-restore:hover {
   text-decoration: underline;
 }
+
+/* 写真を調整する — zoom, position and background colour (photo-editor.tsx). */
+.pe-dialog {
+  max-width: 46rem;
+}
+.pe-title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+.pe-help {
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--color-ink-500);
+}
+.pe-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+.pe-frame {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 294px;
+  height: 372px;
+  border: 2px solid var(--color-brand-500);
+  background: var(--color-sand-50);
+}
+.pe-canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.pe-canvas:active {
+  cursor: grabbing;
+}
+.pe-controls {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.pe-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-ink-700);
+}
+.pe-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.pe-zoom input {
+  flex: 1;
+  accent-color: var(--color-brand-500);
+}
+.pe-backgrounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pe-bg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--color-ink-200);
+  background: #fff;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.pe-bg:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pe-bg-on {
+  border-color: var(--color-brand-500);
+  box-shadow: inset 0 0 0 1px var(--color-brand-500);
+  font-weight: 700;
+}
+.pe-swatch {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--color-ink-200);
+}
+.pe-picker {
+  width: 1.4rem;
+  height: 1.2rem;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.pe-note {
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--color-ink-400);
+}
+.pe-busy {
+  margin-top: 0.6rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-brand-600);
+}
+.pe-error {
+  margin-top: 0.6rem;
+  font-size: 0.8125rem;
+  color: #b03a22;
+}
+.pe-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+@media (max-width: 640px) {
+  .pe-frame {
+    margin: 0 auto;
+  }
+}

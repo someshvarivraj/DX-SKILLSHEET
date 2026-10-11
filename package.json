@@ -32,7 +32,9 @@
     "sheets:regenerate": "tsx scripts/regenerate-sheets.ts",
     "items:convert-legacy": "tsx scripts/convert-legacy-answers.ts",
     "ui:preview": "tailwindcss -i src/app/globals.css -o scripts/ui-preview.css --content \"scripts/ui-preview*.html,src/**/*.tsx\"",
-    "ai:report": "tsx scripts/measure-ai-usage.ts && tsx scripts/make-ai-cost-report.ts && node scripts/render-ai-cost.mjs"
+    "ai:report": "tsx scripts/measure-ai-usage.ts && tsx scripts/make-ai-cost-report.ts && node scripts/render-ai-cost.mjs",
+    "predev": "node scripts/copy-mediapipe.mjs",
+    "prebuild": "node scripts/copy-mediapipe.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed/index.ts"
@@ -41,6 +43,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.658.0",
     "@aws-sdk/client-s3": "^3.658.0",
     "@aws-sdk/s3-request-presigner": "^3.658.0",
+    "@mediapipe/tasks-vision": "^1.1.0",
     "@prisma/client": "^6.1.0",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
