@@ -5,6 +5,7 @@ import { recordAudit } from '@/lib/audit';
 import { loadSheetModel } from '@/lib/sheet/model';
 import { getOrCreateSkillSheet } from '@/lib/sheet/version';
 import { withBasePath } from '@/lib/base-path';
+import { originalPhotoKey } from '@/lib/photo';
 import { SectionTabs } from '@/components/editor/section-tabs';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
 import { MemoPanel } from '@/components/editor/memo-panel';
@@ -85,6 +86,11 @@ export default async function PersonEditorPage({
       photoUrl={
         model.person.photoKey
           ? withBasePath(`/api/files/${encodeURIComponent(model.person.photoKey)}`)
+          : null
+      }
+      originalUrl={
+        model.person.photoKey
+          ? withBasePath(`/api/files/${encodeURIComponent(originalPhotoKey(model.person.photoKey))}`)
           : null
       }
       readOnly={!can(user, 'sheet.edit')}

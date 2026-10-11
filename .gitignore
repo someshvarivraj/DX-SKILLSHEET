@@ -31,3 +31,6 @@ coverage/
 # build harness output
 /tmp-sample-*.html
 /scripts/ui-preview.css
+
+# MediaPipe runtime, copied from node_modules at build (scripts/copy-mediapipe.mjs)
+/public/mediapipe/wasm/
