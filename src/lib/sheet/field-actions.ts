@@ -21,15 +21,33 @@ export type FieldActions = {
   regenerate: boolean;
   regenerateWithInstructions: boolean;
   showOriginal: boolean;
+  /**
+   * 「日本語に翻訳する」: a copied field that came out as English prose (a
+   * free-text answer on a field set to 転記). Sano-san, 2026-10-11: such a
+   * field had no way to be put into Japanese.
+   */
+  translate: boolean;
 };
 
 const NONE: FieldActions = {
   regenerate: false,
   regenerateWithInstructions: false,
   showOriginal: false,
+  translate: false,
 };
 
-export function fieldActions(processing: string, valueType?: string): FieldActions {
+/** English prose rather than a name or code: several Latin words, no Japanese. */
+export function looksEnglish(value: string | null | undefined): boolean {
+  // Links are not prose: a GitHub URL is not "English text to translate".
+  const v = (value ?? '').replace(/https?:\/\/\S+/g, ' ').trim();
+  if (!v || /[\u3040-\u30ff\u3400-\u9fff]/.test(v)) return false;
+  return (v.match(/[A-Za-z]{2,}/g) ?? []).length >= 4;
+}
+
+export function fieldActions(processing: string, valueType?: string, valueJa?: string | null): FieldActions {
+  if ((processing === 'COPY' || processing === 'MANUAL') && valueType !== 'GRID' && looksEnglish(valueJa)) {
+    return { ...NONE, showOriginal: processing === 'COPY', translate: true };
+  }
   // Structured grids (e.g. the placement preference grids) are copied as they
   // were answered, whatever the definition says.
   if (valueType === 'GRID') return NONE;
@@ -37,9 +55,9 @@ export function fieldActions(processing: string, valueType?: string): FieldActio
   switch (processing) {
     case 'GLOSSARY':
     case 'TRANSLATE':
-      return { regenerate: true, regenerateWithInstructions: false, showOriginal: true };
+      return { regenerate: true, regenerateWithInstructions: false, showOriginal: true, translate: false };
     case 'GENERATE':
-      return { regenerate: true, regenerateWithInstructions: true, showOriginal: true };
+      return { regenerate: true, regenerateWithInstructions: true, showOriginal: true, translate: false };
     case 'MANUAL':
     case 'COPY':
     case 'RULE_BASED':

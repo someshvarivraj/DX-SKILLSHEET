@@ -131,6 +131,8 @@ export async function generateFieldAction(
     recordId?: string | null;
     sectionCode?: string;
     operatorPrompt?: string | null;
+    /** Translate this once, whatever the field's processing setting. */
+    translate?: boolean;
   },
 ): Promise<ActionResult> {
   return runAction(async () => {
@@ -143,6 +145,7 @@ export async function generateFieldAction(
       personId,
       userId: user.id,
       operatorPrompt: input.operatorPrompt,
+      processingOverride: input.translate ? 'TRANSLATE' : undefined,
     });
     refresh(personId);
     return {

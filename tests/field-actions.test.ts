@@ -8,6 +8,7 @@ describe('buttons by processing type (feedback 2026-09-23, item 8)', () => {
         regenerate: false,
         regenerateWithInstructions: false,
         showOriginal: false,
+        translate: false,
       });
     }
   });
@@ -18,6 +19,7 @@ describe('buttons by processing type (feedback 2026-09-23, item 8)', () => {
         regenerate: true,
         regenerateWithInstructions: false,
         showOriginal: true,
+        translate: false,
       });
     }
   });
@@ -27,10 +29,19 @@ describe('buttons by processing type (feedback 2026-09-23, item 8)', () => {
       regenerate: true,
       regenerateWithInstructions: true,
       showOriginal: true,
+      translate: false,
     });
   });
 
   it('never offers regeneration on a grid', () => {
     expect(fieldActions('GENERATE', 'GRID').regenerate).toBe(false);
+  });
+
+  it('offers translation and the original when a copied answer came out in English (2026-10-11)', () => {
+    const english = 'I have been studying Japanese for the past 1.5 years through a course.';
+    expect(fieldActions('COPY', 'STRING', english)).toMatchObject({ translate: true, showOriginal: true });
+    expect(fieldActions('COPY', 'STRING', '自動車、製造業').translate).toBe(false);
+    expect(fieldActions('COPY', 'STRING', 'Python, C++').translate).toBe(false);
+    expect(fieldActions('COPY', 'STRING', 'https://github.com/anurag161').translate).toBe(false);
   });
 });

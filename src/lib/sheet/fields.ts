@@ -264,8 +264,10 @@ export async function generateFieldValue(params: {
   skipLocked?: boolean;
   /** Forwarded to writeFieldValue; set by the importer. */
   displayFromValue?: boolean;
+  /** Process this once as another type — 「日本語に翻訳する」 on a copied field. */
+  processingOverride?: 'TRANSLATE';
 }): Promise<GenerateResult> {
-  const [definition, context, glossary] = await Promise.all([
+  const [loaded, context, glossary] = await Promise.all([
     loadFieldDefinition(params.fieldId),
     getPersonContext(params.personId),
     loadGlossary(),
@@ -274,6 +276,10 @@ export async function generateFieldValue(params: {
   const existing = await prisma.fieldValue.findUnique({
     where: fieldValueWhere(params.versionId, params.fieldId, params.recordId),
   });
+
+  const definition = params.processingOverride
+    ? { ...loaded, processing: params.processingOverride, valueType: 'TEXT' as const }
+    : loaded;
 
   if (existing?.isLocked) {
     if (params.skipLocked) return { ok: false, skipped: 'locked' };
