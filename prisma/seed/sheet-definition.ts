@@ -26,6 +26,8 @@ export type SectionSeed = {
   isVisible?: boolean;
   hideWhenEmpty?: boolean;
   maxDisplayed?: number;
+  /** New entries ticked 「シートに表示」 from the start (repeating sections). */
+  showRecordsByDefault?: boolean;
   description?: string;
   fields: FieldSeed[];
 };
@@ -294,6 +296,7 @@ export const SECTIONS: SectionSeed[] = [
     kind: 'REPEATING',
     recordKind: 'EDUCATION',
     maxDisplayed: 4,
+    showRecordsByDefault: true,
     description:
       '修士・学士・高校を別の行として保持する。回答者が在籍期間を誤って記入している例があるため、画面から修正できること。',
     fields: [
@@ -456,6 +459,7 @@ export const SECTIONS: SectionSeed[] = [
     kind: 'REPEATING',
     recordKind: 'INTERNSHIP',
     maxDisplayed: 3,
+    showRecordsByDefault: true,
     description:
       '1人あたり10件程度まで登録でき、スキルシートに表示するのは最大3件。企業名と期間はAIが書き換えないこと。',
     fields: [
@@ -588,6 +592,7 @@ export const SECTIONS: SectionSeed[] = [
     kind: 'REPEATING',
     recordKind: 'PROJECT',
     maxDisplayed: 3,
+    showRecordsByDefault: true,
     fields: [
       {
         code: 'prj_title',

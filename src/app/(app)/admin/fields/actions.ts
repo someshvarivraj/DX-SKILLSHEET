@@ -36,6 +36,8 @@ export async function updateSectionAction(input: {
   isVisible: boolean;
   hideWhenEmpty: boolean;
   maxDisplayed: number;
+  /** Repeating sections: new entries shown on the sheet from the start. */
+  showRecordsByDefault?: boolean;
   description?: string;
   /** A SECTION_PALETTE key, or null for automatic. Omitted = unchanged. */
   colour?: string | null;
@@ -53,6 +55,7 @@ export async function updateSectionAction(input: {
       isVisible: input.isVisible,
       hideWhenEmpty: input.hideWhenEmpty,
       maxDisplayed: input.maxDisplayed,
+      ...(input.showRecordsByDefault !== undefined ? { showRecordsByDefault: input.showRecordsByDefault } : {}),
       description: input.description || null,
       ...(input.colour !== undefined ? { colour: input.colour } : {}),
     },

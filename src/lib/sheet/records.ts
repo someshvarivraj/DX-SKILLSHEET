@@ -50,18 +50,31 @@ export async function createRecord(params: {
     },
   });
 
-  // Register the record against every preset, hidden by default.
+  // Register the record against every preset. Shown from the start where the
+  // section says so (education, internships, projects — 項目定義), while there
+  // is room under its limit; otherwise hidden until ticked.
+  const section = await prisma.sheetSection.findFirst({
+    where: { recordKind: params.kind },
+    select: { showRecordsByDefault: true, maxDisplayed: true },
+  });
   const presets = await prisma.displayPreset.findMany({
     where: { skillSheetId: params.skillSheetId },
   });
-  if (presets.length > 0) {
+  for (const preset of presets) {
+    const shown = section?.showRecordsByDefault
+      ? await prisma.recordDisplay.count({
+          where: { presetId: preset.id, isDisplayed: true, record: { kind: params.kind, deletedAt: null } },
+        })
+      : 0;
     await prisma.recordDisplay.createMany({
-      data: presets.map((p) => ({
-        presetId: p.id,
-        recordId: record.id,
-        isDisplayed: false,
-        order: count,
-      })),
+      data: [
+        {
+          presetId: preset.id,
+          recordId: record.id,
+          isDisplayed: Boolean(section?.showRecordsByDefault) && shown < section!.maxDisplayed,
+          order: count,
+        },
+      ],
       skipDuplicates: true,
     });
   }
