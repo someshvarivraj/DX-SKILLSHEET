@@ -2135,6 +2135,14 @@ html[data-split] .sheet-toolbar .btn {
      read too small next to the form (review, 2026-09-30). */
   flex: 1 1 45%;
   min-width: 0;
+  /* Its own scroll, beside the preview's (Sano-san, 2026-10-10): the form
+     and the sheet each scroll independently, the page around them too. */
+  position: sticky;
+  top: calc(var(--app-header-h) + 0.75rem);
+  height: calc(100vh - var(--app-header-h) - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.35rem;
 }
 .split-preview-panel {
   flex: 1 1 55%;
@@ -2180,6 +2188,11 @@ html[data-split] .sheet-toolbar .btn {
   .split-preview-panel {
     flex-basis: auto;
     width: 100%;
+  }
+  .split-preview-editor {
+    position: static;
+    height: auto;
+    overflow: visible;
   }
   .split-preview-panel {
     position: static;

@@ -20,6 +20,10 @@ import { pickName } from '@/lib/i18n';
  * The open section is kept in the URL (`?tab=`), so returning from the
  * preview — or pressing the browser's back button — reopens the same section.
  */
+
+/** Fired when a section tab is chosen, with `{ section: code }`. */
+export const SECTION_SHOWN_EVENT = 'sheet:section-shown';
+
 export function SectionTabs({
   personId,
   sections,
@@ -52,6 +56,8 @@ export function SectionTabs({
 
   const select = (code: string) => {
     setActiveCode(code);
+    // The side-by-side preview follows to the same section (split-preview.tsx).
+    window.dispatchEvent(new CustomEvent(SECTION_SHOWN_EVENT, { detail: { section: code } }));
     // Record the section in the address without a navigation, so the preview
     // link and the back button both come back to it.
     const url = new URL(window.location.href);

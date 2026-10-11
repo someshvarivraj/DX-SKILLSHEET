@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { SECTION_SHOWN_EVENT } from './section-tabs';
 import { Maximize2, Minimize2, RefreshCw, SplitSquareHorizontal, X } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 import { useT } from '@/lib/i18n/client';
@@ -20,7 +21,44 @@ type Mode = 'hidden' | 'split' | 'max';
  * renderer — one HTML source for what prints (§11.2) stays true here too.
  * Saved edits do not push into the iframe on their own (it is a separate
  * document), so the panel has its own 更新 button to reload it.
+ *
+ * Sano-san (2026-10-10): the editor and the preview each scroll on their own
+ * (as well as the page), and the preview follows the editor — clicking into a
+ * field, or choosing a section tab, brings the same place into view in the
+ * preview and marks it briefly. The sheet marks its parts with data-section,
+ * data-field and data-record (sheet-document.tsx) for this.
  */
+
+type Target = { section?: string; field?: string; record?: string };
+
+/** The part of the printed sheet that shows this field, record or section. */
+function findInSheet(doc: Document, target: Target): HTMLElement | null {
+  const q = (selector: string) => doc.querySelector<HTMLElement>(selector);
+  const esc = (v: string) => CSS.escape(v);
+  return (
+    (target.field && target.record
+      ? q(`[data-record="${esc(target.record)}"][data-field="${esc(target.field)}"]`)
+      : null) ??
+    (target.field && !target.record ? q(`[data-field="${esc(target.field)}"]`) : null) ??
+    (target.record ? q(`[data-record="${esc(target.record)}"]`) : null) ??
+    (target.section ? q(`[data-section="${esc(target.section)}"]`) : null)
+  );
+}
+
+/** A short orange outline on the part just brought into view. */
+function flash(doc: Document, el: HTMLElement) {
+  if (!doc.getElementById('sync-flash-style')) {
+    const style = doc.createElement('style');
+    style.id = 'sync-flash-style';
+    style.textContent =
+      '.sync-flash{outline:3px solid #e8710a;outline-offset:-2px;transition:outline-color .8s}.sync-flash-out{outline-color:transparent}';
+    doc.head.appendChild(style);
+  }
+  el.classList.remove('sync-flash', 'sync-flash-out');
+  el.classList.add('sync-flash');
+  setTimeout(() => el.classList.add('sync-flash-out'), 900);
+  setTimeout(() => el.classList.remove('sync-flash', 'sync-flash-out'), 1800);
+}
 export function SplitPreview({
   personId,
   tab,
@@ -39,6 +77,8 @@ export function SplitPreview({
   const [mode, setMode] = useState<Mode>('hidden');
   const [reloadKey, setReloadKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const lastTarget = useRef<Target | null>(tab ? { section: tab } : null);
 
   // While the preview is open beside the editor, the editor's own toolbar
   // shrinks to one row (html[data-split], see globals.css) — the point of
@@ -79,9 +119,52 @@ export function SplitPreview({
   const previewScroller = () =>
     iframeRef.current?.contentDocument?.querySelector<HTMLElement>('[data-preview-scroll]') ?? null;
 
+  /** Bring a field, record or section into view in the preview. */
+  const showInPreview = useCallback((target: Target, smooth = true) => {
+    lastTarget.current = target;
+    const doc = iframeRef.current?.contentDocument;
+    const scroller = doc?.querySelector<HTMLElement>('[data-preview-scroll]');
+    if (!doc || !scroller) return;
+    const el = findInSheet(doc, target);
+    if (!el) return; // not printed (empty, or switched off): stay where it is
+    const top = scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 48;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+    flash(doc, el);
+  }, []);
+
+  // Follow the editor: a field clicked into, or a section tab chosen.
+  useEffect(() => {
+    if (mode !== 'split') return;
+    const editor = editorRef.current;
+    const onFocus = (event: FocusEvent) => {
+      const block = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-field-anchor]');
+      if (!block) return;
+      showInPreview({
+        section: block.dataset.sectionCode,
+        field: block.dataset.fieldCode,
+        record: block.dataset.recordId,
+      });
+    };
+    const onSection = (event: Event) => {
+      const section = (event as CustomEvent<{ section: string }>).detail?.section;
+      if (section) showInPreview({ section });
+    };
+    editor?.addEventListener('focusin', onFocus);
+    window.addEventListener(SECTION_SHOWN_EVENT, onSection);
+    return () => {
+      editor?.removeEventListener('focusin', onFocus);
+      window.removeEventListener(SECTION_SHOWN_EVENT, onSection);
+    };
+  }, [mode, showInPreview]);
+
   const restoreScroll = () => {
     const top = keepScroll.current;
-    if (top === null) return;
+    if (top === null) {
+      // A fresh load: open where the editor is (the current section or field).
+      const target = lastTarget.current;
+      if (target) setTimeout(() => showInPreview(target, false), 200);
+      return;
+    }
     keepScroll.current = null;
     // The page fits itself to the panel after load; restore after that.
     setTimeout(() => {
@@ -118,7 +201,9 @@ export function SplitPreview({
     <div className={`split-preview ${mode === 'max' ? 'split-preview-max' : ''}`}>
       {/* Hidden with CSS rather than removed, so maximising the preview and
           coming back does not lose the editor's scroll position or open tab. */}
-      <div className={mode === 'max' ? 'hidden' : 'split-preview-editor'}>{children}</div>
+      <div ref={editorRef} className={mode === 'max' ? 'hidden' : 'split-preview-editor'}>
+        {children}
+      </div>
       <div className="split-preview-panel">
         <div className="split-preview-panel-bar">
           <span className="text-xs font-medium text-ink-700">{t('プレビュー')}</span>
