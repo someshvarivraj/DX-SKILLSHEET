@@ -85,6 +85,7 @@ export default async function FieldDefinitionPage() {
     isVisible: section.isVisible,
     hideWhenEmpty: section.hideWhenEmpty,
     maxDisplayed: section.maxDisplayed,
+    showRecordsByDefault: section.showRecordsByDefault,
     description: section.description,
     colour: section.colour,
     colourKey: colours.get(section.code)!.key,

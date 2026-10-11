@@ -508,6 +508,10 @@ model SheetSection {
   recordKind    RecordKind?
   /// Maximum records displayed at once — spec §5.4 caps this at 3.
   maxDisplayed  Int           @default(3)
+  /// Repeating sections: new entries are ticked 「シートに表示」 from the start
+  /// (up to maxDisplayed). Sano-san, 2026-10-11: education, internships and
+  /// projects should be on the sheet by default.
+  showRecordsByDefault Boolean @default(false)
   description   String?
   /// Band colour on the printed sheet: a key of SECTION_PALETTE
   /// (src/lib/sheet/section-colours.ts). Null = automatic, i.e. the

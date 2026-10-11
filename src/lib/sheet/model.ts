@@ -411,6 +411,9 @@ export function toPrintableModel(
       fields: s.fields.filter((f) => isFieldPrintable(f, printOptions)),
       records: s.records
         .filter((r) => r.isDisplayed)
+        // An entry with nothing written in it is not printed: no empty
+        // 「インターンシップ 1」 band (Sano-san, 2026-10-11).
+        .filter((r) => r.fields.some((f) => f.valueJa.trim() !== ''))
         .slice(0, s.maxDisplayed)
         .map((r) => ({
           ...r,

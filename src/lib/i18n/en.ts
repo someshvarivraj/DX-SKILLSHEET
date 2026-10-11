@@ -942,6 +942,8 @@ export const EN: Record<string, string> = {
   "写真を読み込めませんでした": "The photo could not be loaded",
   "画像を作成できませんでした": "The image could not be created",
   "この写真を登録する": "Use this photo",
+  "記録を最初からシートに表示する": "Show entries on the sheet by default",
+  "新しく追加・取り込みされた記録に、最大件数まで「シートに表示」のチェックを付けます。記録がない、または中身が空の場合は表示されません。": "New or imported entries are ticked “Show on sheet”, up to the maximum. Sections with no entries, or only empty ones, are not shown.",
   // @@END
 };
 

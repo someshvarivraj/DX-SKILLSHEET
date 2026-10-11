@@ -63,6 +63,8 @@ async function seedDefinition() {
         isVisible: section.isVisible ?? true,
         hideWhenEmpty: section.hideWhenEmpty ?? false,
         maxDisplayed: section.maxDisplayed ?? 3,
+        // Set on creation only: afterwards it is changed on 項目定義.
+        showRecordsByDefault: section.showRecordsByDefault ?? false,
         description: section.description,
       },
       update: {

@@ -93,6 +93,7 @@ export type SectionRow = {
   isVisible: boolean;
   hideWhenEmpty: boolean;
   maxDisplayed: number;
+  showRecordsByDefault: boolean;
   description: string | null;
   /** The chosen palette key, or null for automatic. */
   colour: string | null;
@@ -850,6 +851,24 @@ function SectionSettings({
               />
             </Labeled>
           ) : null}
+          {section.kind === 'REPEATING' ? (
+            <div className="md:col-span-4">
+              <label className="flex items-start gap-2 text-sm text-ink-700">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={draft.showRecordsByDefault}
+                  onChange={(e) => setDraft({ ...draft, showRecordsByDefault: e.target.checked })}
+                />
+                <span>
+                  {t('記録を最初からシートに表示する')}
+                  <span className="field-hint block">
+                    {t('新しく追加・取り込みされた記録に、最大件数まで「シートに表示」のチェックを付けます。記録がない、または中身が空の場合は表示されません。')}
+                  </span>
+                </span>
+              </label>
+            </div>
+          ) : null}
           <div className="md:col-span-4">
             <Labeled label="シートの色">
               <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t('シートの色')}>
@@ -920,6 +939,7 @@ function SectionSettings({
                     isVisible: section.isVisible,
                     hideWhenEmpty: draft.hideWhenEmpty,
                     maxDisplayed: draft.maxDisplayed,
+                    showRecordsByDefault: draft.showRecordsByDefault,
                     description: draft.description ?? undefined,
                     colour: draft.colour,
                   });
