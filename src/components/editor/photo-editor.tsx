@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { Portal } from '@/components/ui/portal';
 import { withBasePath } from '@/lib/base-path';
 import { useT } from '@/lib/i18n/client';
@@ -23,6 +23,10 @@ const FRAME_H = 372;
 const OUT_W = 490;
 const OUT_H = 620;
 const MAX_ZOOM = 4;
+/** Below 1 the photo is smaller than the frame, leaving room around it. */
+const MIN_ZOOM = 0.5;
+/** Arrow-button step, in frame pixels. */
+const NUDGE = 6;
 /** Larger photos are reduced to this for background work and storage. */
 const WORK_MAX = 1600;
 
@@ -55,6 +59,27 @@ function loadSegmenter(): Promise<Segmenter> {
     segmenterPromise = null;
   });
   return segmenterPromise;
+}
+
+/**
+ * The colour around the photo when it no longer covers the frame (moved down
+ * to leave room above the head, or zoomed out): the photo's own wall, sampled
+ * from its top edge, so the added space looks like more of the same backdrop.
+ */
+function wallColour(canvas: HTMLCanvasElement): string {
+  const band = Math.max(1, Math.round(canvas.height * 0.04));
+  const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, band).data;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  const n = data.length / 4;
+  for (let i = 0; i < data.length; i += 4) {
+    r += data[i]!;
+    g += data[i + 1]!;
+    b += data[i + 2]!;
+  }
+  const hex = (v: number) => Math.round(v / n).toString(16).padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
 /** The photo, reduced if very large, on a canvas we can read and draw from. */
@@ -147,6 +172,9 @@ export function PhotoEditor({
     setShown(background && mask ? recolour(work, mask.data, mask.w, mask.h, background) : work);
   }, [work, background, mask]);
 
+  /** Fills the frame wherever the photo does not reach. */
+  const fill = useMemo(() => (shown ? (background ?? wallColour(shown)) : '#ffffff'), [shown, background]);
+
   /** Size and position of the photo inside a frame `w` wide (cover, then zoom). */
   const placement = useCallback(
     (w: number, h: number) => {
@@ -155,9 +183,10 @@ export function PhotoEditor({
       const dw = shown.width * scale;
       const dh = shown.height * scale;
       const k = w / FRAME_W;
-      // Kept inside the frame: no empty edge can be dragged into view.
-      const maxX = (dw - w) / 2;
-      const maxY = (dh - h) / 2;
+      // Free to move — down to leave room above the head, for instance
+      // (Sano-san, 2026-10-12) — as long as some of the photo stays in the frame.
+      const maxX = (dw + w) / 2 - 40 * k;
+      const maxY = (dh + h) / 2 - 40 * k;
       const x = Math.min(maxX, Math.max(-maxX, offset.x * k));
       const y = Math.min(maxY, Math.max(-maxY, offset.y * k));
       return { dx: (w - dw) / 2 + x, dy: (h - dh) / 2 + y, dw, dh };
@@ -171,10 +200,10 @@ export function PhotoEditor({
     const p = placement(FRAME_W, FRAME_H);
     if (!canvas || !shown || !p) return;
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = fill;
     ctx.fillRect(0, 0, FRAME_W, FRAME_H);
     ctx.drawImage(shown, p.dx, p.dy, p.dw, p.dh);
-  }, [shown, placement]);
+  }, [shown, placement, fill]);
 
   // Keep the stored offset within what can be shown, so the next drag starts right.
   useEffect(() => {
@@ -217,7 +246,7 @@ export function PhotoEditor({
       out.height = OUT_H;
       const ctx = out.getContext('2d')!;
       const p = placement(OUT_W, OUT_H)!;
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = fill;
       ctx.fillRect(0, 0, OUT_W, OUT_H);
       ctx.drawImage(shown, p.dx, p.dy, p.dw, p.dh);
       onSave(await canvasToBlob(out), await canvasToBlob(work, 0.92));
@@ -236,7 +265,7 @@ export function PhotoEditor({
     setOffset({ x: drag.current.ox + e.clientX - drag.current.x, y: drag.current.oy + e.clientY - drag.current.y });
   };
   const onWheel = (e: React.WheelEvent) => {
-    setZoom((z) => Math.min(MAX_ZOOM, Math.max(1, z - e.deltaY * 0.0015)));
+    setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z - e.deltaY * 0.0015)));
   };
 
   return (
@@ -245,7 +274,7 @@ export function PhotoEditor({
         <div className="dialog pe-dialog" role="dialog" aria-modal="true" aria-label={t('写真を調整する')}>
           <h2 className="pe-title">{t('写真を調整する')}</h2>
           <p className="pe-help">
-            {t('写真をドラッグして位置を、スライダー（またはマウスホイール）で大きさを調整します。枠の中がそのままスキルシートに載ります。')}
+            {t('写真をドラッグして（または矢印で）位置を、スライダー（またはマウスホイール）で大きさを調整します。頭の上に余白を作るなど、枠からはみ出した部分は背景の色で埋まります。枠の中がそのままスキルシートに載ります。')}
           </p>
 
           <div className="pe-body">
@@ -271,13 +300,13 @@ export function PhotoEditor({
             <div className="pe-controls">
               <label className="pe-label" htmlFor="pe-zoom">{t('大きさ')}</label>
               <div className="pe-zoom">
-                <button type="button" className="icon-btn" aria-label={t('小さく')} onClick={() => setZoom((z) => Math.max(1, z - 0.1))}>
+                <button type="button" className="icon-btn" aria-label={t('小さく')} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - 0.1))}>
                   <ZoomOut size={16} aria-hidden />
                 </button>
                 <input
                   id="pe-zoom"
                   type="range"
-                  min={1}
+                  min={MIN_ZOOM}
                   max={MAX_ZOOM}
                   step={0.01}
                   value={zoom}
@@ -286,6 +315,26 @@ export function PhotoEditor({
                 <button type="button" className="icon-btn" aria-label={t('大きく')} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + 0.1))}>
                   <ZoomIn size={16} aria-hidden />
                 </button>
+              </div>
+              <p className="pe-label mt-3">{t('位置')}</p>
+              <div className="pe-nudge" role="group" aria-label={t('位置')}>
+                <span />
+                <button type="button" className="icon-btn" aria-label={t('上へ')} onClick={() => setOffset((o) => ({ ...o, y: o.y - NUDGE }))}>
+                  <ArrowUp size={16} aria-hidden />
+                </button>
+                <span />
+                <button type="button" className="icon-btn" aria-label={t('左へ')} onClick={() => setOffset((o) => ({ ...o, x: o.x - NUDGE }))}>
+                  <ArrowLeft size={16} aria-hidden />
+                </button>
+                <span />
+                <button type="button" className="icon-btn" aria-label={t('右へ')} onClick={() => setOffset((o) => ({ ...o, x: o.x + NUDGE }))}>
+                  <ArrowRight size={16} aria-hidden />
+                </button>
+                <span />
+                <button type="button" className="icon-btn" aria-label={t('下へ')} onClick={() => setOffset((o) => ({ ...o, y: o.y + NUDGE }))}>
+                  <ArrowDown size={16} aria-hidden />
+                </button>
+                <span />
               </div>
               <button
                 type="button"
