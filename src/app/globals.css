@@ -3790,3 +3790,12 @@ tr.person-male > td:first-child {
   gap: 0.15rem;
   margin-bottom: 0.4rem;
 }
+
+/* Photo dropped in from a folder (photo-panel.tsx). */
+.photo-drop {
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+.photo-drop-active {
+  background: var(--color-brand-50);
+  box-shadow: inset 0 0 0 2px var(--color-brand-500);
+}
