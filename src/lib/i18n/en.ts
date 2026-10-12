@@ -944,6 +944,10 @@ export const EN: Record<string, string> = {
   "この写真を登録する": "Use this photo",
   "記録を最初からシートに表示する": "Show entries on the sheet by default",
   "新しく追加・取り込みされた記録に、最大件数まで「シートに表示」のチェックを付けます。記録がない、または中身が空の場合は表示されません。": "New or imported entries are ticked “Show on sheet”, up to the maximum. Sections with no entries, or only empty ones, are not shown.",
+  "位置": "Position",
+  "左へ": "Left",
+  "右へ": "Right",
+  "写真をドラッグして（または矢印で）位置を、スライダー（またはマウスホイール）で大きさを調整します。頭の上に余白を作るなど、枠からはみ出した部分は背景の色で埋まります。枠の中がそのままスキルシートに載ります。": "Drag the photo (or use the arrows) to position it, and the slider (or mouse wheel) to size it. Space you open up — above the head, for example — is filled with the background colour. What is inside the frame is what goes on the skill sheet.",
   // @@END
 };
 
