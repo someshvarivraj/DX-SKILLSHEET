@@ -58,6 +58,11 @@ export function PhotoPanel({
 
   const onChoose = (file: File | null) => {
     if (!file) return;
+    // A dropped file is not filtered by the file picker's accept list.
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setError('写真はJPEGまたはPNGのみ登録できる');
+      return;
+    }
     if (file.size > PHOTO_MAX_BYTES) {
       // Caught here as well as on the server, so an oversized file is refused
       // before it is uploaded rather than after.
@@ -100,8 +105,35 @@ export function PhotoPanel({
 
   const shown = preview ?? photoUrl;
 
+  // Drag a photo in from a folder (Sano-san, 2026-10-12) instead of picking it.
+  const [dragOver, setDragOver] = useState(false);
+  const canDrop = !readOnly && !pending;
+  const dropHandlers = canDrop
+    ? {
+        onDragOver: (e: React.DragEvent) => {
+          if (!e.dataTransfer.types.includes('Files')) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          setDragOver(true);
+        },
+        onDragLeave: (e: React.DragEvent) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false);
+        },
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault();
+          setDragOver(false);
+          onChoose(e.dataTransfer.files?.[0] ?? null);
+        },
+      }
+    : {};
+
   return (
-    <div className="px-4 py-3" data-field-anchor="" id={`field-photo-${personId}`}>
+    <div
+      className={`px-4 py-3 photo-drop ${dragOver ? 'photo-drop-active' : ''}`}
+      data-field-anchor=""
+      id={`field-photo-${personId}`}
+      {...dropHandlers}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-ink-900">{t('写真')}</span>
         <span className=" bg-brand-50 px-1.5 py-0.5 text-xs text-ink-500">{t('画像')}</span>
@@ -117,13 +149,15 @@ export function PhotoPanel({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={shown} alt={t('登録されている写真')} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs text-ink-400">{t('未登録')}</span>
+            <span className="px-2 text-center text-xs text-ink-400">
+              {canDrop ? t('ここに写真をドラッグ') : t('未登録')}
+            </span>
           )}
         </div>
 
         <div className="min-w-[16rem] flex-1">
           <p className="field-hint">
-            {t('スキルシートの右上に表示されます。JPEGまたはPNG、{mb}MBまで。縦長（3:4）の写真が最もきれいに収まります。', {
+            {t('スキルシートの右上に表示されます。JPEGまたはPNG、{mb}MBまで。フォルダから写真をここへドラッグしても登録できます。', {
               mb: Math.round(PHOTO_MAX_BYTES / 1024 / 1024),
             })}
           </p>

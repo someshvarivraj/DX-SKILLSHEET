@@ -948,6 +948,8 @@ export const EN: Record<string, string> = {
   "左へ": "Left",
   "右へ": "Right",
   "写真をドラッグして（または矢印で）位置を、スライダー（またはマウスホイール）で大きさを調整します。頭の上に余白を作るなど、枠からはみ出した部分は背景の色で埋まります。枠の中がそのままスキルシートに載ります。": "Drag the photo (or use the arrows) to position it, and the slider (or mouse wheel) to size it. Space you open up — above the head, for example — is filled with the background colour. What is inside the frame is what goes on the skill sheet.",
+  "ここに写真をドラッグ": "Drag a photo here",
+  "スキルシートの右上に表示されます。JPEGまたはPNG、{mb}MBまで。フォルダから写真をここへドラッグしても登録できます。": "Shown at the top right of the skill sheet. JPEG or PNG, up to {mb} MB. You can also drag a photo here from a folder.",
   // @@END
 };
 
