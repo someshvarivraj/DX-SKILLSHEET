@@ -136,6 +136,13 @@ describe('A-3 — required fields always print; others only when filled', () => 
     expect(isFieldPrintable(f({ valueJa: '長距離走', isDisplayed: false }), opts)).toBe(false);
   });
 
+  it('prints a filled field that has no display switch, whatever its stored flag (2026-10-13)', () => {
+    // First written empty (so stored as not displayed), filled in later.
+    expect(isFieldPrintable(f({ valueJa: 'N3を取得している。', isDisplayed: false, displayToggle: false }), opts)).toBe(true);
+    expect(isFieldPrintable(f({ valueJa: '', isDisplayed: false, displayToggle: false }), opts)).toBe(false);
+    expect(isFieldPrintable(f({ valueJa: '長距離走', isDisplayed: false, displayToggle: true }), opts)).toBe(false);
+  });
+
   it('still honours includeInPdf and the per-recipient preset, even when required', () => {
     expect(isFieldPrintable(f({ isRequired: true, includeInPdf: false }), opts)).toBe(false);
     // ...but a screen-only view may still show it.

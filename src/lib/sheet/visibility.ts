@@ -28,6 +28,13 @@ export type PrintableField = {
   code: string;
   includeInPdf: boolean;
   isDisplayed: boolean;
+  /**
+   * Whether the field has a "PDFに載せる／載せない" switch. Without one nobody
+   * can change `isDisplayed`, so it is ignored: a field that was first written
+   * empty (and so stored as not displayed) and filled in later must still
+   * print — 日本語力について did not (Sano-san, 2026-10-13).
+   */
+  displayToggle?: boolean;
   isRequired: boolean;
   valueJa: string;
   notAsked?: boolean;
@@ -45,5 +52,6 @@ export function isFieldPrintable(field: PrintableField, opts: PrintOptions): boo
   if (opts.hiddenFieldCodes.has(field.code)) return false;
   if (field.notAsked && field.valueJa.trim() === '') return false;
   if (field.isRequired) return true;
-  return field.isDisplayed && field.valueJa.trim() !== '';
+  const displayed = field.displayToggle === false ? true : field.isDisplayed;
+  return displayed && field.valueJa.trim() !== '';
 }
