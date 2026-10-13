@@ -153,7 +153,11 @@ export async function generateFieldAction(
     refresh(personId);
     return {
       ok: result.ok,
-      message: result.ok ? '生成した。内容を確認すること' : 'ロックされているため生成しなかった',
+      message: !result.ok
+        ? 'ロックされているため生成しなかった'
+        : result.valueJa?.trim()
+          ? '生成した。内容を確認すること'
+          : '元になる回答やスコアがないため、文章を作成できなかった',
       warnings: result.warnings,
     };
   });
