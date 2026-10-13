@@ -24,7 +24,10 @@ import {
   revertFieldValue,
   runGeneration,
   setFieldFlags,
+  writeFieldValue,
 } from '@/lib/sheet/fields';
+import { normaliseScores, scoreRows, type ScoreInput } from '@/lib/sheet/jlpt-scores';
+import { saveJlptScores } from '@/lib/sheet/jlpt-scores-db';
 import { keepCurrentValues, loadImportDiffs } from '@/lib/sheet/import-diff';
 import {
   createRecord,
@@ -177,6 +180,108 @@ export async function generateSectionAction(
     warnings: [...new Set(outcome.warnings)],
   };
   });
+}
+
+/**
+ * Save the JLPT score table (日本語能力 > 各スコア), then rewrite the two fields
+ * built from it: 取得資格と時期 (by rule) and 日本語力について (by the AI, from
+ * the scores — Sano-san, 2026-10-13). A locked field, or a 日本語力について
+ * last edited by hand (the company's own assessment added to the AI text), is
+ * left as it is.
+ */
+export async function saveJlptScoresAction(
+  personId: string,
+  input: { fieldId: string } & ScoreInput,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const { user, version } = await guardField(personId, input.fieldId);
+    const field = await prisma.sheetField.findUniqueOrThrow({
+      where: { id: input.fieldId },
+      select: { code: true, sectionId: true },
+    });
+    if (field.code !== 'jlpt_scores') throw new OperatorError('この項目にはスコアを保存できない');
+
+    const scores = normaliseScores(input);
+    if ('error' in scores) throw new OperatorError(scores.error);
+
+    const existing = await prisma.fieldValue.findUnique({
+      where: { versionId_fieldId_recordKey: { versionId: version.id, fieldId: input.fieldId, recordKey: '' } },
+      select: { isLocked: true },
+    });
+    if (existing?.isLocked) {
+      throw new OperatorError('この項目はロックされている。ロックを解除してから編集すること');
+    }
+
+    await saveJlptScores(personId, scores);
+    const rows = scoreRows(scores);
+    await writeFieldValue({
+      versionId: version.id,
+      fieldId: input.fieldId,
+      valueJa: rows.map((r) => `${r.row}：${r.value}`).join('\n'),
+      valueJson: rows,
+      changeType: 'MANUAL_EDIT',
+      userId: user.id,
+      markReviewed: true,
+    });
+    await recordAudit({
+      userId: user.id,
+      action: 'sheet.field_edit',
+      entityType: 'JlptResult',
+      entityId: personId,
+      personId,
+      summary: `JLPTスコアを保存した（${scores.level}）`,
+    });
+
+    const warnings: string[] = [];
+    let rewritten = false;
+    const dependants = await prisma.sheetField.findMany({
+      where: { sectionId: field.sectionId, code: { in: ['jlpt_qualification', 'jlpt_description'] }, isActive: true },
+      select: { id: true, code: true, nameJa: true },
+    });
+    for (const dependant of dependants) {
+      if (dependant.code === 'jlpt_description' && (await lastChangeWasManual(version.skillSheetId, dependant.id))) {
+        warnings.push(`「${dependant.nameJa}」は手で編集されているため作り直していない。必要なら「再生成」を押すこと`);
+        continue;
+      }
+      try {
+        const result = await generateFieldValue({
+          versionId: version.id,
+          fieldId: dependant.id,
+          personId,
+          userId: user.id,
+          skipLocked: true,
+        });
+        if (result.skipped === 'locked') warnings.push(`「${dependant.nameJa}」はロックされているため作り直していない`);
+        else if (dependant.code === 'jlpt_description') rewritten = true;
+        warnings.push(...(result.warnings ?? []));
+      } catch (error) {
+        console.error('[jlpt] regenerate', dependant.code, error);
+        warnings.push(`「${dependant.nameJa}」を作り直せなかった。「再生成」を押してもう一度試すこと`);
+      }
+    }
+
+    refresh(personId);
+    return {
+      ok: true,
+      message: rewritten ? 'スコアを保存し、日本語力の文章を作り直した' : 'スコアを保存した',
+      warnings,
+    };
+  });
+}
+
+/** Whether a field's latest change on this sheet, in any version, was typed by hand. */
+async function lastChangeWasManual(skillSheetId: string, fieldId: string): Promise<boolean> {
+  const latest = await prisma.fieldValueHistory.findFirst({
+    where: {
+      fieldValue: { fieldId, recordKey: '', version: { skillSheetId } },
+      // Ticking 確認 or locking records a history row too, without changing the text.
+      changeType: { in: ['IMPORT', 'AI_GENERATE', 'RULE_GENERATE', 'MANUAL_EDIT', 'REVERT'] },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { changeType: true },
+  });
+  // A restored version was chosen by hand too.
+  return latest?.changeType === 'MANUAL_EDIT' || latest?.changeType === 'REVERT';
 }
 
 export async function setFieldFlagsAction(

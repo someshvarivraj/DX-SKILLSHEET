@@ -340,7 +340,10 @@ export async function runImport(params: {
           where: { id: existing.id },
           data: {
             fullNameEnglish: nameEnglish || existing.fullNameEnglish,
-            fullNameKatakana: nameKatakana || existing.fullNameKatakana,
+            // A katakana name already on file is kept: it may be the official
+            // spelling the company entered (Sano-san, 2026-10-13), which the
+            // form's own spelling must not undo on the next import.
+            fullNameKatakana: existing.fullNameKatakana || nameKatakana || null,
             dateOfBirth: dateOfBirth ?? existing.dateOfBirth,
           },
         })
@@ -438,9 +441,19 @@ export async function upsertJlpt(personId: string, answers: Record<string, unkno
   const year = dated ? parsedYear : 0;
   const month = dated ? parsedMonth : 0;
 
+  // "45", "45点", "４５" and "45/60" all mean 45. An empty answer is null, not
+  // 0: the 2026 form asks only the level, and an empty score stored as 0 made
+  // every such candidate read as having failed (総合点が合格点に届いていない).
   const int = (v: unknown): number | null => {
-    const n = Number(String(v ?? '').replace(/[^\d]/g, ''));
-    return Number.isFinite(n) && String(v ?? '').trim() !== '-' ? n : null;
+    const digits = String(v ?? '').normalize('NFKC').match(/\d+/)?.[0];
+    return digits === undefined ? null : Number(digits);
+  };
+  const scores = {
+    total: int(answers['C-2-2']),
+    languageKnowledge: int(answers['C-2-3']),
+    reading: int(answers['C-2-4']),
+    languageAndReading: int(answers['C-2-5']),
+    listening: int(answers['C-2-6']),
   };
 
   await prisma.jlptResult.upsert({
@@ -457,19 +470,11 @@ export async function upsertJlpt(personId: string, answers: Record<string, unkno
       level: level as JlptLevel,
       examYear: year,
       examMonth: month,
-      total: int(answers['C-2-2']),
-      languageKnowledge: int(answers['C-2-3']),
-      reading: int(answers['C-2-4']),
-      languageAndReading: int(answers['C-2-5']),
-      listening: int(answers['C-2-6']),
+      ...scores,
     },
-    update: {
-      total: int(answers['C-2-2']),
-      languageKnowledge: int(answers['C-2-3']),
-      reading: int(answers['C-2-4']),
-      languageAndReading: int(answers['C-2-5']),
-      listening: int(answers['C-2-6']),
-    },
+    // Only scores the answer actually gives: a form without them must not wipe
+    // the scores entered on the editing screen (日本語能力 > 各スコア).
+    update: Object.fromEntries(Object.entries(scores).filter(([, v]) => v !== null)),
   });
 }
 

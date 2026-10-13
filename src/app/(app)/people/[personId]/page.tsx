@@ -10,6 +10,8 @@ import { SectionTabs } from '@/components/editor/section-tabs';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
 import { MemoPanel } from '@/components/editor/memo-panel';
 import { PhotoPanel } from '@/components/editor/photo-panel';
+import { JlptScoresProvider } from '@/components/editor/jlpt-score-table';
+import { loadPrimaryScores } from '@/lib/sheet/jlpt-scores-db';
 import { ScrollRestore } from '@/components/editor/scroll-restore';
 import { SplitPreview } from '@/components/editor/split-preview';
 import { GenerationNotice } from '@/components/generation-progress';
@@ -96,6 +98,9 @@ export default async function PersonEditorPage({
       readOnly={!can(user, 'sheet.edit')}
     />
   );
+  // 日本語能力 > 各スコア is entered as a table (jlpt-score-table.tsx).
+  const jlptScores = await loadPrimaryScores(personId);
+
   const editableSectionCodes =
     user.role === 'ENGINEER' ? [...ENGINEER_EDITABLE_SECTIONS] : null;
 
@@ -148,16 +153,18 @@ export default async function PersonEditorPage({
           {/* Sano-san's review (2026-09-23, item 7): the tabs come first, and
               the photo sits inside 個人情報 rather than as a section of its own
               above the tabs. */}
-          <SectionTabs
-            personId={personId}
-            sections={editorSections}
-            presetId={model.preset?.id ?? null}
-            readOnly={readOnly}
-            editableSectionCodes={editableSectionCodes}
-            canSelectRecords={can(user, 'sheet.selectRecords')}
-            initialCode={tab ?? null}
-            fieldReplacements={{ [PHOTO_FIELD]: photo }}
-          />
+          <JlptScoresProvider scores={jlptScores}>
+            <SectionTabs
+              personId={personId}
+              sections={editorSections}
+              presetId={model.preset?.id ?? null}
+              readOnly={readOnly}
+              editableSectionCodes={editableSectionCodes}
+              canSelectRecords={can(user, 'sheet.selectRecords')}
+              initialCode={tab ?? null}
+              fieldReplacements={{ [PHOTO_FIELD]: photo }}
+            />
+          </JlptScoresProvider>
 
           {editorSections.some((s) => s.fields.some((f) => f.code === PHOTO_FIELD)) ? null : (
             // Only if the プロフィール写真 definition has been removed or

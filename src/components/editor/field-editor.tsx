@@ -6,6 +6,7 @@ import type { FieldView } from '@/lib/sheet/model';
 import { fieldActions } from '@/lib/sheet/field-actions';
 import { composeGridText, gridRowsOf } from '@/lib/sheet/grid';
 import { MoraBot } from '@/components/morabot';
+import { JLPT_SCORES_FIELD, JlptScoreTable, useJlptScores } from './jlpt-score-table';
 import { useLang, useT } from '@/lib/i18n/client';
 import { pickName } from '@/lib/i18n';
 import {
@@ -86,6 +87,7 @@ export function FieldEditor({
   const [pending, startTransition] = useTransition();
   const [aiBusy, setAiBusy] = useState(false);
 
+  const jlptScores = useJlptScores();
   const disabled = Boolean(readOnly) || field.isLocked || pending;
   const actions = fieldActions(field.processing, field.valueType, field.valueJa);
 
@@ -338,7 +340,14 @@ export function FieldEditor({
         </div>
       ) : null}
 
-      {field.valueType === 'GRID' && gridRows.length > 0 ? (
+      {field.code === JLPT_SCORES_FIELD && jlptScores !== undefined ? (
+        <JlptScoreTable
+          personId={personId}
+          fieldId={field.id}
+          scores={jlptScores}
+          disabled={disabled}
+        />
+      ) : field.valueType === 'GRID' && gridRows.length > 0 ? (
         <div className="grid-inputs">
           {gridRows.map((r, i) => (
             <label key={i} className="grid-input-row">
