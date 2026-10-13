@@ -753,6 +753,66 @@ html[data-split] .page {
   }
 }
 
+/* JLPT 各スコア as a table, laid out like the result notice (2026-10-13). */
+.jlpt-table-wrap {
+  display: grid;
+  gap: 0.5rem;
+}
+.jlpt-table-wrap > .jlpt-table {
+  display: block;
+  overflow-x: auto;
+}
+.jlpt-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.jlpt-table th,
+.jlpt-table td {
+  border: 1px solid var(--color-ink-100);
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.jlpt-table th {
+  background: var(--color-sand-50);
+  font-weight: 500;
+  color: var(--color-ink-700);
+  line-height: 1.35;
+  min-width: 6.5rem;
+}
+.jlpt-table th:first-child {
+  min-width: 5rem;
+}
+.jlpt-max {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-ink-500);
+}
+.jlpt-table .input {
+  width: 100%;
+  min-width: 4.5rem;
+  text-align: center;
+}
+.jlpt-table .jlpt-na {
+  color: var(--color-ink-400);
+  background: var(--color-sand-50);
+}
+.jlpt-table td.jlpt-na {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-ink-100) 6px 7px);
+}
+.jlpt-total {
+  font-weight: 600;
+  font-size: 1rem;
+}
+.jlpt-table-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 /* The ⋯ menu that holds a field's less common actions. */
 .menu-root {
   position: relative;

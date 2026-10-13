@@ -950,6 +950,24 @@ export const EN: Record<string, string> = {
   "写真をドラッグして（または矢印で）位置を、スライダー（またはマウスホイール）で大きさを調整します。頭の上に余白を作るなど、枠からはみ出した部分は背景の色で埋まります。枠の中がそのままスキルシートに載ります。": "Drag the photo (or use the arrows) to position it, and the slider (or mouse wheel) to size it. Space you open up — above the head, for example — is filled with the background colour. What is inside the frame is what goes on the skill sheet.",
   "ここに写真をドラッグ": "Drag a photo here",
   "スキルシートの右上に表示されます。JPEGまたはPNG、{mb}MBまで。フォルダから写真をここへドラッグしても登録できます。": "Shown at the top right of the skill sheet. JPEG or PNG, up to {mb} MB. You can also drag a photo here from a folder.",
+  "級": "Level",
+  "総合点": "Total",
+  "言語知識（文字・語彙・文法）": "Language knowledge (vocabulary, grammar)",
+  "読解": "Reading",
+  "言語知識・読解": "Language knowledge & reading",
+  "聴解": "Listening",
+  "この級にはない区分": "Not scored at this level",
+  "{label}は数字で入力してください": "Enter {label} as a number",
+  "合格（合格点{p}点・各区分の基準点を満たしている）": "Pass (pass mark {p}; every section meets its minimum)",
+  "不合格（総合点が合格点{p}点に届いていない）": "Fail (total below the pass mark of {p})",
+  "不合格（基準点に届いていない区分がある）": "Fail (a section is below its minimum)",
+  "すべての区分を入力すると、総合点と合否を表示します。": "Fill in every section to see the total and the pass/fail check.",
+  "保存して文章を作り直す": "Save and rewrite the text",
+  "保存すると「取得資格と時期」と「日本語力について」をスコアから作り直します（手で編集した文章とロック中の項目はそのまま）。": "Saving rewrites “Qualification and date” and “Description of ability” from the scores (text edited by hand and locked fields are left as they are).",
+  "スコアを保存し、日本語力の文章を作り直した": "Scores saved and the Japanese-ability text rewritten",
+  "スコアを保存した": "Scores saved",
+  "級を選択すること": "Choose a level",
+  "この項目にはスコアを保存できない": "Scores can't be saved to this field",
   // @@END
 };
 
@@ -1024,5 +1042,9 @@ export const EN_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+)人を追加しました（(\d+)人は既に回答リンクがあります）$/, (m) => `Added ${m[1]} (${m[2]} already had a link)`],
   [/^(\d+)人を追加しました$/, (m) => `Added ${m[1]}`],
   [/^メールアドレスの形式が正しくありません: (.+)$/, (m) => `Invalid email address: ${m[1]}`],
+  [/^「(.+)」は手で編集されているため作り直していない。必要なら「再生成」を押すこと$/, (m) => `“${m[1]}” was edited by hand, so it was not rewritten. Press “Regenerate” if needed`],
+  [/^「(.+)」はロックされているため作り直していない$/, (m) => `“${m[1]}” is locked, so it was not rewritten`],
+  [/^「(.+)」を作り直せなかった。「再生成」を押してもう一度試すこと$/, (m) => `“${m[1]}” could not be rewritten. Press “Regenerate” to try again`],
+  [/^(.+)は0〜(\d+)の整数で入力すること$/, (m) => `${m[1]} must be a whole number from 0 to ${m[2]}`],
   // @@PATTERNS_END
 ];

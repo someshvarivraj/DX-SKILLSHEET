@@ -233,11 +233,16 @@ export async function buildSheetFromResponse(responseId: string) {
   const str = (k: string) => (typeof answers[k] === 'string' ? (answers[k] as string).trim() : '');
   const name = str('A-1-1') || str('A-2-1');
   const kana = str('A-1-2') || str('A-2-2');
+  const current = await prisma.person.findUniqueOrThrow({
+    where: { id: response.personId },
+    select: { fullNameKatakana: true },
+  });
   const person = await prisma.person.update({
     where: { id: response.personId },
     data: {
       ...(name ? { fullNameEnglish: name } : {}),
-      ...(kana ? { fullNameKatakana: kana } : {}),
+      // An official katakana name already on file stays (see import/run.ts).
+      ...(kana && !current.fullNameKatakana ? { fullNameKatakana: kana } : {}),
       ...(parseDate(str('A-1-4')) ? { dateOfBirth: parseDate(str('A-1-4')) } : {}),
     },
   });
