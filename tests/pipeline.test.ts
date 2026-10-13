@@ -207,6 +207,27 @@ describe('GENERATE processing', () => {
     expect(result.valueJa).toContain('17');
   });
 
+  it('writes 日本語力について from the JLPT scores when the form asked none (2026-10-13)', async () => {
+    const jlptField = field({
+      code: 'jlpt_description',
+      processing: 'GENERATE' as never,
+      valueType: 'TEXT' as never,
+      ruleKey: 'jlpt_description',
+      sourceCodes: ['C-2-2', 'C-2-5', 'C-2-6'],
+    });
+    const withScores = await processField(
+      jlptField,
+      ctx({}, { rule: { jlpt: { level: 'N4', languageAndReading: 62, listening: 41 } } }),
+    );
+    expect(withScores.usedAi).toBe(true);
+    expect(withScores.valueJa).not.toBe('');
+
+    // No scores at all: still nothing to write, and no AI call.
+    const without = await processField(jlptField, ctx({}));
+    expect(without.valueJa).toBe('');
+    expect(without.usedAi).toBe(false);
+  });
+
   it('never sends the fields that chapter 13 excludes', async () => {
     const result = await processField(
       field({

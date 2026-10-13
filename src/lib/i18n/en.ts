@@ -968,6 +968,7 @@ export const EN: Record<string, string> = {
   "スコアを保存した": "Scores saved",
   "級を選択すること": "Choose a level",
   "この項目にはスコアを保存できない": "Scores can't be saved to this field",
+  "元になる回答やスコアがないため、文章を作成できなかった": "Nothing to write from: there are no answers or scores for this field.",
   // @@END
 };
 

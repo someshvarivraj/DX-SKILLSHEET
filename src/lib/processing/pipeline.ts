@@ -144,8 +144,13 @@ export async function processField(
   const warnings: string[] = [];
 
   // §8.3 — an empty or "None" answer produces an empty field. No AI call.
+  // Except when a rule supplies the facts instead: 日本語力について is written
+  // from the JLPT scores entered on the editing screen, which the 2026 form
+  // does not ask, so its source answers are empty (2026-10-13).
   const allEmpty = sources.every((s) => isEmptyAnswer(s.value));
-  if (allEmpty && field.processing !== 'RULE_BASED' && field.processing !== 'MANUAL') {
+  const generatesFromRule =
+    (field.processing === 'GENERATE' || field.processing === 'TRANSLATE') && Boolean(field.ruleKey);
+  if (allEmpty && !generatesFromRule && field.processing !== 'RULE_BASED' && field.processing !== 'MANUAL') {
     return emptyResult(sourceText);
   }
 
