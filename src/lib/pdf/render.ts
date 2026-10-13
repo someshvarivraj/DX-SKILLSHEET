@@ -56,12 +56,24 @@ function escapeHtml(s: string): string {
  * on Windows and macOS alike.
  */
 export function buildFileName(model: SheetModel, when = new Date()): string {
+  return personFileName(model.person, '', when);
+}
+
+/**
+ * 「カタカナ／English{suffix}_日付.pdf」, shared by the skill sheet and the
+ * supplementary document (「…_補足資料_20261013.pdf」).
+ */
+export function personFileName(
+  person: { fullNameEnglish: string; fullNameKatakana: string | null },
+  suffix: string,
+  when = new Date(),
+): string {
   const clean = (s: string | null | undefined) =>
     (s ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim();
-  const english = clean(model.person.fullNameEnglish);
-  const katakana = clean(model.person.fullNameKatakana).replace(/[\s・･]+/g, '・');
+  const english = clean(person.fullNameEnglish);
+  const katakana = clean(person.fullNameKatakana).replace(/[\s・･]+/g, '・');
   const name = [katakana, english].filter(Boolean).join('／');
-  return `${name || 'skillsheet'}_${dateStamp(when)}.pdf`;
+  return `${name || 'skillsheet'}${suffix}_${dateStamp(when)}.pdf`;
 }
 
 /** The same name in ASCII only, for storage keys and old download clients. */

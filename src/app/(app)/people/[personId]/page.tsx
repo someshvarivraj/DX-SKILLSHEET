@@ -8,6 +8,7 @@ import { withBasePath } from '@/lib/base-path';
 import { originalPhotoKey } from '@/lib/photo';
 import { SectionTabs } from '@/components/editor/section-tabs';
 import { SheetToolbar } from '@/components/editor/sheet-toolbar';
+import { PersonSwitcher } from '@/components/editor/person-switcher';
 import { MemoPanel } from '@/components/editor/memo-panel';
 import { PhotoPanel } from '@/components/editor/photo-panel';
 import { JlptScoresProvider } from '@/components/editor/jlpt-score-table';
@@ -77,6 +78,33 @@ export default async function PersonEditorPage({
 
   const readOnly = !can(user, 'sheet.edit') && !can(user, 'sheet.editOwnExperience');
 
+  // Everyone else, in the people list's order (finalised first), for moving
+  // to the next person without going back to the list. Staff only: an
+  // engineer sees no one but themselves.
+  const STATUS_ORDER: Record<string, number> = { FINAL: 0, AWAITING_REVIEW: 1, DRAFT: 2 };
+  const switchable =
+    user.role === 'ENGINEER'
+      ? []
+      : (
+          await prisma.person.findMany({
+            where: { isActive: true },
+            orderBy: [{ cohort: 'desc' }, { fullNameEnglish: 'asc' }],
+            select: {
+              id: true,
+              fullNameEnglish: true,
+              fullNameKatakana: true,
+              skillSheet: { select: { currentVersion: { select: { status: true } } } },
+            },
+          })
+        )
+          .filter((p) => canAccessPerson(user, p.id))
+          .map((p, i) => ({ p, i, rank: STATUS_ORDER[p.skillSheet?.currentVersion?.status ?? 'DRAFT'] ?? 3 }))
+          .sort((a, b) => a.rank - b.rank || a.i - b.i)
+          .map(({ p }) => ({
+            id: p.id,
+            label: p.fullNameKatakana ? `${p.fullNameKatakana}（${p.fullNameEnglish}）` : p.fullNameEnglish,
+          }));
+
   // Answers imported (or submitted) again since the sheet was made — §5.2.
   const t = await getT();
   const diffCount =
@@ -122,6 +150,7 @@ export default async function PersonEditorPage({
   return (
     <div className="space-y-4">
       <ScrollRestore personId={personId} />
+      {switchable.length > 1 ? <PersonSwitcher currentId={personId} people={switchable} /> : null}
       <SheetToolbar
         model={model}
         canFinalise={can(user, 'sheet.finalise')}

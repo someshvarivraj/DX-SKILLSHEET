@@ -1,6 +1,9 @@
 /**
  * Several people's PDFs in one download (spec §11.4), as a ZIP.
  *
+ * `?kind=supplement` makes the ZIP of 補足資料 instead (Sano-san, 2026-10-13).
+ * The supplement does not need a finalised version, as for a single download.
+ *
  * Each person goes through the same export as the single download — finalised
  * versions only (§11.1), one PDF at a time (§11.3, the render queue), and each
  * file recorded in the export history with its copy kept (§11.7). People
@@ -15,6 +18,7 @@ import { prisma } from '@/lib/db';
 import { getUserFromToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { can, canAccessPerson } from '@/lib/auth/permissions';
 import { exportSkillSheet } from '@/lib/pdf/render';
+import { exportSupplement } from '@/lib/pdf/supplement';
 import { sendDownloadProblem } from '@/lib/pdf/error-page';
 import { withBasePath } from '@/lib/base-path';
 import { makeZip } from '@/lib/zip';
@@ -58,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  const supplement = req.query.kind === 'supplement';
   const people = await prisma.person.findMany({ where: { id: { in: ids } } });
   const files: Array<{ name: string; data: Buffer }> = [];
   const skipped: string[] = [];
@@ -76,7 +81,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       continue;
     }
     // One person failing (a rendering error) must not lose everyone else's PDF.
-    const result = await exportSkillSheet({ personId: id, userId: user.id }).catch((error: unknown) => {
+    const result = await (supplement
+      ? exportSupplement({ personId: id, userId: user.id }).then((r) => (r ? { ok: true as const, ...r } : null))
+      : exportSkillSheet({ personId: id, userId: user.id })
+    ).catch((error: unknown) => {
       console.error('bulk PDF export failed', id, error);
       return null;
     });
@@ -117,7 +125,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const zip = makeZip(files, now);
   res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="skillsheets_${stamp}.zip"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${supplement ? 'supplements' : 'skillsheets'}_${stamp}.zip"`,
+  );
   res.setHeader('Content-Length', String(zip.length));
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).send(zip);

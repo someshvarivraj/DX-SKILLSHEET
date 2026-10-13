@@ -39,3 +39,11 @@ describe('PDF file name (Sano-san, 2026-10-13)', () => {
     expect(buildAsciiFileName(model, when)).toBe('Maradana_Kasi_Sri_Roshan_20261013.pdf');
   });
 });
+
+describe('補足資料 file name (Sano-san, 2026-10-13)', () => {
+  it('matches the skill sheet, with 補足資料 before the date', async () => {
+    const { buildSupplementFileName } = await import('../src/lib/pdf/supplement');
+    const model = { person: { fullNameEnglish: 'Paranjita Debnath', fullNameKatakana: 'デブナス・パランジタ' } } as SheetModel;
+    expect(buildSupplementFileName(model, new Date(2026, 9, 13))).toBe('デブナス・パランジタ／Paranjita Debnath_補足資料_20261013.pdf');
+  });
+});

@@ -22,7 +22,7 @@ import {
   SupplementDocument,
   type MemoView,
 } from '@/components/supplement-document';
-import { renderPdf } from './render';
+import { personFileName, renderPdf } from './render';
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -43,8 +43,13 @@ export function buildSupplementHtml(model: SheetModel, memos: MemoView[]): strin
 </html>`;
 }
 
-/** Latin name, the word "supplement" and the date, mirroring §11.6. */
+/** 「デブナス・パランジタ／Paranjita Debnath_補足資料_20261013.pdf」 (Sano-san, 2026-10-13). */
 export function buildSupplementFileName(model: SheetModel, when = new Date()): string {
+  return personFileName(model.person, '_補足資料', when);
+}
+
+/** Latin name, the word "supplement" and the date: the ASCII fallback. */
+export function buildSupplementAsciiFileName(model: SheetModel, when = new Date()): string {
   const name = model.person.fullNameEnglish
     .normalize('NFKD')
     .replace(/[^\w\s-]/g, '')
@@ -59,6 +64,7 @@ export function buildSupplementFileName(model: SheetModel, when = new Date()): s
 
 export type SupplementResult = {
   fileName: string;
+  asciiFileName: string;
   bytes: number;
   buffer: Buffer;
 };
@@ -97,5 +103,5 @@ export async function exportSupplement(params: {
     summary: `${fileName} を出力した`,
   });
 
-  return { fileName, bytes: buffer.byteLength, buffer };
+  return { fileName, asciiFileName: buildSupplementAsciiFileName(model), bytes: buffer.byteLength, buffer };
 }
