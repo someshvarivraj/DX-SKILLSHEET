@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { MoraBot } from '@/components/morabot';
 import { getLang, getT } from '@/lib/i18n/server';
 import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
+import { SelectedFirstRows } from '@/components/selected-first-rows';
 import { BulkPdfBar } from '@/components/bulk-pdf-bar';
 import { ResumeGenerationNotice } from '@/components/resume-generation';
 import { findStalledPeople } from '@/lib/sheet/generation-jobs';
@@ -214,6 +215,7 @@ export default async function PeoplePage({
                   </tr>
                 </thead>
                 <tbody>
+                  <SelectedFirstRows form="bulk-pdf">
                   {shown.map((person) => {
                     const version = person.skillSheet?.currentVersion;
                     const unreviewed = version ? (unreviewedByVersion.get(version.id) ?? 0) : 0;
@@ -291,6 +293,7 @@ export default async function PeoplePage({
                       </tr>
                     );
                   })}
+                  </SelectedFirstRows>
                 </tbody>
               </table>
             </div>

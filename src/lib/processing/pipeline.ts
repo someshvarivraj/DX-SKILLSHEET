@@ -17,6 +17,7 @@ import type { Glossary } from '@/lib/glossary/glossary';
 import { runRule, type RuleContext } from '@/lib/rules';
 import { cleanChoice, cleanChoiceList, cleanGrid, isNoneOption, oneLinkPerLine } from '@/lib/style/choice';
 import { normaliseJapanese } from '@/lib/style/text';
+import { formatAcademicScore } from '@/lib/style/score';
 import { buildMessages } from './prompt';
 
 export type FieldDefinition = {
@@ -281,8 +282,12 @@ function processCopy(
 
   return {
     // Several answers are put on separate lines (学士 / B.Tech（…）), not run
-    // together; links typed on one line are printed one to a line.
-    valueJa: oneLinkPerLine(normaliseJapanese(parts.join('\n'))),
+    // together; links typed on one line are printed one to a line. 成績 gets
+    // its label (CGPA: 6.8).
+    valueJa:
+      field.code === 'edu_score'
+        ? formatAcademicScore(parts.join(' '))
+        : oneLinkPerLine(normaliseJapanese(parts.join('\n'))),
     valueJson: null,
     sourceText,
     usedAi: false,

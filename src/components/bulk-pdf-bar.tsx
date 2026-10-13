@@ -31,7 +31,9 @@ export function BulkPdfBar({ finalCount }: { finalCount: number }) {
 
   const selectAll = (on: boolean) => {
     for (const b of boxes()) if (!b.disabled) b.checked = on;
-    setCount(boxes().filter((b) => b.checked).length);
+    // Setting `checked` fires no event; the table listens for one to move the
+    // ticked rows to the top (selected-first-rows.tsx).
+    document.dispatchEvent(new Event('change'));
   };
 
   const download = async () => {

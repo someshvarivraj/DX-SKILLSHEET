@@ -49,17 +49,41 @@ function escapeHtml(s: string): string {
 }
 
 /** Latin name + creation date, no employee number (§11.6). */
+/**
+ * 「マラダナ・カシ・スリ・ロシャン／Maradana Kasi Sri Roshan_20261013.pdf」 —
+ * katakana and English, as the sheet prints the name (Sano-san, 2026-10-13).
+ * Characters no file system accepts are dropped; the full-width ／ is allowed
+ * on Windows and macOS alike.
+ */
 export function buildFileName(model: SheetModel, when = new Date()): string {
+  const clean = (s: string | null | undefined) =>
+    (s ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim();
+  const english = clean(model.person.fullNameEnglish);
+  const katakana = clean(model.person.fullNameKatakana).replace(/[\s・･]+/g, '・');
+  const name = [katakana, english].filter(Boolean).join('／');
+  return `${name || 'skillsheet'}_${dateStamp(when)}.pdf`;
+}
+
+/** The same name in ASCII only, for storage keys and old download clients. */
+export function buildAsciiFileName(model: SheetModel, when = new Date()): string {
   const name = model.person.fullNameEnglish
     .normalize('NFKD')
     .replace(/[^\w\s-]/g, '')
     .trim()
     .split(/\s+/)
     .join('_');
-  const date = `${when.getFullYear()}${String(when.getMonth() + 1).padStart(2, '0')}${String(
+  return `${name || 'skillsheet'}_${dateStamp(when)}.pdf`;
+}
+
+function dateStamp(when: Date): string {
+  return `${when.getFullYear()}${String(when.getMonth() + 1).padStart(2, '0')}${String(
     when.getDate(),
   ).padStart(2, '0')}`;
-  return `${name || 'skillsheet'}_${date}.pdf`;
+}
+
+/** Content-Disposition for a download whose name may hold Japanese (RFC 6266). */
+export function attachmentHeader(fileName: string, asciiFallback: string): string {
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
 // §11.3 — never render more than one PDF at a time.
@@ -126,7 +150,7 @@ function formatStamp(d: Date, withTime: boolean): string {
 }
 
 export type ExportResult =
-  | { ok: true; fileName: string; storageKey: string; bytes: number; buffer: Buffer }
+  | { ok: true; fileName: string; asciiFileName: string; storageKey: string; bytes: number; buffer: Buffer }
   | { ok: false; reason: 'not-final'; unreviewed: Array<{ fieldName: string; sectionName: string }> };
 
 /** Export one person's sheet. Refuses anything that is not FINAL (§11.1). */
@@ -175,7 +199,8 @@ export async function exportSkillSheet(params: {
   const buffer = await renderPdf(html, finalVersion.finalisedAt ?? finalVersion.updatedAt);
 
   const fileName = buildFileName(model);
-  const storageKey = buildExportKey(params.personId, fileName);
+  const asciiFileName = buildAsciiFileName(model);
+  const storageKey = buildExportKey(params.personId, asciiFileName);
   await getStorage().put(storageKey, buffer, 'application/pdf');
 
   await prisma.exportHistory.create({
@@ -198,7 +223,7 @@ export async function exportSkillSheet(params: {
     summary: `${fileName} を出力した`,
   });
 
-  return { ok: true, fileName, storageKey, bytes: buffer.byteLength, buffer };
+  return { ok: true, fileName, asciiFileName, storageKey, bytes: buffer.byteLength, buffer };
 }
 
 async function loadPhotoDataUrl(key: string | null): Promise<string | null> {
