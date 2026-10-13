@@ -17,7 +17,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { can, canAccessPerson } from '@/lib/auth/permissions';
-import { exportSkillSheet } from '@/lib/pdf/render';
+import { attachmentHeader, exportSkillSheet } from '@/lib/pdf/render';
 import { sendDownloadProblem } from '@/lib/pdf/error-page';
 import { withBasePath } from '@/lib/base-path';
 
@@ -78,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  res.setHeader('Content-Disposition', attachmentHeader(result.fileName, result.asciiFileName));
   res.setHeader('Content-Length', String(result.bytes));
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).send(result.buffer);

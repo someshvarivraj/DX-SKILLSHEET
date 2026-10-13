@@ -17,6 +17,7 @@ import type {
 import { prisma } from '@/lib/db';
 import { resolveSectionColours, type SectionColour } from './section-colours';
 import { characterCount, checkStyle, type StyleIssue } from '@/lib/style/text';
+import { formatAcademicScore } from '@/lib/style/score';
 import { isFieldPrintable } from './visibility';
 import { askedItemKeys, latestAnswerMap } from '@/lib/items/answers';
 
@@ -156,7 +157,9 @@ function buildFieldView(
       }
     | undefined,
 ): FieldView {
-  const valueJa = value?.valueJa ?? '';
+  // 成績 is labelled (CGPA: 6.8) even where it was stored as a bare figure.
+  const stored = value?.valueJa ?? '';
+  const valueJa = field.code === 'edu_score' ? formatAcademicScore(stored) : stored;
   const prose =
     field.valueType === 'TEXT' ||
     (field.processing === 'GENERATE' && field.valueType === 'STRING');
