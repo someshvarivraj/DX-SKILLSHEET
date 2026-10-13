@@ -9,7 +9,6 @@ import { PageHeader } from '@/components/page-header';
 import { MoraBot } from '@/components/morabot';
 import { getLang, getT } from '@/lib/i18n/server';
 import { GenerationBanner, GenerationRowBadge } from '@/components/generation-progress';
-import { SelectedFirstRows } from '@/components/selected-first-rows';
 import { BulkPdfBar } from '@/components/bulk-pdf-bar';
 import { ResumeGenerationNotice } from '@/components/resume-generation';
 import { findStalledPeople } from '@/lib/sheet/generation-jobs';
@@ -110,7 +109,13 @@ export default async function PeoplePage({
     AWAITING_REVIEW: searched.filter((p) => statusOf(p) === 'AWAITING_REVIEW').length,
     FINAL: searched.filter((p) => statusOf(p) === 'FINAL').length,
   };
-  const shown = status === 'all' ? searched : searched.filter((p) => statusOf(p) === status);
+  // Sano-san (2026-10-13): finalised sheets together, then the rest, so the
+  // ones ready to download are not scattered through the list.
+  const STATUS_ORDER: Record<string, number> = { FINAL: 0, AWAITING_REVIEW: 1, DRAFT: 2 };
+  const shown = (status === 'all' ? searched : searched.filter((p) => statusOf(p) === status))
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => (STATUS_ORDER[statusOf(a.p)] ?? 3) - (STATUS_ORDER[statusOf(b.p)] ?? 3) || a.i - b.i)
+    .map(({ p }) => p);
 
   const href = (next: { q?: string; status?: FilterKey }) => {
     const sp = new URLSearchParams();
@@ -215,7 +220,6 @@ export default async function PeoplePage({
                   </tr>
                 </thead>
                 <tbody>
-                  <SelectedFirstRows form="bulk-pdf">
                   {shown.map((person) => {
                     const version = person.skillSheet?.currentVersion;
                     const unreviewed = version ? (unreviewedByVersion.get(version.id) ?? 0) : 0;
@@ -293,7 +297,6 @@ export default async function PeoplePage({
                       </tr>
                     );
                   })}
-                  </SelectedFirstRows>
                 </tbody>
               </table>
             </div>

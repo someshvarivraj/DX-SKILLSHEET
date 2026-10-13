@@ -31,12 +31,10 @@ export function BulkPdfBar({ finalCount }: { finalCount: number }) {
 
   const selectAll = (on: boolean) => {
     for (const b of boxes()) if (!b.disabled) b.checked = on;
-    // Setting `checked` fires no event; the table listens for one to move the
-    // ticked rows to the top (selected-first-rows.tsx).
-    document.dispatchEvent(new Event('change'));
+    setCount(boxes().filter((b) => b.checked).length);
   };
 
-  const download = async () => {
+  const download = async (kind: 'sheet' | 'supplement') => {
     const ids = boxes().filter((b) => b.checked).map((b) => b.value);
     if (ids.length === 0) return;
     setBusy(ids.length);
@@ -44,6 +42,7 @@ export function BulkPdfBar({ finalCount }: { finalCount: number }) {
     try {
       const params = new URLSearchParams();
       for (const id of ids) params.append('id', id);
+      if (kind === 'supplement') params.set('kind', 'supplement');
       const res = await fetch(withBasePath(`/api/people/pdf-bulk?${params}`), { headers: { Accept: 'application/zip' } });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -76,7 +75,7 @@ export function BulkPdfBar({ finalCount }: { finalCount: number }) {
   }
 
   return (
-    <form id={FORM_ID} className="bulk-pdf" onSubmit={(e) => { e.preventDefault(); void download(); }}>
+    <form id={FORM_ID} className="bulk-pdf" onSubmit={(e) => { e.preventDefault(); void download('sheet'); }}>
       <span className="text-sm text-ink-700">
         {count > 0
           ? t('{n}人を選択中', { n: count })
@@ -86,8 +85,18 @@ export function BulkPdfBar({ finalCount }: { finalCount: number }) {
         {count === 0 ? t('確定済みをすべて選択') : t('選択を解除')}
       </button>
       <span className="flex-1" />
+      {/* Sano-san (2026-10-13): the skill sheets and the 補足資料 for the
+          chosen people, each as one ZIP. */}
       <button type="submit" className="btn btn-primary btn-sm" disabled={count === 0 || busy > 0}>
-        <Download size={14} aria-hidden /> {t('選択した人のPDFをまとめてダウンロード（ZIP）')}
+        <Download size={14} aria-hidden /> {t('スキルシートをダウンロード（ZIP）')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        disabled={count === 0 || busy > 0}
+        onClick={() => void download('supplement')}
+      >
+        <Download size={14} aria-hidden /> {t('補足資料をダウンロード（ZIP）')}
       </button>
       {busy > 0 ? (
         <div className="w-full">

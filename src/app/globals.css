@@ -753,6 +753,21 @@ html[data-split] .page {
   }
 }
 
+/* Moving to another person from the editing screen (person-switcher.tsx). */
+.person-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.person-switcher-select {
+  width: auto;
+  max-width: min(22rem, 100%);
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.875rem;
+}
+
 /* JLPT 各スコア as a table, laid out like the result notice (2026-10-13). */
 .jlpt-table-wrap {
   display: grid;

@@ -969,6 +969,12 @@ export const EN: Record<string, string> = {
   "級を選択すること": "Choose a level",
   "この項目にはスコアを保存できない": "Scores can't be saved to this field",
   "元になる回答やスコアがないため、文章を作成できなかった": "Nothing to write from: there are no answers or scores for this field.",
+  "スキルシートをダウンロード（ZIP）": "Download skill sheets (ZIP)",
+  "補足資料をダウンロード（ZIP）": "Download supplementary documents (ZIP)",
+  "対象者の切り替え": "Switch candidate",
+  "前の人": "Previous",
+  "次の人": "Next",
+  "他の人を開く": "Open another candidate",
   // @@END
 };
 
