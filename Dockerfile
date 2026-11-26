@@ -1,7 +1,7 @@
 # 本番用イメージ。EC2上で docker compose -f docker-compose.prod.yml up -d で起動します。
 # Chromium は PDF 生成に使うため、同じイメージに含めます（仕様書11.2節）。
 
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
